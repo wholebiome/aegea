@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys
 import boto3
-from . import register_parser
+from . import register_parser, config
 from .util.aws import DNSZone
 
 def resolve_instance_ids(input_names):
@@ -34,7 +34,7 @@ def terminate(args):
     ec2, ids, names = resolve_instance_ids(args.names)
     ec2.meta.client.terminate_instances(InstanceIds=ids)
     for name in names:
-        DNSZone("FIXME").delete(name)
+        DNSZone(config.private_dns_zone).delete(name)
 
 for action in (start, stop, reboot, terminate):
     parser = register_parser(action, help='{} EC2 instances'.format(action.__name__.capitalize()))

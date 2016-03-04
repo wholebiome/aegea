@@ -8,8 +8,16 @@ import boto3
 from . import register_parser
 from .util.printing import format_table, page_output
 
+def get_field(item, field):
+    for element in field.split("."):
+        try:
+            item = getattr(item, element)
+        except AttributeError:
+            item = item.get(element)
+    return item
+
 def get_cell(resource, field):
-    cell = getattr(resource, field)
+    cell = get_field(resource, field)
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
 def tabulate(collection, columns, max_col_width=64):
@@ -20,7 +28,7 @@ def ls(args):
     ec2 = boto3.resource("ec2")
     if "tags" not in args.columns:
         args.columns.append("tags")
-    table = [[getattr(i, f) for f in args.columns] for i in ec2.instances.all()]
+    table = [[get_field(i, f) for f in args.columns] for i in ec2.instances.all()]
     for row in table:
         if "state" in args.columns:
             row[args.columns.index("state")] = row[args.columns.index("state")]["Name"]
@@ -92,7 +100,7 @@ def zones(args):
             for page2 in route53.get_paginator('list_resource_record_sets').paginate(HostedZoneId=zone["Id"]):
                 for rrs in page2["ResourceRecordSets"]:
                     for record in rrs.get("ResourceRecords", []):
-                        table.append([rrs.get(f) for f in rrs_cols] + [record.get(f) for f in record_cols] + [zone["Config"]["PrivateZone"]])
+                        table.append([rrs.get(f) for f in rrs_cols] + [record.get(f) for f in record_cols] + [get_field(zone, "Config.PrivateZone")])
     page_output(format_table(table, column_names=rrs_cols + record_cols + ["Private"], max_col_width=64))
 
 parser = register_parser(zones, help='List Route53 DNS zones')
@@ -122,7 +130,7 @@ def logs(args):
             for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"]):
                 for stream in page2["logStreams"]:
                     stream["lastIngestionTime"] = datetime.utcnow() - datetime.utcfromtimestamp(stream["lastIngestionTime"]/1000)
-                    table.append([group.get(f) for f in group_cols] + [stream.get(f) for f in stream_cols])
+                    table.append([get_field(group, f) for f in group_cols] + [get_field(stream, f) for f in stream_cols])
 
 #                    for page3 in logs.get_paginator('filter_log_events').paginate(logGroupName=group["logGroupName"]):
 #                        for event in page3["events"]:
@@ -137,8 +145,17 @@ def clusters(args):
     ecs = boto3.client('ecs')
     cluster_arns = sum([p["clusterArns"] for p in ecs.get_paginator('list_clusters').paginate()], [])
     for cluster in ecs.describe_clusters(clusters=cluster_arns)["clusters"]:
-        table.append([cluster.get(f) for f in args.columns])
+        table.append([get_field(cluster, f) for f in args.columns])
     page_output(format_table(table, column_names=args.columns, max_col_width=64))
 
 parser = register_parser(clusters, help='List ECS clusters')
 parser.add_argument("--columns", nargs="+", default=["clusterName", "clusterArn", "status", "registeredContainerInstancesCount", "runningTasksCount", "pendingTasksCount"])
+
+def sirs(args):
+    table = []
+    for sir in boto3.client('ec2').describe_spot_instance_requests()['SpotInstanceRequests']:
+        table.append([get_field(sir, f) for f in args.columns])
+    page_output(format_table(table, column_names=args.columns, max_col_width=64))
+
+parser = register_parser(sirs, help='List EC2 spot instance requests')
+parser.add_argument("--columns", nargs="+", default=["SpotInstanceRequestId", "CreateTime", "SpotPrice", "LaunchSpecification.InstanceType", "State", "Status.Message"])
