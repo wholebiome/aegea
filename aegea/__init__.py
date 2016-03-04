@@ -6,6 +6,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import argparse, logging
 
+from tweak import Config
+
+config = Config(__name__)
+
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(description=__doc__)

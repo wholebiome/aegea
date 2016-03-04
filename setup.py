@@ -16,7 +16,8 @@ setup(
         'boto3 >= 1.2.6',
         'argcomplete >= 1.1.0',
         'paramiko >= 1.16.0',
-        'requests >= 2.9.1'
+        'requests >= 2.9.1',
+        'tweak >= 0.0.2',
     ],
     extras_require={
         ':python_version == "2.7"': ['enum34 >= 1.0.4', 'ipaddress >= 1.0.16'],
