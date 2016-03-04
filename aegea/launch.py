@@ -34,9 +34,9 @@ def launch(args):
                        UserData=get_user_data(host_key=ssh_host_key, commands=get_startup_commands(args)))
     if args.spot:
         launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
-        res = ec2.meta.client.request_spot_instances(SpotPrice=str(1),
-                                         ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
-                                         LaunchSpecification=launch_spec)
+        res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_bid),
+                                                     ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
+                                                     LaunchSpecification=launch_spec)
         sir_id = res["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
         ec2.meta.client.get_waiter('spot_instance_request_fulfilled').wait(SpotInstanceRequestIds=[sir_id])
         instance = ec2.Instance(ec2.meta.client.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])["SpotInstanceRequests"][0]["InstanceId"])
@@ -55,3 +55,4 @@ parser.add_argument('--instance-type', '-t', default="t2.micro")
 parser.add_argument("--ssh-key-name", default="gaia2")
 parser.add_argument('--ami', type=str)
 parser.add_argument('--spot', action='store_true')
+parser.add_argument('--spot-bid', type=float, default=1.0)

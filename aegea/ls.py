@@ -158,4 +158,4 @@ def sirs(args):
     page_output(format_table(table, column_names=args.columns, max_col_width=64))
 
 parser = register_parser(sirs, help='List EC2 spot instance requests')
-parser.add_argument("--columns", nargs="+", default=["SpotInstanceRequestId", "CreateTime", "SpotPrice", "LaunchSpecification.InstanceType", "State", "Status.Message"])
+parser.add_argument("--columns", nargs="+", default=["SpotInstanceRequestId", "CreateTime", "SpotPrice", "LaunchSpecification.InstanceType", "State", "Status.Message", "InstanceId"])
