@@ -147,7 +147,8 @@ def page_output(content, pager=None, file=None):
         content_cols = max(len(strip_ansi_codes(i)) for i in content_lines)
         if tty_rows > content_rows and tty_cols > content_cols:
             raise Exception()
-
+        # FIXME
+        raise Exception()
         pager_process = subprocess.Popen(pager or os.environ.get('PAGER', 'less -RS'), shell=True, stdin=subprocess.PIPE, stdout=file)
         pager_process.stdin.write(content.encode("utf-8"))
         pager_process.stdin.close()

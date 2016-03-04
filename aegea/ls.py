@@ -7,6 +7,7 @@ import boto3
 
 from . import register_parser
 from .util.printing import format_table, page_output
+from .util.aws import ARN
 
 def get_field(item, field):
     for element in field.split("."):
@@ -74,6 +75,13 @@ def volumes(args):
 
 parser = register_parser(volumes, help='List EC2 EBS volumes')
 parser.add_argument("--columns", nargs="+", default=["id", "size", "volume_type", "iops", "encrypted", "state", "create_time", "attachments", "availability_zone"])
+
+def snapshots(args):
+    account_id = ARN(boto3.resource("iam").CurrentUser().arn).account_id
+    page_output(tabulate(boto3.resource("ec2").snapshots.filter(OwnerIds=[account_id]), columns=args.columns))
+
+parser = register_parser(snapshots, help='List EC2 EBS snapshots')
+parser.add_argument("--columns", nargs="+", default=["id", "description", "volume", "volume_size", "state", "progress", "encrypted", "owner_id", "start_time", "tags"])
 
 def buckets(args):
     page_output(tabulate(boto3.resource("s3").buckets.all(), columns=args.columns))

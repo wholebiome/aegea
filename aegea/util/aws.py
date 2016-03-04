@@ -135,3 +135,11 @@ class DNSZone:
                 else:
                     raise Exception(msg)
         self.update(name, value, action="DELETE", record_type=record_type)
+
+class ARN:
+    fields = "arn partition service region account_id resource".split()
+    def __init__(self, arn):
+        self.__dict__.update(dict(zip(self.fields, arn.split(":", 5))))
+
+    def __str__(self):
+        return ":".join(getattr(self, field) for field in self.fields)

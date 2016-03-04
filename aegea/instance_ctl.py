@@ -34,6 +34,7 @@ def terminate(args):
     ec2, ids, names = resolve_instance_ids(args.names)
     ec2.meta.client.terminate_instances(InstanceIds=ids)
     for name in names:
+        # FIXME: when terminating by id, look up and delete DNS name
         DNSZone(config.private_dns_zone).delete(name)
 
 for action in (start, stop, reboot, terminate):
