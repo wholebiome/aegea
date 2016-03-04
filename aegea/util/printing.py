@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, shutil, subprocess
+import os, sys, shutil, subprocess, re
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 
@@ -135,11 +135,16 @@ def page_output(content, pager=None, file=None):
             raise Exception()
         content_lines = content.splitlines()
         content_rows = len(content_lines)
-        content_cols = max(len(i) for i in content_lines)
 
         tty_rows, tty_cols = shutil.get_terminal_size()
-        # FIXME: unicode chars and terminal control seqs need to be collapsed
-        raise Exception()
+
+        naive_content_cols = max(len(i) for i in content_lines)
+        if tty_rows > content_rows and tty_cols > naive_content_cols:
+            raise Exception()
+
+        def strip_ansi_codes(i):
+            return re.sub(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]", "", i)
+        content_cols = max(len(strip_ansi_codes(i)) for i in content_lines)
         if tty_rows > content_rows and tty_cols > content_cols:
             raise Exception()
 
