@@ -149,21 +149,15 @@ parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
 parser.add_argument("log_groups", nargs="*")
 
 def clusters(args):
-    table = []
     ecs = boto3.client('ecs')
     cluster_arns = sum([p["clusterArns"] for p in ecs.get_paginator('list_clusters').paginate()], [])
-    for cluster in ecs.describe_clusters(clusters=cluster_arns)["clusters"]:
-        table.append([get_field(cluster, f) for f in args.columns])
-    page_output(format_table(table, column_names=args.columns, max_col_width=64))
+    page_output(tabulate(ecs.describe_clusters(clusters=cluster_arns)["clusters"], columns=args.columns))
 
 parser = register_parser(clusters, help='List ECS clusters')
 parser.add_argument("--columns", nargs="+", default=["clusterName", "clusterArn", "status", "registeredContainerInstancesCount", "runningTasksCount", "pendingTasksCount"])
 
 def sirs(args):
-    table = []
-    for sir in boto3.client('ec2').describe_spot_instance_requests()['SpotInstanceRequests']:
-        table.append([get_field(sir, f) for f in args.columns])
-    page_output(format_table(table, column_names=args.columns, max_col_width=64))
+    page_output(tabulate(boto3.client('ec2').describe_spot_instance_requests()['SpotInstanceRequests'], columns=args.columns))
 
 parser = register_parser(sirs, help='List EC2 spot instance requests')
 parser.add_argument("--columns", nargs="+", default=["SpotInstanceRequestId", "CreateTime", "SpotPrice", "LaunchSpecification.InstanceType", "State", "Status.Message", "InstanceId"])
