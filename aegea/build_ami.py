@@ -44,7 +44,7 @@ def get_bootstrap_commands():
 def get_bootstrap_packages():
     return ["iptables-persistent", "docker.io", "debian-goodies", "bridge-utils", "squid-deb-proxy", "pixz",
             "cryptsetup-bin", "mdadm", "btrfs-tools", "libffi-dev", "libssl-dev", "libxml2-dev", "libxslt1-dev", "htop",
-            "pydf", "jq", "httpie", "python3-pip", "nfs-common"]
+            "pydf", "jq", "httpie", "python3-pip", "nfs-common", "fail2ban"]
 
 def build_image(args):
     ec2 = boto3.resource("ec2")
