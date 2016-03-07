@@ -1,39 +1,25 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, socket, errno
+import os, sys, socket, errno, time
 
 from .. import logger
+from .printing import GREEN
 
-def wait_net_service(server, port, timeout=None):
-    """ Wait for network service to appear
-        @param timeout: in seconds, if None or 0 wait forever
-        @return: True of False, if timeout is None may return only True or
-                 throw unhandled network exception
-    """
-    s = socket.socket()
-    if timeout:
-        from time import time as now
-        # time module is needed to calc timeout shared between two exceptions
-        end = now() + timeout
-
+def wait_for_port(host, port, timeout=600, print_progress=True):
+    if print_progress:
+        sys.stderr.write("Waiting for {}:{}".format(host, port))
+        sys.stderr.flush()
+    start_time = time.time()
     while True:
         try:
-            if timeout:
-                next_timeout = end - now()
-                if next_timeout < 0:
-                    return False
-                else:
-                    s.settimeout(next_timeout)
-            s.connect((server, port))
-        except socket.timeout as err:
-            # this exception occurs only if timeout is set
-            if timeout:
-                return False
-        except socket.error as err:
-            # catch timeout exception from underlying network library
-            # this one is different from socket.timeout
-            if type(err.args) != tuple or err[0] != errno.ETIMEDOUT:
+            socket.socket().connect((host, port))
+            if print_progress:
+                sys.stderr.write(GREEN("OK") + "\n")
+            return
+        except Exception:
+            time.sleep(1)
+            if print_progress:
+                sys.stderr.write(".")
+                sys.stderr.flush()
+            if time.time() - start_time > timeout:
                 raise
-        else:
-            s.close()
-            return True

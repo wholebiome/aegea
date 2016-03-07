@@ -6,7 +6,7 @@ import boto3
 from paramiko import SSHClient, SFTPClient, RSAKey, SSHException
 
 from . import register_parser, logger
-from .util import wait_net_service
+from .util import wait_for_port
 from .util.aws import locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, set_tags
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts
 
@@ -46,7 +46,7 @@ def get_bootstrap_commands():
 def get_bootstrap_packages():
     return ["iptables-persistent", "docker.io", "debian-goodies", "bridge-utils", "squid-deb-proxy", "pixz",
             "cryptsetup-bin", "mdadm", "btrfs-tools", "libffi-dev", "libssl-dev", "libxml2-dev", "libxslt1-dev", "htop",
-            "pydf", "jq", "httpie", "python3-pip", "nfs-common", "fail2ban", "awscli"]
+            "pydf", "jq", "httpie", "python3-pip", "python3-setuptools", "nfs-common", "fail2ban", "awscli"]
 
 def build_image(args):
     ec2 = boto3.resource("ec2")
@@ -60,7 +60,7 @@ def build_image(args):
         vpc = ensure_vpc()
         subnet = ensure_subnet(vpc)
         security_group = ensure_security_group("test", vpc)
-        instance_type = "t2.micro"
+        instance_type = args.instance_type
         ssh_host_key = new_ssh_key()
         instances = subnet.create_instances(ImageId=init_ami,
                                             KeyName=args.ssh_key_name,
@@ -77,12 +77,13 @@ def build_image(args):
         instance = instances[0]
         instance.wait_until_running()
         logger.info("Launched %s in %s", instance, subnet)
+        instance.reload()
         add_ssh_host_key_to_known_hosts(instance.public_dns_name, ssh_host_key)
         set_tags(instance, Name="{}.{}".format(__name__, datetime.datetime.now().isoformat()))
 
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
-    wait_net_service(instance.public_dns_name, 22)
+    wait_for_port(instance.public_dns_name, 22)
     ssh_client.connect(instance.public_dns_name,
                        username="ubuntu",
                        key_filename=os.path.join(os.path.expanduser("~/.ssh"), args.ssh_key_name + ".pem"))
@@ -92,7 +93,7 @@ def build_image(args):
                 raise Exception("cloud-init encountered errors")
             break
         except Exception as e:
-            if "ENOENT" in str(e):
+            if "ENOENT" in str(e) or "EPERM" in str(e):
                 time.sleep(1)
             else:
                 raise
@@ -107,3 +108,4 @@ parser.add_argument("name", default="test")
 parser.add_argument("--snapshot-existing-host", type=str)
 parser.add_argument("--wait-for-ami", action="store_true")
 parser.add_argument("--ssh-key-name", default=__name__)
+parser.add_argument("--instance-type", default="c3.xlarge")

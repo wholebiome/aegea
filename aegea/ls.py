@@ -29,9 +29,11 @@ def tabulate(collection, args):
 
 def ls(args):
     ec2 = boto3.resource("ec2")
-    if "tags" not in args.columns:
-        args.columns.append("tags")
+    for col in "tags", "launch_time":
+        if col not in args.columns:
+            args.columns.append(col)
     table = [[get_field(i, f) for f in args.columns] for i in ec2.instances.all()]
+    table = sorted(table, key=lambda x: x[args.columns.index("launch_time")])
     for row in table:
         if "state" in args.columns:
             row[args.columns.index("state")] = row[args.columns.index("state")]["Name"]
@@ -120,7 +122,7 @@ def images(args):
     page_output(tabulate(boto3.resource("ec2").images.filter(Owners=["self"]), args))
 
 parser = register_parser(images, help='List EC2 AMIs')
-parser.add_argument("--columns", nargs="+", default=["id", "name", "description", "creation_date", "public", "virtualization_type"])
+parser.add_argument("--columns", nargs="+", default=["id", "name", "description", "creation_date", "public", "virtualization_type", "state", "tags"])
 parser.add_argument("--sort-by", default="creation_date")
 
 def security_groups(args):
