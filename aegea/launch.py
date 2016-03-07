@@ -4,11 +4,8 @@ import os, sys, datetime, base64
 import boto3
 
 from . import register_parser, logger, config
-from .util.aws import get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone, ensure_instance_profile
+from .util.aws import get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone, ensure_instance_profile, set_tags
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
-
-def set_tags(resource, **tags):
-    resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()])
 
 def get_startup_commands(args):
     return [

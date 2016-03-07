@@ -165,3 +165,6 @@ def ensure_instance_profile(iam_role_name):
         role = ensure_iam_role(iam_role_name)
         instance_profile.add_role(RoleName=role.name)
     return instance_profile
+
+def set_tags(resource, **tags):
+    return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()])

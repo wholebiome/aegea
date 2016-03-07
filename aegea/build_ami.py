@@ -1,13 +1,13 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, json, time
+import os, sys, json, time, datetime
 
 import boto3
 from paramiko import SSHClient, SFTPClient, RSAKey, SSHException
 
 from . import register_parser, logger
 from .util import wait_net_service
-from .util.aws import locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group
+from .util.aws import locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, set_tags
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts
 
 class AegeaSSHClient(SSHClient):
@@ -78,6 +78,7 @@ def build_image(args):
         instance.wait_until_running()
         logger.info("Launched %s in %s", instance, subnet)
         add_ssh_host_key_to_known_hosts(instance.public_dns_name, ssh_host_key)
+        set_tags(instance, Name="{}.{}".format(__name__, datetime.datetime.now().isoformat()))
 
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
