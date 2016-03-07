@@ -172,3 +172,9 @@ def key_pairs(args):
 
 parser = register_parser(key_pairs, help='List EC2 SSH key pairs')
 parser.add_argument("--columns", nargs="+", default=["name", "key_fingerprint"])
+
+def subnets(args):
+    page_output(tabulate(boto3.resource("ec2").subnets.all(), args))
+
+parser = register_parser(subnets, help='List EC2 VPCs and subnets')
+parser.add_argument("--columns", nargs="+", default=["id", "vpc_id", "availability_zone", "cidr_block", "default_for_az", "map_public_ip_on_launch", "state", "tags"])

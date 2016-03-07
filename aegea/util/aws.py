@@ -62,14 +62,17 @@ def get_user_data(host_key, commands=None, packages=None, files=None):
 
 def ensure_vpc():
     ec2 = boto3.resource("ec2")
-    for vpc in ec2.vpcs.all():
+    for vpc in ec2.vpcs.filter(Filters=[dict(Name="isDefault", Values=["true"])]):
         break
     else:
-        logger.info("Creating VPC")
-        vpc = ec2.create_vpc() # CidrBlock=...
-        ec2.meta.client.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
-        vpc.modify_attribute(EnableDnsSupport={"Value": True})
-        vpc.modify_attribute(EnableDnsHostnames={"Value": True})
+        for vpc in ec2.vpcs.all():
+            break
+        else:
+            logger.info("Creating VPC")
+            vpc = ec2.create_vpc() # CidrBlock=...
+            ec2.meta.client.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
+            vpc.modify_attribute(EnableDnsSupport={"Value": True})
+            vpc.modify_attribute(EnableDnsHostnames={"Value": True})
     return vpc
 
 def ensure_subnet(vpc):
@@ -89,11 +92,16 @@ def ensure_ingress_rule(security_group, **kwargs):
     else:
         security_group.authorize_ingress(CidrIp=cidr_ip, **kwargs)
 
-def ensure_security_group(name, vpc):
-    for security_group in vpc.security_groups.all():
+def resolve_security_group(name, vpc):
+    for security_group in vpc.security_groups.filter(GroupNames=[name]):
         if security_group.group_name == name:
-            break
-    else:
+            return security_group
+    raise KeyError(name)
+
+def ensure_security_group(name, vpc):
+    try:
+        security_group = resolve_security_group(name, vpc)
+    except KeyError:
         logger.info("Creating security group %s for %s", name, vpc)
         security_group = vpc.create_security_group(GroupName=name, Description=name)
     ensure_ingress_rule(security_group, IpProtocol="tcp", FromPort=22, ToPort=22, CidrIp="0.0.0.0/0")
@@ -161,6 +169,7 @@ def ensure_instance_profile(iam_role_name):
             break
     else:
         instance_profile = iam.create_instance_profile(InstanceProfileName=iam_role_name)
+        iam.meta.client.get_waiter('instance_profile_exists').wait(InstanceProfileName=iam_role_name)
     if not any(role.name == iam_role_name for role in instance_profile.roles):
         role = ensure_iam_role(iam_role_name)
         instance_profile.add_role(RoleName=role.name)

@@ -1,14 +1,15 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, json, time, datetime
+import os, sys, json, time
+from argparse import Namespace
 
 import boto3
 from paramiko import SSHClient, SFTPClient, RSAKey, SSHException
 
 from . import register_parser, logger
-from .util import wait_for_port
 from .util.aws import locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, set_tags
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts
+from .launch import launch
 
 class AegeaSSHClient(SSHClient):
     def check_call(self, *args, **kwargs):
@@ -32,7 +33,8 @@ def get_bootstrap_files():
         for file_ in files:
             with open(os.path.join(root, file_)) as fh:
                 manifest.append(dict(path=os.path.join("/", os.path.relpath(root, rootfs_skel_dir), file_),
-                                     content=fh.read()))
+                                     content=fh.read(),
+                                     permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:]))
     return manifest
 
 def get_bootstrap_commands():
@@ -46,7 +48,8 @@ def get_bootstrap_commands():
 def get_bootstrap_packages():
     return ["iptables-persistent", "docker.io", "debian-goodies", "bridge-utils", "squid-deb-proxy", "pixz",
             "cryptsetup-bin", "mdadm", "btrfs-tools", "libffi-dev", "libssl-dev", "libxml2-dev", "libxslt1-dev", "htop",
-            "pydf", "jq", "httpie", "python3-pip", "python3-setuptools", "nfs-common", "fail2ban", "awscli"]
+            "pydf", "jq", "httpie", "python3-pip", "python3-setuptools", "nfs-common", "fail2ban", "awscli",
+            "emacs24-nox"]
 
 def build_image(args):
     ec2 = boto3.resource("ec2")
@@ -56,34 +59,14 @@ def build_image(args):
         instance = ec2.Instance(args.snapshot_existing_host)
         init_ami = "Unknown"
     else:
-        init_ami = locate_ubuntu_ami(region="us-west-2")
-        vpc = ensure_vpc()
-        subnet = ensure_subnet(vpc)
-        security_group = ensure_security_group("test", vpc)
-        instance_type = args.instance_type
-        ssh_host_key = new_ssh_key()
-        instances = subnet.create_instances(ImageId=init_ami,
-                                            KeyName=args.ssh_key_name,
-                                            SecurityGroupIds=[security_group.id],
-                                            InstanceType=instance_type,
-                                            #Placement={"Tenancy": config["aws"]["instance_placement_tenancy"]},
-                                            #IamInstanceProfile=dict(Arn=instance_profile.arn),
-                                            UserData=get_user_data(host_key=ssh_host_key,
-                                                                   commands=get_bootstrap_commands(),
-                                                                   packages=get_bootstrap_packages(),
-                                                                   files=get_bootstrap_files()),
-                                            MinCount=1,
-                                            MaxCount=1)
-        instance = instances[0]
-        instance.wait_until_running()
-        logger.info("Launched %s in %s", instance, subnet)
-        instance.reload()
-        add_ssh_host_key_to_known_hosts(instance.public_dns_name, ssh_host_key)
-        set_tags(instance, Name="{}.{}".format(__name__, datetime.datetime.now().isoformat()))
-
+        args.ami = locate_ubuntu_ami(region="us-west-2")
+        args.hostname = "{}_{}".format(__name__.replace(".", "_"), int(time.time()))
+        args.wait_for_ssh = True
+        for field in "spot spot_bid iam_role subnet availability_zone".split():
+            setattr(args, field, None)
+        instance = launch(args)
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
-    wait_for_port(instance.public_dns_name, 22)
     ssh_client.connect(instance.public_dns_name,
                        username="ubuntu",
                        key_filename=os.path.join(os.path.expanduser("~/.ssh"), args.ssh_key_name + ".pem"))
@@ -109,3 +92,4 @@ parser.add_argument("--snapshot-existing-host", type=str)
 parser.add_argument("--wait-for-ami", action="store_true")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument("--instance-type", default="c3.xlarge")
+parser.add_argument('--security-groups', nargs="+")
