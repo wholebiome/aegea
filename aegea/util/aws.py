@@ -143,3 +143,25 @@ class ARN:
 
     def __str__(self):
         return ":".join(getattr(self, field) for field in self.fields)
+
+def ensure_iam_role(iam_role_name):
+    iam = boto3.resource("iam")
+    for role in iam.roles.all():
+        if role.name == iam_role_name:
+            break
+    else:
+        role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc("ec2"))
+    role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/IAMReadOnlyAccess")
+    return role
+
+def ensure_instance_profile(iam_role_name):
+    iam = boto3.resource("iam")
+    for instance_profile in iam.instance_profiles.all():
+        if instance_profile.name == iam_role_name:
+            break
+    else:
+        instance_profile = iam.create_instance_profile(InstanceProfileName=iam_role_name)
+    if not any(role.name == iam_role_name for role in instance_profile.roles):
+        role = ensure_iam_role(iam_role_name)
+        instance_profile.add_role(RoleName=role.name)
+    return instance_profile

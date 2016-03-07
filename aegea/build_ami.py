@@ -39,18 +39,22 @@ def get_bootstrap_commands():
     return ["apt-get remove --yes popularity-contest postfix",
             "update-grub",
             "grub-install /dev/xvda",
+            "pip3 install keymaker",
+            "keymaker install",
             "apt-get clean"]
 
 def get_bootstrap_packages():
     return ["iptables-persistent", "docker.io", "debian-goodies", "bridge-utils", "squid-deb-proxy", "pixz",
             "cryptsetup-bin", "mdadm", "btrfs-tools", "libffi-dev", "libssl-dev", "libxml2-dev", "libxslt1-dev", "htop",
-            "pydf", "jq", "httpie", "python3-pip", "nfs-common", "fail2ban"]
+            "pydf", "jq", "httpie", "python3-pip", "nfs-common", "fail2ban", "awscli"]
 
 def build_image(args):
     ec2 = boto3.resource("ec2")
+    iam = boto3.resource("iam")
     ensure_ssh_key(args.ssh_key_name)
     if args.snapshot_existing_host:
         instance = ec2.Instance(args.snapshot_existing_host)
+        init_ami = "Unknown"
     else:
         init_ami = locate_ubuntu_ami(region="us-west-2")
         vpc = ensure_vpc()
@@ -92,10 +96,13 @@ def build_image(args):
             else:
                 raise
 
-    image = instance.create_image(Name=args.name, Description="Created by {}. FIXME: add more metadata".format(__name__))
+    image = instance.create_image(Name=args.name, Description="Built by {} for {}, base={}".format(__name__, iam.CurrentUser().user.name, init_ami))
     print(image.id)
+    if args.wait_for_ami:
+        ec2.meta.client.get_waiter('image_available').wait(ImageIds=[image.id])
 
 parser = register_parser(build_image, help='Build an EC2 AMI')
 parser.add_argument("name", default="test")
 parser.add_argument("--snapshot-existing-host", type=str)
-parser.add_argument("--ssh-key-name", default="gaia2")
+parser.add_argument("--wait-for-ami", action="store_true")
+parser.add_argument("--ssh-key-name", default=__name__)

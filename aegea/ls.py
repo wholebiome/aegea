@@ -164,3 +164,9 @@ def sirs(args):
 
 parser = register_parser(sirs, help='List EC2 spot instance requests')
 parser.add_argument("--columns", nargs="+", default=["SpotInstanceRequestId", "CreateTime", "SpotPrice", "LaunchSpecification.InstanceType", "State", "Status.Message", "InstanceId"])
+
+def key_pairs(args):
+    page_output(tabulate(boto3.resource("ec2").key_pairs.all(), args))
+
+parser = register_parser(key_pairs, help='List EC2 SSH key pairs')
+parser.add_argument("--columns", nargs="+", default=["name", "key_fingerprint"])

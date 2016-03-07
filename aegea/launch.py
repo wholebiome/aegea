@@ -4,7 +4,7 @@ import os, sys, datetime, base64
 import boto3
 
 from . import register_parser, logger, config
-from .util.aws import get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone
+from .util.aws import get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone, ensure_instance_profile
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
 
 def set_tags(resource, **tags):
@@ -12,7 +12,7 @@ def set_tags(resource, **tags):
 
 def get_startup_commands(args):
     return [
-        "hostnamectl set-hostname " + args.hostname
+        "hostnamectl set-hostname {}.{}".format(args.hostname, config.private_dns_zone)
     ]
 
 def launch(args):
@@ -25,12 +25,13 @@ def launch(args):
     vpc = ensure_vpc()
     subnet = ensure_subnet(vpc)
     security_group = ensure_security_group("test", vpc)
+    instance_profile = ensure_instance_profile(args.iam_role)
     ssh_host_key = new_ssh_key()
     launch_spec = dict(ImageId=args.ami,
                        KeyName=args.ssh_key_name,
                        SecurityGroupIds=[security_group.id],
                        InstanceType=args.instance_type,
-                       #IamInstanceProfile=dict(Arn=instance_profile.arn),
+                       IamInstanceProfile=dict(Arn=instance_profile.arn),
                        UserData=get_user_data(host_key=ssh_host_key, commands=get_startup_commands(args)))
     if args.spot:
         launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
@@ -52,7 +53,8 @@ def launch(args):
 parser = register_parser(launch, help='Launch a new EC2 instance')
 parser.add_argument('hostname')
 parser.add_argument('--instance-type', '-t', default="t2.micro")
-parser.add_argument("--ssh-key-name", default="gaia2")
-parser.add_argument('--ami', type=str)
+parser.add_argument("--ssh-key-name", default=__name__)
+parser.add_argument('--ami')
 parser.add_argument('--spot', action='store_true')
 parser.add_argument('--spot-bid', type=float, default=1.0)
+parser.add_argument('--iam-role', default=__name__)
