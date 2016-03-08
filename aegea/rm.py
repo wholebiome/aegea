@@ -18,6 +18,8 @@ def rm(args):
                 boto3.resource("ec2").Snapshot(snapshot_id).delete()
         elif name.startswith("sir-"):
             boto3.client("ec2").cancel_spot_instance_requests(SpotInstanceRequestIds=[name])
+        else:
+            raise Exception("Name {} not recognized as an AWS resource".format(name))
 
-parser = register_parser(rm, help='Remove resources')
+parser = register_parser(rm, help='Remove resources', description="List resources to be removed by their ID or ARN, such as ami-eb957a8b, AIDAJYZD67Q2SUMUA2JBC, or arn:aws:iam::123456789012:user/foo.")
 parser.add_argument('names', nargs='+')
