@@ -178,3 +178,13 @@ def ensure_instance_profile(iam_role_name):
 
 def set_tags(resource, **tags):
     return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()])
+
+def resolve_instance_id(name):
+    if name.startswith("i-"):
+        return name
+    ec2 = boto3.resource("ec2")
+    try:
+        desc = ec2.meta.client.describe_instances(Filters=[dict(Name="tag:Name", Values=[name])])
+        return desc["Reservations"][0]["Instances"][0]["InstanceId"]
+    except IndexError:
+        raise Exception('Could not resolve "{}" to a known instance'.format(name))

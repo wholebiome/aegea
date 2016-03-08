@@ -7,7 +7,7 @@ import boto3
 
 from . import register_parser
 from .util.printing import format_table, page_output
-from .util.aws import ARN
+from .util.aws import ARN, resolve_instance_id
 
 def get_field(item, field):
     for element in field.split("."):
@@ -95,7 +95,8 @@ parser.add_argument("--columns", nargs="+", default=["name", "creation_date"])
 
 def console(args):
     ec2 = boto3.resource("ec2")
-    page_output(ec2.Instance(args.instance).console_output()['Output'])
+    instance_id = resolve_instance_id(args.instance)
+    page_output(ec2.Instance(instance_id).console_output()['Output'])
 
 parser = register_parser(console, help='Get console output for an EC2 instance')
 parser.add_argument("instance")
