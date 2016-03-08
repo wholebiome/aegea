@@ -1,5 +1,5 @@
 """
-Aegea: Amazon Web Services Operator Interface
+Amazon Web Services Operator Interface
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -8,11 +8,13 @@ import argparse, logging
 
 from tweak import Config
 
+from .util.printing import BOLD, RED, ENDC
+
 config = Config(__name__)
 
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser(description=__doc__)
+parser = argparse.ArgumentParser(description="{}: {}".format(BOLD() + RED() + __name__.capitalize() + ENDC(), __doc__))
 parser.set_defaults(entry_point=lambda args: parser.print_help())
 subparsers = parser.add_subparsers(title='commands')
 

@@ -6,6 +6,7 @@ from collections import OrderedDict
 from warnings import warn
 
 import boto3
+from botocore.exceptions import ClientError
 
 from .. import logger
 from .crypto import get_public_key_from_pair
@@ -94,14 +95,14 @@ def ensure_ingress_rule(security_group, **kwargs):
 
 def resolve_security_group(name, vpc):
     for security_group in vpc.security_groups.filter(GroupNames=[name]):
-        if security_group.group_name == name:
-            return security_group
+        assert security_group.group_name == name
+        return security_group
     raise KeyError(name)
 
 def ensure_security_group(name, vpc):
     try:
         security_group = resolve_security_group(name, vpc)
-    except KeyError:
+    except (ClientError, KeyError):
         logger.info("Creating security group %s for %s", name, vpc)
         security_group = vpc.create_security_group(GroupName=name, Description=name)
     ensure_ingress_rule(security_group, IpProtocol="tcp", FromPort=22, ToPort=22, CidrIp="0.0.0.0/0")

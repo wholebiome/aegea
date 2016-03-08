@@ -1,0 +1,2 @@
+include aegea/*.yml
+recursive-include aegea/rootfs.skel *

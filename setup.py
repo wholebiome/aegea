@@ -18,6 +18,8 @@ setup(
         'paramiko >= 1.16.0',
         'requests >= 2.9.1',
         'tweak >= 0.0.2',
+        'keymaker >= 0.1.7',
+        'pyyaml >= 3.11'
     ],
     extras_require={
         ':python_version == "2.7"': ['enum34 >= 1.0.4', 'ipaddress >= 1.0.16'],
@@ -27,6 +29,5 @@ setup(
     scripts=glob.glob('scripts/*'),
     platforms=['MacOS X', 'Posix'],
     test_suite='test',
-    #package_data={'aegea': ['config/*.yml']},
-    #include_package_data=True
+    include_package_data=True
 )

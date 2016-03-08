@@ -14,8 +14,9 @@ def get_startup_commands(args):
         "hostnamectl set-hostname {}.{}".format(args.hostname, config.private_dns_zone)
     ]
 
-def launch(args):
+def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
     ec2 = boto3.resource("ec2")
+    iam = boto3.resource("iam")
     ensure_ssh_key(args.ssh_key_name)
     assert not args.hostname.startswith("i-")
     if args.ami is None:
@@ -40,7 +41,10 @@ def launch(args):
                        KeyName=args.ssh_key_name,
                        SecurityGroupIds=[sg.id for sg in security_groups],
                        InstanceType=args.instance_type,
-                       UserData=get_user_data(host_key=ssh_host_key, commands=get_startup_commands(args)))
+                       UserData=get_user_data(host_key=ssh_host_key,
+                                              commands=user_data_commands or get_startup_commands(args),
+                                              packages=user_data_packages,
+                                              files=user_data_files))
     if args.iam_role:
         instance_profile = ensure_instance_profile(args.iam_role)
         launch_spec["IamInstanceProfile"] = dict(Arn=instance_profile.arn)
@@ -60,7 +64,7 @@ def launch(args):
         instances = ec2.create_instances(MinCount=1, MaxCount=1, **launch_spec)
         instance = instances[0]
     instance.wait_until_running()
-    set_tags(instance, Name=args.hostname)
+    set_tags(instance, Name=args.hostname, launchedBy=iam.CurrentUser().user.name)
     DNSZone(config.private_dns_zone).update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
         instance = ec2.Instance(instance.id)
@@ -82,3 +86,4 @@ parser.add_argument('--subnet')
 parser.add_argument('--availability-zone', '-z')
 parser.add_argument('--security-groups', nargs="+")
 parser.add_argument('--wait-for-ssh', action='store_true')
+parser.add_argument('--iam-role', default=__name__)

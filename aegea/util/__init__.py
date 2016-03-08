@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, socket, errno, time
 
-from .. import logger
 from .printing import GREEN
 
 def wait_for_port(host, port, timeout=600, print_progress=True):
