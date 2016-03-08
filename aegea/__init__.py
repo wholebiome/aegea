@@ -20,6 +20,6 @@ subparsers = parser.add_subparsers(title='commands')
 
 def register_parser(function, **kwargs):
     parser = subparsers.add_parser(function.__name__, **kwargs)
-    parser.add_argument("--max-col-width", type=int, default=32)
+    parser.add_argument("--max-col-width", "-w", type=int, default=32)
     parser.set_defaults(entry_point=function)
     return parser

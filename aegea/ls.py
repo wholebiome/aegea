@@ -161,6 +161,20 @@ def clusters(args):
 parser = register_parser(clusters, help='List ECS clusters')
 parser.add_argument("--columns", nargs="+", default=["clusterName", "clusterArn", "status", "registeredContainerInstancesCount", "runningTasksCount", "pendingTasksCount"])
 
+def tasks(args):
+    ecs = boto3.client('ecs')
+    cluster_arns = sum([p["clusterArns"] for p in ecs.get_paginator('list_clusters').paginate()], [])
+    table = []
+    for cluster_arn in cluster_arns:
+        task_arns = sum([p["taskArns"] for p in ecs.get_paginator('list_tasks').paginate(cluster=cluster_arn)], [])
+        if task_arns:
+            for task in ecs.describe_tasks(cluster=cluster_arn, tasks=task_arns)["tasks"]:
+                table.append([get_field(task, f) for f in args.columns])
+    page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
+
+parser = register_parser(tasks, help='List ECS tasks')
+parser.add_argument("--columns", nargs="+", default=["taskArn", "taskDefinitionArn", "clusterArn", "lastStatus", "desiredStatus", "createdAt", "overrides"])
+
 def sirs(args):
     page_output(tabulate(boto3.client('ec2').describe_spot_instance_requests()['SpotInstanceRequests'], args))
 
