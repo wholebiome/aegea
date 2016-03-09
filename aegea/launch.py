@@ -6,12 +6,18 @@ import boto3
 from . import register_parser, logger, config
 
 from .util import wait_for_port
-from .util.aws import get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone, ensure_instance_profile, set_tags, resolve_security_group
+from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
+                       ensure_instance_profile, add_tags, resolve_security_group, get_bdm)
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
 
 def get_startup_commands(args):
     return [
-        "hostnamectl set-hostname {}.{}".format(args.hostname, config.private_dns_zone)
+        "hostnamectl set-hostname {}.{}".format(args.hostname, config.private_dns_zone),
+        "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource",
+        "bash -c 'devices=(/dev/xvd[b-m]); yes|mdadm --create --force --verbose /dev/md0 --level=0 --raid-devices=${#devices[@]} ${devices[@]}'",
+        "blockdev --setra 16384 /dev/md0",
+        "mkfs.btrfs --force /dev/md0",
+        "mount /dev/md0 /mnt"
     ]
 
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
@@ -41,6 +47,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                        KeyName=args.ssh_key_name,
                        SecurityGroupIds=[sg.id for sg in security_groups],
                        InstanceType=args.instance_type,
+                       BlockDeviceMappings=get_bdm(),
                        UserData=get_user_data(host_key=ssh_host_key,
                                               commands=user_data_commands or get_startup_commands(args),
                                               packages=user_data_packages,
@@ -65,7 +72,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         instances = ec2.create_instances(MinCount=1, MaxCount=1, **launch_spec)
         instance = instances[0]
     instance.wait_until_running()
-    set_tags(instance, Name=args.hostname, launchedBy=iam.CurrentUser().user.name)
+    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name)
     DNSZone(config.private_dns_zone).update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
         instance = ec2.Instance(instance.id)

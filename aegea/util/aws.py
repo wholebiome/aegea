@@ -176,7 +176,7 @@ def ensure_instance_profile(iam_role_name):
         instance_profile.add_role(RoleName=role.name)
     return instance_profile
 
-def set_tags(resource, **tags):
+def add_tags(resource, **tags):
     return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()])
 
 def resolve_instance_id(name):
@@ -188,3 +188,7 @@ def resolve_instance_id(name):
         return desc["Reservations"][0]["Instances"][0]["InstanceId"]
     except IndexError:
         raise Exception('Could not resolve "{}" to a known instance'.format(name))
+
+def get_bdm(max_devices=12):
+    # Note: d2.8xl and hs1.8xl have 24 devices
+    return [dict(VirtualName="ephemeral" + str(i), DeviceName="xvd" + chr(ord("b")+i)) for i in range(max_devices)]

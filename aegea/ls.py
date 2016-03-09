@@ -96,7 +96,8 @@ parser.add_argument("--columns", nargs="+", default=["name", "creation_date"])
 def console(args):
     ec2 = boto3.resource("ec2")
     instance_id = resolve_instance_id(args.instance)
-    page_output(ec2.Instance(instance_id).console_output()['Output'])
+    err = '[No console output received for {}. Console output may lag by several minutes.]'.format(instance_id)
+    page_output(ec2.Instance(instance_id).console_output().get('Output', err))
 
 parser = register_parser(console, help='Get console output for an EC2 instance')
 parser.add_argument("instance")

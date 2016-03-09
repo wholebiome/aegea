@@ -7,7 +7,7 @@ import boto3
 from paramiko import SSHClient, SFTPClient, RSAKey, SSHException
 
 from . import register_parser, logger, config
-from .util.aws import locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, set_tags
+from .util.aws import locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, add_tags, get_bdm
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts
 from .launch import launch
 
@@ -86,8 +86,10 @@ def build_image(args):
             else:
                 raise
 
-    image = instance.create_image(Name=args.name, Description="Built by {} for {}, base={}".format(__name__, iam.CurrentUser().user.name, args.ami))
+    description = "Built by {} for {}".format(__name__, iam.CurrentUser().user.name)
+    image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     print(image.id)
+    add_tags(image, Owner=iam.CurrentUser().user.name, Base=args.ami)
     if args.wait_for_ami:
         ec2.meta.client.get_waiter('image_available').wait(ImageIds=[image.id])
     instance.terminate()
