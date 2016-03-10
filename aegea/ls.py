@@ -17,12 +17,20 @@ def get_field(item, field):
             item = item.get(element)
     return item
 
-def get_cell(resource, field):
+def get_cell(resource, field, transform=None):
     cell = get_field(resource, field)
+    cell = transform(cell) if transform else cell
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
-def tabulate(collection, args):
-    table = [[get_cell(i, f) for f in args.columns] for i in collection]
+def format_tags(cell):
+    tags = {tag["Key"]: tag["Value"] for tag in cell} if cell else {}
+    return ", ".join("{}={}".format(k, v) for k, v in tags.items())
+
+def tabulate(collection, args, cell_transforms=None):
+    if cell_transforms is None:
+        cell_transforms = {}
+    cell_transforms["tags"] = format_tags
+    table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
     if getattr(args, "sort_by", None):
         table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)])
     return format_table(table, column_names=args.columns, max_col_width=args.max_col_width)
@@ -32,19 +40,19 @@ def ls(args):
     for col in "tags", "launch_time":
         if col not in args.columns:
             args.columns.append(col)
-    table = [[get_field(i, f) for f in args.columns] for i in ec2.instances.all()]
-    table = sorted(table, key=lambda x: x[args.columns.index("launch_time")])
-    for row in table:
-        if "state" in args.columns:
-            row[args.columns.index("state")] = row[args.columns.index("state")]["Name"]
-        tags = {tag["Key"]: tag["Value"] for tag in row[args.columns.index("tags")]} if row[args.columns.index("tags")] else {}
-        name = tags.get("Name", row[args.columns.index("id")])
-        row[args.columns.index("tags")] = ", ".join("{}={}".format(k, v) for k, v in tags.items())
-        row.insert(0, name)
-    page_output(format_table(table, column_names=["name"] + args.columns, max_col_width=args.max_col_width))
+    def add_name(instance):
+        instance.name = instance.id
+        for tag in instance.tags or []:
+            if tag["Key"] == "Name":
+                instance.name = tag["Value"]
+        return instance
+    instances = [add_name(i) for i in ec2.instances.all()]
+    args.columns = ["name"] + args.columns
+    page_output(tabulate(instances, args, cell_transforms={"state": lambda x: x["Name"]}))
 
 parser = register_parser(ls, help='List EC2 instances')
 parser.add_argument("--columns", nargs="+", default=["id", "state", "instance_type", "launch_time", "public_dns_name", "image_id", "tags"])
+parser.add_argument("--sort-by", default="launch_time")
 
 def users(args):
     iam = boto3.resource("iam")
