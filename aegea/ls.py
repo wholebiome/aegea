@@ -197,3 +197,9 @@ def subnets(args):
 
 parser = register_parser(subnets, help='List EC2 VPCs and subnets')
 parser.add_argument("--columns", nargs="+", default=["id", "vpc_id", "availability_zone", "cidr_block", "default_for_az", "map_public_ip_on_launch", "state", "tags"])
+
+def tables(args):
+    page_output(tabulate(boto3.resource("dynamodb").tables.all(), args))
+
+parser = register_parser(tables, help='List DynamoDB tables')
+parser.add_argument("--columns", nargs="+", default=["name", "key_schema", "attribute_definitions", "item_count", "provisioned_throughput", "creation_date_time", "table_size_bytes", "table_status"])
