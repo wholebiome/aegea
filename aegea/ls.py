@@ -134,26 +134,29 @@ parser = register_parser(security_groups, help='List EC2 security groups')
 parser.add_argument("--columns", nargs="+", default=["id", "group_name", "description", "ip_permissions", "ip_permissions_egress", "vpc_id"])
 
 def logs(args):
+    logs = boto3.client("logs")
+    if args.log_streams:
+        for log_stream in args.log_streams:
+            group, stream = log_stream.split(".", 1)
+            for page in logs.get_paginator('filter_log_events').paginate(logGroupName=group, logStreamNames=[stream]):
+                for event in page["events"]:
+                    print(event["timestamp"], event["message"])
+        return
     table = []
     group_cols = ["logGroupName"]
     stream_cols = ["logStreamName", "lastIngestionTime", "storedBytes"]
-    logs = boto3.client("logs")
     for page in logs.get_paginator('describe_log_groups').paginate():
         for group in page["logGroups"]:
-            if args.log_groups and group["logGroupName"] not in args.log_groups:
-                continue
+            #if args.log_groups and group["logGroupName"] not in args.log_groups:
+            #    continue
             for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"]):
                 for stream in page2["logStreams"]:
                     stream["lastIngestionTime"] = datetime.utcnow() - datetime.utcfromtimestamp(stream["lastIngestionTime"]/1000)
                     table.append([get_field(group, f) for f in group_cols] + [get_field(stream, f) for f in stream_cols])
-
-#                    for page3 in logs.get_paginator('filter_log_events').paginate(logGroupName=group["logGroupName"]):
-#                        for event in page3["events"]:
-#                            print(event["timestamp"], event["message"])
     page_output(format_table(table, column_names=group_cols + stream_cols, max_col_width=args.max_col_width))
 
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
-parser.add_argument("log_groups", nargs="*")
+parser.add_argument("log_streams", nargs="*")
 
 def clusters(args):
     ecs = boto3.client('ecs')

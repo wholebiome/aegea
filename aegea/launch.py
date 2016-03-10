@@ -12,6 +12,7 @@ from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ss
 
 def get_startup_commands(args):
     return [
+        "sed -i '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers",
         "hostnamectl set-hostname {}.{}".format(args.hostname, config.private_dns_zone),
         "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource",
         "bash -c 'devices=(/dev/xvd[b-m]); yes|mdadm --create --force --verbose /dev/md0 --level=0 --raid-devices=${#devices[@]} ${devices[@]}'",
