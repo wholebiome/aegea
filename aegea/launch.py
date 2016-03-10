@@ -26,8 +26,11 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     iam = boto3.resource("iam")
     ensure_ssh_key(args.ssh_key_name)
     assert not args.hostname.startswith("i-")
-    if args.ami is None:
-        filters = dict(Owners=["self"], Filters=[dict(Name="state", Values=["available"])])
+    if args.ami is None or not args.ami.startswith("ami-"):
+        if args.ami is None:
+            filters = dict(Owners=["self"], Filters=[dict(Name="state", Values=["available"])])
+        else:
+            filters = dict(Owners=["self"], Filters=[dict(Name="name", Values=[args.ami])])
         amis = sorted(ec2.images.filter(**filters), key=lambda ami: ami.creation_date)
         args.ami = amis[-1].id
 

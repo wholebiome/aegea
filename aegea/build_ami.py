@@ -91,8 +91,11 @@ def build_image(args):
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     print(image.id)
     add_tags(image, Owner=iam.CurrentUser().user.name, Base=args.ami)
-    if args.wait_for_ami:
-        ec2.meta.client.get_waiter('image_available').wait(ImageIds=[image.id])
+    ec2.meta.client.get_waiter('image_available').wait(ImageIds=[image.id])
+    while ec2.Image(image.id).state != "available":
+        sys.stderr.write(".")
+        sys.stderr.flush()
+        time.sleep(1)
     instance.terminate()
 
 parser = register_parser(build_image, help='Build an EC2 AMI')
