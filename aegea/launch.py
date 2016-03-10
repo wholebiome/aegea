@@ -65,7 +65,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
     if args.spot:
         launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
-        logger.info("Requesting {} spot instance at {} bid".format(args.instance_type, args.spot_bid))
+        logger.info("Bidding {} for a {} spot instance".format(args.spot_bid, args.instance_type))
         res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_bid),
                                                      ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
                                                      LaunchSpecification=launch_spec)

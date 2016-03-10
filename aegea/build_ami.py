@@ -7,7 +7,8 @@ import boto3
 from paramiko import SSHClient, SFTPClient, RSAKey, SSHException
 
 from . import register_parser, logger, config
-from .util.aws import locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, add_tags, get_bdm
+from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
+                       ensure_security_group, add_tags, get_bdm, resolve_instance_id)
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts
 from .launch import launch
 
@@ -59,7 +60,7 @@ def build_image(args):
     iam = boto3.resource("iam")
     ensure_ssh_key(args.ssh_key_name)
     if args.snapshot_existing_host:
-        instance = ec2.Instance(args.snapshot_existing_host)
+        instance = ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
     else:
         args.ami = args.base_ami or locate_ubuntu_ami(region="us-west-2")
