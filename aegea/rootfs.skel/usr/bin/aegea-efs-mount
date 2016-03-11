@@ -28,6 +28,8 @@ for filesystem in efs.describe_file_systems()["FileSystems"]:
     for tag in efs.describe_tags(FileSystemId=filesystem["FileSystemId"])["Tags"]:
         if tag["Key"] == "mountpoint":
             mountpoints[tag["Value"]] = filesystem
+else:
+    logger.info("No EFS filesystems found")
 
 mount_procs = []
 for mountpoint, filesystem in mountpoints.items():

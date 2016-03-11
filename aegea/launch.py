@@ -64,7 +64,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                                               packages=user_data_packages,
                                               files=user_data_files))
     if args.iam_role:
-        instance_profile = ensure_instance_profile(args.iam_role, policies=args.policies)
+        instance_profile = ensure_instance_profile(args.iam_role, policies=args.iam_policies)
         launch_spec["IamInstanceProfile"] = dict(Arn=instance_profile.arn)
     if not args.spot:
         launch_spec["SubnetId"] = subnet.id
