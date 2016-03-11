@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, socket, errno, time
+import os, sys, re, socket, errno, time
 
 from .printing import GREEN
 
@@ -22,3 +22,12 @@ def wait_for_port(host, port, timeout=600, print_progress=True):
                 sys.stderr.flush()
             if time.time() - start_time > timeout:
                 raise
+
+def validate_hostname(hostname):
+    if len(hostname) > 255:
+        raise Exception("Hostname {} is longer than 255 characters".format(hostname))
+    if hostname[-1] == ".":
+        hostname = hostname[:-1]
+    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    if not all(allowed.match(x) for x in hostname.split(".")):
+        raise Exception("Hostname {} is not RFC 1123 compliant".format(hostname))

@@ -47,10 +47,11 @@ def get_bootstrap_commands():
             "pip install awscli-cwlogs",
             "pip3 install keymaker",
             "keymaker install",
-            "apt-get clean"]
+            "apt-get clean",
+            "apt-get install --yes docker.io || true"]
 
 def get_bootstrap_packages():
-    return ["iptables-persistent", "docker.io", "debian-goodies", "bridge-utils", "squid-deb-proxy", "pixz",
+    return ["iptables-persistent", "debian-goodies", "bridge-utils", "squid-deb-proxy", "pixz",
             "cryptsetup-bin", "mdadm", "btrfs-tools", "libffi-dev", "libssl-dev", "libxml2-dev", "libxslt1-dev", "htop",
             "pydf", "jq", "httpie", "python-pip", "python-setuptools", "python3-pip", "python3-setuptools", "nfs-common",
             "fail2ban", "awscli", "emacs24-nox"]

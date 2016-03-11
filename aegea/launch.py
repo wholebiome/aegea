@@ -5,15 +5,16 @@ import boto3
 
 from . import register_parser, logger, config
 
-from .util import wait_for_port
+from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm)
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
 
 def get_startup_commands(args):
     return [
-        "sed -i '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers",
         "hostnamectl set-hostname {}.{}".format(args.hostname, config.private_dns_zone),
+        "service awslogs restart",
+        "sed -i '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers",
         "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource",
         "bash -c 'devices=(/dev/xvd[b-m]); yes|mdadm --create --force --verbose /dev/md0 --level=0 --raid-devices=${#devices[@]} ${devices[@]}'",
         "blockdev --setra 16384 /dev/md0",
@@ -25,6 +26,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
     ensure_ssh_key(args.ssh_key_name)
+    validate_hostname(args.hostname)
     assert not args.hostname.startswith("i-")
     if args.ami is None or not args.ami.startswith("ami-"):
         if args.ami is None:
