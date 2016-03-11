@@ -212,3 +212,9 @@ def tables(args):
 
 parser = register_parser(tables, help='List DynamoDB tables')
 parser.add_argument("--columns", nargs="+", default=["name", "key_schema", "attribute_definitions", "item_count", "provisioned_throughput", "creation_date_time", "table_size_bytes", "table_status"])
+
+def filesystems(args):
+    page_output(tabulate(boto3.client("efs").describe_file_systems()["FileSystems"], args))
+
+parser = register_parser(filesystems, help='List EFS filesystems')
+parser.add_argument("--columns", nargs="+", default=["Name", "OwnerId", "FileSystemId", "SizeInBytes", "CreationTime", "LifeCycleState", "NumberOfMountTargets"])
