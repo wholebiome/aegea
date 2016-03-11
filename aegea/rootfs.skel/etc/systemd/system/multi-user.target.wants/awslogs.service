@@ -1,10 +1,1 @@
-[Unit]
-Description=Run AWS CloudWatch Logs agent
-
-[Service]
-Environment=AWS_CONFIG_FILE=/etc/aws.conf
-ExecStartPre=/bin/mkdir -p /var/awslogs/state
-ExecStart=/usr/local/bin/aws logs push --config-file /etc/awslogs.conf
-
-[Install]
-WantedBy=multi-user.target
+../../../../lib/systemd/system/awslogs.service
