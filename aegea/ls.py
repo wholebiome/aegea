@@ -217,6 +217,7 @@ def filesystems(args):
     efs = boto3.client("efs")
     table = []
     for filesystem in efs.describe_file_systems()["FileSystems"]:
+        filesystem["tags"] = efs.describe_tags(FileSystemId=filesystem["FileSystemId"])["Tags"]
         for mount_target in efs.describe_mount_targets(FileSystemId=filesystem["FileSystemId"])["MountTargets"]:
             mount_target.update(filesystem)
             table.append(mount_target)
@@ -224,5 +225,5 @@ def filesystems(args):
     page_output(tabulate(table, args, cell_transforms={"SizeInBytes": lambda x: x.get("Value") if x else None}))
 
 parser = register_parser(filesystems, help='List EFS filesystems')
-parser.add_argument("--columns", nargs="+", default=["Name", "OwnerId", "FileSystemId", "SizeInBytes", "CreationTime", "LifeCycleState"])
-parser.add_argument("--mount-target-columns", nargs="+", default=["MountTargetId", "SubnetId", "IpAddress", "NetworkInterfaceId"])
+parser.add_argument("--columns", nargs="+", default=["Name", "FileSystemId", "SizeInBytes", "CreationTime", "LifeCycleState"])
+parser.add_argument("--mount-target-columns", nargs="+", default=["MountTargetId", "SubnetId", "IpAddress", "NetworkInterfaceId", "tags"])
