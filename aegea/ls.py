@@ -159,7 +159,8 @@ def logs(args):
             #    continue
             for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"]):
                 for stream in page2["logStreams"]:
-                    stream["lastIngestionTime"] = datetime.utcnow() - datetime.utcfromtimestamp(stream["lastIngestionTime"]/1000)
+                    if "lastIngestionTime" in stream:
+                        stream["lastIngestionTime"] = datetime.utcnow() - datetime.utcfromtimestamp(stream["lastIngestionTime"]/1000)
                     table.append([get_field(group, f) for f in group_cols] + [get_field(stream, f) for f in stream_cols])
     page_output(format_table(table, column_names=group_cols + stream_cols, max_col_width=args.max_col_width))
 
