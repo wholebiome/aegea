@@ -214,7 +214,15 @@ parser = register_parser(tables, help='List DynamoDB tables')
 parser.add_argument("--columns", nargs="+", default=["name", "key_schema", "attribute_definitions", "item_count", "provisioned_throughput", "creation_date_time", "table_size_bytes", "table_status"])
 
 def filesystems(args):
-    page_output(tabulate(boto3.client("efs").describe_file_systems()["FileSystems"], args))
+    efs = boto3.client("efs")
+    table = []
+    for filesystem in efs.describe_file_systems()["FileSystems"]:
+        for mount_target in efs.describe_mount_targets(FileSystemId=filesystem["FileSystemId"])["MountTargets"]:
+            mount_target.update(filesystem)
+            table.append(mount_target)
+    args.columns += args.mount_target_columns
+    page_output(tabulate(table, args, cell_transforms={"SizeInBytes": lambda x: x.get("Value") if x else None}))
 
 parser = register_parser(filesystems, help='List EFS filesystems')
-parser.add_argument("--columns", nargs="+", default=["Name", "OwnerId", "FileSystemId", "SizeInBytes", "CreationTime", "LifeCycleState", "NumberOfMountTargets"])
+parser.add_argument("--columns", nargs="+", default=["Name", "OwnerId", "FileSystemId", "SizeInBytes", "CreationTime", "LifeCycleState"])
+parser.add_argument("--mount-target-columns", nargs="+", default=["MountTargetId", "SubnetId", "IpAddress", "NetworkInterfaceId"])

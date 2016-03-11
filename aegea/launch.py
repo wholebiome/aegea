@@ -7,8 +7,9 @@ from . import register_parser, logger, config
 
 from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
-                       ensure_instance_profile, add_tags, resolve_security_group, get_bdm)
+                       ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id)
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
+from .util.exceptions import AegeaException
 
 def get_startup_commands(args):
     return [
@@ -26,8 +27,12 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
     ensure_ssh_key(args.ssh_key_name)
-    validate_hostname(args.hostname)
-    assert not args.hostname.startswith("i-")
+    try:
+        i = resolve_instance_id(args.hostname)
+        raise Exception("The hostname {} is being used by {} (state: {})".format(args.hostname, i, ec2.Instance(i).state["Name"]))
+    except AegeaException:
+        validate_hostname(args.hostname)
+        assert not args.hostname.startswith("i-")
     if args.ami is None or not args.ami.startswith("ami-"):
         if args.ami is None:
             filters = dict(Owners=["self"], Filters=[dict(Name="state", Values=["available"])])
@@ -59,7 +64,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                                               packages=user_data_packages,
                                               files=user_data_files))
     if args.iam_role:
-        instance_profile = ensure_instance_profile(args.iam_role)
+        instance_profile = ensure_instance_profile(args.iam_role, policies=args.policies)
         launch_spec["IamInstanceProfile"] = dict(Arn=instance_profile.arn)
     if not args.spot:
         launch_spec["SubnetId"] = subnet.id
@@ -101,3 +106,5 @@ parser.add_argument('--availability-zone', '-z')
 parser.add_argument('--security-groups', nargs="+")
 parser.add_argument('--wait-for-ssh', action='store_true')
 parser.add_argument('--iam-role', default=__name__)
+parser.add_argument('--iam-policies', nargs="+", default=["IAMReadOnlyAccess", "AmazonElasticFileSystemFullAccess"],
+                    help='Ensure the default or specified IAM role has the listed IAM managed policies attached')

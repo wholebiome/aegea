@@ -8,6 +8,7 @@ from warnings import warn
 import boto3
 from botocore.exceptions import ClientError
 
+from .exceptions import AegeaException
 from .. import logger
 from .crypto import get_public_key_from_pair
 
@@ -32,18 +33,18 @@ def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", region="us-
     elif region.startswith("us-gov-"):
         partition = "aws-govcloud"
     if partition not in {"aws", "aws-cn", "aws-govcloud"}:
-        raise Exception("Unrecognized partition {}".format(partition))
+        raise AegeaException("Unrecognized partition {}".format(partition))
     manifest_url = "https://cloud-images.ubuntu.com/releases/streams/v1/com.ubuntu.cloud:released:{partition}.json"
     manifest_url = manifest_url.format(partition=partition)
     manifest = requests.get(manifest_url).json()
     if product not in manifest["products"]:
-        raise Exception("Ubuntu version {} not found in Ubuntu cloud image manifest".format(product))
+        raise AegeaException("Ubuntu version {} not found in Ubuntu cloud image manifest".format(product))
     versions = manifest["products"][product]["versions"]
     version = max(versions)
     for ami in versions[version]["items"].values():
         if ami["crsn"] == region and ami["root_store"] == root_store and ami["virt"] == virt:
             return ami["id"]
-    raise Exception("No AMI found for {} {} {} {} {}".format(product, version, region, root_store, virt))
+    raise AegeaException("No AMI found for {} {} {} {} {}".format(product, version, region, root_store, virt))
 
 def get_user_data(host_key, commands=None, packages=None, files=None):
     if packages is None:
@@ -80,7 +81,7 @@ def ensure_subnet(vpc):
     for subnet in vpc.subnets.all():
         break
     else:
-        raise Exception("Not implemented")
+        raise AegeaException("Not implemented")
     return subnet
 
 def ensure_ingress_rule(security_group, **kwargs):
@@ -142,7 +143,7 @@ class DNSZone:
                     warn(msg)
                     return
                 else:
-                    raise Exception(msg)
+                    raise AegeaException(msg)
         self.update(name, value, action="DELETE", record_type=record_type)
 
 class ARN:
@@ -153,17 +154,19 @@ class ARN:
     def __str__(self):
         return ":".join(getattr(self, field) for field in self.fields)
 
-def ensure_iam_role(iam_role_name):
+def ensure_iam_role(iam_role_name, policies=frozenset()):
     iam = boto3.resource("iam")
     for role in iam.roles.all():
         if role.name == iam_role_name:
             break
     else:
         role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc("ec2"))
-    role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/IAMReadOnlyAccess")
+    for policy in policies:
+        # TODO: enumerate policies to avoid requiring IAM write access
+        role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
     return role
 
-def ensure_instance_profile(iam_role_name):
+def ensure_instance_profile(iam_role_name, policies=frozenset()):
     iam = boto3.resource("iam")
     for instance_profile in iam.instance_profiles.all():
         if instance_profile.name == iam_role_name:
@@ -171,8 +174,8 @@ def ensure_instance_profile(iam_role_name):
     else:
         instance_profile = iam.create_instance_profile(InstanceProfileName=iam_role_name)
         iam.meta.client.get_waiter('instance_profile_exists').wait(InstanceProfileName=iam_role_name)
-    if not any(role.name == iam_role_name for role in instance_profile.roles):
-        role = ensure_iam_role(iam_role_name)
+    role = ensure_iam_role(iam_role_name, policies=policies)
+    if not any(r.name == iam_role_name for r in instance_profile.roles):
         instance_profile.add_role(RoleName=role.name)
     return instance_profile
 
@@ -187,7 +190,7 @@ def resolve_instance_id(name):
         desc = ec2.meta.client.describe_instances(Filters=[dict(Name="tag:Name", Values=[name])])
         return desc["Reservations"][0]["Instances"][0]["InstanceId"]
     except IndexError:
-        raise Exception('Could not resolve "{}" to a known instance'.format(name))
+        raise AegeaException('Could not resolve "{}" to a known instance'.format(name))
 
 def get_bdm(max_devices=12):
     # Note: d2.8xl and hs1.8xl have 24 devices

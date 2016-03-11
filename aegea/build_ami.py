@@ -41,7 +41,8 @@ def get_bootstrap_files():
     return manifest
 
 def get_bootstrap_commands():
-    return ["apt-get remove --yes popularity-contest postfix",
+    return ["sed -i -e '/disk_setup/ d' /etc/cloud/cloud.cfg",
+            "apt-get remove --yes popularity-contest postfix",
             "update-grub",
             "grub-install /dev/xvda",
             "pip install awscli-cwlogs",
