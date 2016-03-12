@@ -14,6 +14,7 @@ class TestAegea(unittest.TestCase):
 
     def test_basic_aegea_commands(self):
         subprocess.check_call(["aegea", "--help"])
+        subprocess.check_call(["aegea", "ls"])
 
 if __name__ == '__main__':
     unittest.main()

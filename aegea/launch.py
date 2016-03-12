@@ -7,9 +7,11 @@ from . import register_parser, logger, config
 
 from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
-                       ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id)
+                       ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
+                       expect_error_codes)
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
 from .util.exceptions import AegeaException
+from botocore.exceptions import ClientError
 
 def get_startup_commands(args):
     return [
@@ -70,18 +72,24 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         launch_spec["SubnetId"] = subnet.id
     if args.availability_zone:
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
-    if args.spot:
-        launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
-        logger.info("Bidding {} for a {} spot instance".format(args.spot_bid, args.instance_type))
-        res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_bid),
-                                                     ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
-                                                     LaunchSpecification=launch_spec)
-        sir_id = res["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
-        ec2.meta.client.get_waiter('spot_instance_request_fulfilled').wait(SpotInstanceRequestIds=[sir_id])
-        instance = ec2.Instance(ec2.meta.client.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])["SpotInstanceRequests"][0]["InstanceId"])
-    else:
-        instances = ec2.create_instances(MinCount=1, MaxCount=1, **launch_spec)
-        instance = instances[0]
+    try:
+        if args.spot:
+            launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
+            logger.info("Bidding {} for a {} spot instance".format(args.spot_bid, args.instance_type))
+            res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_bid),
+                                                         ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
+                                                         LaunchSpecification=launch_spec,
+                                                         DryRun=args.dry_run)
+            sir_id = res["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
+            ec2.meta.client.get_waiter('spot_instance_request_fulfilled').wait(SpotInstanceRequestIds=[sir_id])
+            instance = ec2.Instance(ec2.meta.client.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])["SpotInstanceRequests"][0]["InstanceId"])
+        else:
+            instances = ec2.create_instances(MinCount=1, MaxCount=1, DryRun=args.dry_run, **launch_spec)
+            instance = instances[0]
+    except ClientError as e:
+        expect_error_codes(e, "DryRunOperation")
+        logger.info("Dry run succeeded")
+        exit()
     instance.wait_until_running()
     add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name)
     DNSZone(config.private_dns_zone).update(args.hostname, instance.private_dns_name)
@@ -108,3 +116,4 @@ parser.add_argument('--wait-for-ssh', action='store_true')
 parser.add_argument('--iam-role', default=__name__)
 parser.add_argument('--iam-policies', nargs="+", default=["IAMReadOnlyAccess", "AmazonElasticFileSystemFullAccess"],
                     help='Ensure the default or specified IAM role has the listed IAM managed policies attached')
+parser.add_argument('--dry-run', action='store_true')
