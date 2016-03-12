@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aegea',
-    version='0.1.0',
+    version='0.2.0',
     url='https://github.com/kislyuk/aegea',
     license='Proprietary',
     author='Andrey Kislyuk',
@@ -17,7 +17,7 @@ setup(
         'argcomplete >= 1.1.0',
         'paramiko >= 1.16.0',
         'requests >= 2.9.1',
-        'tweak >= 0.0.2',
+        'tweak >= 0.1.0',
         'keymaker >= 0.1.7',
         'pyyaml >= 3.11'
     ],
