@@ -35,7 +35,7 @@ def terminate(args):
     ec2.meta.client.terminate_instances(InstanceIds=ids)
     for name in names:
         # FIXME: when terminating by id, look up and delete DNS name
-        DNSZone(config.private_dns_zone).delete(name)
+        DNSZone(config.dns.private_zone).delete(name)
 
 for action in (start, stop, reboot, terminate):
     parser = register_parser(action, help='{} EC2 instances'.format(action.__name__.capitalize()))

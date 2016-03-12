@@ -15,7 +15,7 @@ from botocore.exceptions import ClientError
 
 def get_startup_commands(args):
     return [
-        "hostnamectl set-hostname {}.{}".format(args.hostname, config.private_dns_zone),
+        "hostnamectl set-hostname {}.{}".format(args.hostname, config.dns.private_zone),
         "service awslogs restart",
         "sed -i '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers",
         "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource",
@@ -92,7 +92,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         exit()
     instance.wait_until_running()
     add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name)
-    DNSZone(config.private_dns_zone).update(args.hostname, instance.private_dns_name)
+    DNSZone(config.dns.private_zone).update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
         instance = ec2.Instance(instance.id)
         time.sleep(1)
