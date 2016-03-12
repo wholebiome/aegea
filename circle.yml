@@ -1,3 +1,7 @@
+test:
+  override:
+    - tox
+
 dependencies:
   override:
     - pip install tox tox-pyenv
