@@ -14,7 +14,6 @@ from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
 
 def audit(args):
-    ec2 = boto3.resource("ec2")
-    iam = boto3.resource("iam")
+    pass
 
 parser = register_parser(audit, help='Generate a security report')
