@@ -56,6 +56,9 @@ def BOLD(message=None):
 def ENDC():
     return '\033[0m' if sys.stdout.isatty() else ''
 
+def strip_ansi_codes(i):
+    return re.sub(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]", "", i)
+
 def format_table(table, column_names=None, column_specs=None, max_col_width=32, report_dimensions=False):
     ''' Table pretty printer.
     Expects tables to be given as arrays of arrays.
@@ -79,7 +82,7 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
             if len(my_col) > max_col_width:
                 my_col = my_col[:max_col_width-1] + '…'
             my_column_names.append(my_col)
-            col_widths[i] = max(col_widths[i], len(my_col))
+            col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_col)))
     my_table = []
     for row in table:
         my_row = []
@@ -88,7 +91,7 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
             if len(my_item) > max_col_width:
                 my_item = my_item[:max_col_width-1] + '…'
             my_row.append(my_item)
-            col_widths[i] = max(col_widths[i], len(my_item))
+            col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_item)))
         my_table.append(my_row)
 
     def border(i):
@@ -115,7 +118,7 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
         formatted_table.append(border('├') + border('┼').join(border('─')*i for i in col_widths) + border('┤'))
 
     for row in my_table:
-        padded_row = [row[i] + ' '*(col_widths[i]-len(row[i])) for i in range(len(row))]
+        padded_row = [row[i] + ' '*(col_widths[i]-len(strip_ansi_codes(row[i]))) for i in range(len(row))]
         formatted_table.append(border('│') + border('│').join(padded_row) + border('│'))
     formatted_table.append(border('└') + border('┴').join(border('─')*i for i in col_widths) + border('┘'))
 
@@ -143,8 +146,6 @@ def page_output(content, pager=None, file=None):
         if tty_rows > content_rows and tty_cols > naive_content_cols:
             raise Exception()
 
-        def strip_ansi_codes(i):
-            return re.sub(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]", "", i)
         content_cols = max(len(strip_ansi_codes(i)) for i in content_lines)
         if tty_rows > content_rows and tty_cols > content_cols:
             raise Exception()
