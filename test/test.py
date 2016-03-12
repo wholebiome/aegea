@@ -23,7 +23,7 @@ class TestAegea(unittest.TestCase):
             if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh"):
                 args += ["--help"]
             elif subcommand in ("launch", "build_image"):
-                args += ["test", "--dry-run"]
+                args += ["--dry-run", "test"]
             elif subcommand == "rm":
                 args += [resolve_ami()]
             subprocess.check_call(["aegea", subcommand] + args)
