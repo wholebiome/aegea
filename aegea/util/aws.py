@@ -12,6 +12,8 @@ from .exceptions import AegeaException
 from .. import logger
 from .crypto import get_public_key_from_pair
 
+USING_PYTHON2 = True if sys.version_info < (3, 0) else False
+
 def get_assume_role_policy_doc(service="lambda"):
     return json.dumps({
         "Version": "2012-10-17",
@@ -53,7 +55,7 @@ def get_user_data(host_key, commands=None, packages=None, files=None):
         commands = []
     if files is None:
         files = []
-    buf = io.StringIO()
+    buf = io.BytesIO() if USING_PYTHON2 else io.StringIO()
     host_key.write_private_key(buf)
     cloud_config_data = OrderedDict(ssh_keys=dict(rsa_private=buf.getvalue(),
                                                   rsa_public=get_public_key_from_pair(host_key)),
