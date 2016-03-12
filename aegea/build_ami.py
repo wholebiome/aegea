@@ -56,7 +56,7 @@ def build_image(args):
         instance = ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
     else:
-        args.ami = args.base_ami or locate_ubuntu_ami(region="us-west-2")
+        args.ami = args.base_ami or locate_ubuntu_ami(region=ec2.meta.client.meta.region_name)
         args.hostname = "{}-{}".format(__name__.replace(".", "-").replace("_", "-"), int(time.time()))
         args.wait_for_ssh = True
         for field in "spot spot_bid iam_role subnet availability_zone".split():
