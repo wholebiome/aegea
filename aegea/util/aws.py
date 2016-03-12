@@ -11,6 +11,7 @@ from botocore.exceptions import ClientError
 from .exceptions import AegeaException
 from .. import logger
 from .crypto import get_public_key_from_pair
+from .compat import StringIO
 
 def get_assume_role_policy_doc(service="lambda"):
     return json.dumps({
@@ -53,7 +54,7 @@ def get_user_data(host_key, commands=None, packages=None, files=None):
         commands = []
     if files is None:
         files = []
-    buf = io.StringIO()
+    buf = StringIO()
     host_key.write_private_key(buf)
     cloud_config_data = OrderedDict(ssh_keys=dict(rsa_private=buf.getvalue(),
                                                   rsa_public=get_public_key_from_pair(host_key)),
