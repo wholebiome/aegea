@@ -29,9 +29,11 @@ class AegeaSSHClient(SSHClient):
 
 def get_bootstrap_files():
     manifest = []
-    rootfs_skel_dir = os.path.join(os.path.dirname(__file__), "rootfs.skel")
+    rootfs_skel_dir = config.build_ami.rootfs_skel
+    if rootfs_skel_dir == "auto":
+        rootfs_skel_dir = os.path.join(os.path.dirname(__file__), "rootfs.skel")
     if not os.path.exists(rootfs_skel_dir):
-        raise Exception()
+        raise Exception("rootfs_skel directory {} not found".format(rootfs_skel_dir))
     for root, dirs, files in os.walk(rootfs_skel_dir):
         for file_ in files:
             with open(os.path.join(root, file_)) as fh:
@@ -41,21 +43,10 @@ def get_bootstrap_files():
     return manifest
 
 def get_bootstrap_commands():
-    return ["sed -i -e '/disk_setup/ d' /etc/cloud/cloud.cfg",
-            "apt-get remove --yes popularity-contest postfix",
-            "update-grub",
-            "grub-install /dev/xvda",
-            "pip install awscli-cwlogs",
-            "pip3 install keymaker",
-            "keymaker install",
-            "apt-get clean",
-            "apt-get install --yes docker.io || true"]
+    return config.build_ami.commands
 
 def get_bootstrap_packages():
-    return ["iptables-persistent", "debian-goodies", "bridge-utils", "squid-deb-proxy", "pixz",
-            "cryptsetup-bin", "mdadm", "btrfs-tools", "libffi-dev", "libssl-dev", "libxml2-dev", "libxslt1-dev", "htop",
-            "pydf", "jq", "httpie", "python-pip", "python-setuptools", "python3-pip", "python3-setuptools", "nfs-common",
-            "fail2ban", "awscli", "emacs24-nox"]
+    return config.build_ami.packages
 
 def build_image(args):
     ec2 = boto3.resource("ec2")

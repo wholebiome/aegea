@@ -10,7 +10,7 @@ from tweak import Config
 
 from .util.printing import BOLD, RED, ENDC
 
-config = Config(__name__)
+config = Config(__name__, use_yaml=True, save_on_exit=False)
 
 logger = logging.getLogger(__name__)
 
