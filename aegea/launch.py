@@ -8,7 +8,7 @@ from . import register_parser, logger, config
 from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
-                       expect_error_codes)
+                       expect_error_codes, resolve_ami)
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
@@ -35,14 +35,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     except AegeaException:
         validate_hostname(args.hostname)
         assert not args.hostname.startswith("i-")
-    if args.ami is None or not args.ami.startswith("ami-"):
-        if args.ami is None:
-            filters = dict(Owners=["self"], Filters=[dict(Name="state", Values=["available"])])
-        else:
-            filters = dict(Owners=["self"], Filters=[dict(Name="name", Values=[args.ami])])
-        amis = sorted(ec2.images.filter(**filters), key=lambda ami: ami.creation_date)
-        args.ami = amis[-1].id
-
+    args.ami = resolve_ami(args.ami)
     if args.subnet:
         subnet = ec2.Subnet(args.subnet)
         vpc = ec2.Vpc(subnet.vpc_id)

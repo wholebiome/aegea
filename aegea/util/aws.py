@@ -202,3 +202,14 @@ def get_metadata(path):
 def expect_error_codes(exception, *codes):
     if exception.response["Error"]["Code"] not in codes:
         raise
+
+def resolve_ami(ami=None):
+    ec2 = boto3.resource("ec2")
+    if ami is None or not ami.startswith("ami-"):
+        if ami is None:
+            filters = dict(Owners=["self"], Filters=[dict(Name="state", Values=["available"])])
+        else:
+            filters = dict(Owners=["self"], Filters=[dict(Name="name", Values=[ami])])
+        amis = sorted(ec2.images.filter(**filters), key=lambda x: x.creation_date)
+        ami = amis[-1].id
+    return ami
