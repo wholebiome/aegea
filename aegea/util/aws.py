@@ -195,3 +195,6 @@ def resolve_instance_id(name):
 def get_bdm(max_devices=12):
     # Note: d2.8xl and hs1.8xl have 24 devices
     return [dict(VirtualName="ephemeral" + str(i), DeviceName="xvd" + chr(ord("b")+i)) for i in range(max_devices)]
+
+def get_metadata(path):
+    return requests.get("http://169.254.169.254/latest/meta-data/{}".format(path)).content.decode()
