@@ -21,7 +21,7 @@ def audit(args):
         table.append([random.choice(results[1:]) if "Scored" in test else "", test])
     page_output(format_table(table, column_names=["Result", "Test"], max_col_width=120))
 
-parser = register_parser(audit, help='Generate a security report using the CIS Amazon Web Services Foundations Benchmark')
+parser = register_parser(audit, help='Generate a security report using the CIS AWS Foundations Benchmark')
 tests = """1 Identity and Access Management
 1.1 Avoid the use of the "root" account (Scored)
 1.2 Ensure multi-factor authentication (MFA) is enabled for all IAM users that have a console password (Scored)

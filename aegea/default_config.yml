@@ -35,9 +35,11 @@ build_ami:
     - cgmanager-utils
     - unzip
     - nmap
+    - cmake
   commands:
     - "sed -i -e '/disk_setup/ d' /etc/cloud/cloud.cfg"
-    - "apt-get remove --yes popularity-contest postfix"
+    - "apt-get remove --yes popularity-contest postfix apport"
+    - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
     - "update-grub"
     - "grub-install /dev/xvda"
     - "pip install awscli-cwlogs"
