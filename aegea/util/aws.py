@@ -139,7 +139,7 @@ class DNSZone:
                     value = rrs["ResourceRecords"]
                     break
             else:
-                msg = "Could not find {t} {n} in Route53 zone {z}".format(t=record_type, n=name, z=self.zone_name)
+                msg = "Could not find {t} record {n} in Route53 zone {z}".format(t=record_type, n=name, z=self.zone_name)
                 if missing_ok:
                     warn(msg)
                     return

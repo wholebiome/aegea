@@ -47,3 +47,4 @@ build_ami:
     - "keymaker install"
     - "apt-get clean"
     - "apt-get install --yes docker.io || true"
+    - "activate-global-python-argcomplete"
