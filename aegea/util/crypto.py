@@ -34,7 +34,10 @@ def ensure_ssh_key(name):
                             PublicKeyMaterial=get_public_key_from_pair(ssh_key))
         logger.info("Imported SSH key %s", get_ssh_key_path(name))
 
-def add_ssh_host_key_to_known_hosts(hostname, key):
+def hostkey_line(hostnames, key):
+    return hostkeys.HostKeyEntry(hostnames=hostnames, key=key).to_line()
+
+def add_ssh_host_key_to_known_hosts(host_key_line):
     ssh_known_hosts_path = os.path.expanduser("~/.ssh/known_hosts")
     with open(ssh_known_hosts_path, "a") as fh:
-        fh.write(hostkeys.HostKeyEntry(hostnames=[hostname], key=key).to_line())
+        fh.write(host_key_line)

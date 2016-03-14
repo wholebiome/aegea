@@ -9,7 +9,7 @@ from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami)
-from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
+from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
 
@@ -84,12 +84,13 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         logger.info("Dry run succeeded")
         exit()
     instance.wait_until_running()
-    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name)
+    hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
+    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name, SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:])
     DNSZone(config.dns.private_zone).update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
         instance = ec2.Instance(instance.id)
         time.sleep(1)
-    add_ssh_host_key_to_known_hosts(instance.public_dns_name, ssh_host_key)
+    add_ssh_host_key_to_known_hosts(hostkey_line([instance.public_dns_name], ssh_host_key))
     if args.wait_for_ssh:
         wait_for_port(instance.public_dns_name, 22)
     logger.info("Launched %s in %s", instance, subnet)
