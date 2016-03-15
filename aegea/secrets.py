@@ -1,11 +1,12 @@
-"""Manage secrets (credentials) using an S3 bucket.
+"""
+Manage secrets (credentials) using an S3 bucket.
 
-Secrets are credentials for use by services that run in your AWS account. This
-utility does not manage AWS credentials, since the AWS IAM API provides a way to
-do so through IAM roles, instance profiles, and instance metadata.
-
-Upload and manage credentials with ``aegea secrets``. On an EC2
-instance, read credentials with ``aegea-get-secret``.
+Secrets are credentials (private SSH keys, API keys, passwords, etc.)
+for use by services that run in your AWS account. This utility does
+not manage AWS credentials, since the AWS IAM API provides a way to do
+so through IAM roles, instance profiles, and instance
+metadata. Instead, instance role credentials are used as primary
+credentials to access any other credentials needed by your services.
 
 When you run ``aegea secrets`` with AWS admin credentials, it creates
 an S3 bucket with the name ``credentials-<ACCOUNT-ID>``, where
@@ -19,10 +20,16 @@ all instances with the role ``lims`` can access
 ``credentials-123456789012/role/lims``. Conversely, without admin
 access, these principals can't read each other's directories.
 
+Upload and manage credentials with ``aegea secrets``. On an EC2
+instance, read credentials with ``aegea-get-secret``. Once you
+retrieve a secret with ``aegea-get-secret``, try to avoid saving it on
+the filesystem or passing it in process arguments. Instead, try
+passing it as an environment variable value or on process standard
+input.
+
 For more information about credential storage best practices, see
 http://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html
 and https://www.vaultproject.io/.
-
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
