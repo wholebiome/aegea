@@ -20,7 +20,7 @@ class TestAegea(unittest.TestCase):
         subprocess.check_call(["aegea", "--help"])
         for subcommand in aegea.parser._actions[-1].choices:
             args = []
-            if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh"):
+            if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh", "secrets"):
                 args += ["--help"]
             elif subcommand in ("launch", "build_image"):
                 args += ["--dry-run", "test"]
