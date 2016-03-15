@@ -164,3 +164,29 @@ def page_output(content, pager=None, file=None):
             pager_process.terminate()
         except:
             pass
+
+def get_field(item, field):
+    for element in field.split("."):
+        try:
+            item = getattr(item, element)
+        except AttributeError:
+            item = item.get(element)
+    return item
+
+def get_cell(resource, field, transform=None):
+    cell = get_field(resource, field)
+    cell = transform(cell) if transform else cell
+    return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
+
+def format_tags(cell):
+    tags = {tag["Key"]: tag["Value"] for tag in cell} if cell else {}
+    return ", ".join("{}={}".format(k, v) for k, v in tags.items())
+
+def tabulate(collection, args, cell_transforms=None):
+    if cell_transforms is None:
+        cell_transforms = {}
+    cell_transforms["tags"] = format_tags
+    table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
+    if getattr(args, "sort_by", None):
+        table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)])
+    return format_table(table, column_names=args.columns, max_col_width=args.max_col_width)

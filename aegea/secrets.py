@@ -1,119 +1,81 @@
-"""
-Manage secrets (credentials) using an S3 bucket.
+"""Manage secrets (credentials) using an S3 bucket.
 
-Secrets are credentials (private SSH keys, API keys, passwords, etc.)
-for use by services that run in your AWS account. This utility does
-not manage AWS credentials, since the AWS IAM API provides a way to do
-so through IAM roles, instance profiles, and instance
-metadata. Instead, instance role credentials are used as primary
-credentials to access any other credentials needed by your services.
+Secrets are credentials (private SSH keys, API keys, passwords, etc.)  for use
+by services that run in your AWS account. This utility does not manage AWS
+credentials, since the AWS IAM API provides a way to do so through IAM roles,
+instance profiles, and instance metadata. Instead, instance role credentials are
+used as primary credentials to access any other credentials needed by your
+services.
 
-When you run ``aegea secrets`` with AWS admin credentials, it creates
-an S3 bucket with the name ``credentials-<ACCOUNT-ID>``, where
-ACCOUNT-ID is the numeric ID of your AWS account. It then sets access
-policies on the bucket and on your IAM users, groups, and roles to
-ensure that they have read-only access only to paths within that
-bucket. For example, an IAM user ``alice`` will only have read access
-to ``credentials-123456789012/user/alice``. All users in the group
-``devs`` have access to ``credentials-123456789012/group/devs``, and
-all instances with the role ``lims`` can access
-``credentials-123456789012/role/lims``. Conversely, without admin
-access, these principals can't read each other's directories.
+When you run ``aegea secrets`` with AWS admin credentials, it creates an S3
+bucket with the name ``credentials-<ACCOUNT-ID>``, where ACCOUNT-ID is the
+numeric ID of your AWS account. It then sets access policies on the bucket and
+on your IAM users, groups, and roles to ensure that they have read-only access
+only to paths within that bucket. For example, an IAM user ``alice`` will only
+have read access to ``credentials-123456789012/user/alice``. All users in the
+group ``devs`` have access to ``credentials-123456789012/group/devs``, and all
+instances with the role ``lims`` can access
+``credentials-123456789012/role/lims``. Conversely, without admin access, these
+principals can't read each other's directories.
 
-Upload and manage credentials with ``aegea secrets``. On an EC2
-instance, read credentials with ``aegea-get-secret``. Once you
-retrieve a secret with ``aegea-get-secret``, try to avoid saving it on
-the filesystem or passing it in process arguments. Instead, try
-passing it as an environment variable value or on process standard
-input.
+Upload and manage credentials with ``aegea secrets``. On an EC2 instance, read
+credentials with ``aegea-get-secret``. Once you retrieve a secret with
+``aegea-get-secret``, try to avoid saving it on the filesystem or passing it in
+process arguments. Instead, try passing it as an environment variable value or
+on process standard input.
 
 For more information about credential storage best practices, see
 http://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html
 and https://www.vaultproject.io/.
+
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, argparse, subprocess, json, copy
+from textwrap import fill
 import boto3
 
 from . import register_parser
 from .util.aws import ARN
+from .util.printing import format_table, page_output, tabulate
+from .util.exceptions import AegeaException
 
-'''
-def build_policy_doc(bucket, prefix="/*", perms="r"):
-    actions = []
-    if "r" in perms:
-        actions.extend(["s3:ListBucket", "s3:GetObject"])
-    if "w" in perms:
-        actions.extend(["s3:PutObject", "s3:DeleteObject"])
-    doc = {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": actions,
-                "Resource": [str(ARN(service="s3", resource=bucket.name)),
-                             str(ARN(service="s3", resource=bucket.name + prefix))]
-            }
-        ]
-    }
-    return json.dumps(doc)
+class IAMPolicyBuilder:
+    def __init__(self, **kwargs):
+        self.policy = dict(Version="2012-10-17", Statement=[])
+        self.add_statement(**kwargs)
 
-def set_permissions(bucket):
-    ssh_admin_group = get_group(name="ssh_admin")
-    ssh_admin_group.create_policy(PolicyName="keymaker-ssh-admin",
-                                  PolicyDocument=build_policy_doc(bucket, perms="rw"))
-    ssh_admin_group.add_user(UserName=iam.CurrentUser().user_name)
+    def add_statement(self, principal=None, action=None, effect="Allow", resource=None):
+        statement = dict(Action=[], Effect=effect, Resource=[])
+        if principal:
+            statement["Principal"] = principal
+        self.policy["Statement"].append(statement)
+        if action:
+            self.add_action(action)
+        if resource:
+            self.add_resource(resource)
 
-    ssh_group = get_group()
-    ssh_group.create_policy(PolicyName="keymaker-ssh-group",
-                            PolicyDocument=build_policy_doc(bucket, perms="r"))
-    for user in iam.users.all():
-        ssh_group.add_user(UserName=user.name)
-        user.create_policy(PolicyName="keymaker-ssh-user",
-                           PolicyDocument=build_policy_doc(bucket, perms="w", prefix="/users/" + user.name))
-'''
+    def add_action(self, action):
+        self.policy["Statement"][-1]["Action"].append(action)
+
+    def add_resource(self, resource):
+        self.policy["Statement"][-1]["Resource"].append(resource)
 
 def build_s3_bucket_policy(account_id, bucket):
-    return {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Principal": {"AWS": account_id},
-                "Action": [
-                    "s3:GetObject"
-                ],
-                "Effect": "Allow",
-                "Resource": ["arn:aws:s3:::" + bucket + "/user/${aws:userid}/*"]
-            }
-        ]
-    }
+    resource = "arn:aws:s3:::" + bucket + "/user/${aws:userid}/*"
+    return IAMPolicyBuilder(principal={"AWS": account_id}, action="s3:GetObject", resource=resource).policy
 
 def build_iam_policy(principal, bucket):
-    return {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Action": [
-                    "s3:GetObject"
-                ],
-                "Effect": "Allow",
-                "Resource": ["arn:aws:s3:::{bucket}/{principal}/*".format(bucket=bucket, principal=principal)]
-            }
-        ]
-    }
-
-def qualified_name(principal):
-    return ARN(principal.arn).resource
+    resource = "arn:aws:s3:::{bucket}/{principal}/*".format(bucket=bucket, principal=principal)
+    return IAMPolicyBuilder(action="s3:GetObject", resource=resource).policy
 
 def secrets(args):
     iam = boto3.resource("iam")
     s3 = boto3.resource("s3")
     account_id = ARN(iam.CurrentUser().user.arn).account_id
-    if args.bucket_name is None:
-        args.bucket_name = "credentials-{}".format(account_id)
-    bucket = s3.Bucket(args.bucket_name)
+    bucket_name = "credentials-{}".format(account_id)
+    bucket = s3.Bucket(bucket_name)
     bucket.create()
     policy = bucket.Policy()
     policy.put(Policy=json.dumps(build_s3_bucket_policy(account_id, bucket.name)))
@@ -136,13 +98,19 @@ def secrets(args):
         principal.attach_policy(PolicyArn=policy.arn)
     for user_name in args.iam_users:
         principals.append(iam.User(user_name))
-    if args.action == "list":
-        for object_summary in bucket.objects.all():
-            print(object_summary)
+    if len(principals) == 0 and args.action != "ls":
+        raise AegeaException('Please supply one or more principals with "--instance-profiles" or "--iam-{roles,users,groups}".')
+    if len(args.secrets) == 0 and args.action != "ls":
+        raise AegeaException('Please supply one or more secrets and pass their value(s) via environment variable or on stdin.')
+    if args.action == "ls":
+        page_output(tabulate(bucket.objects.all(), args, cell_transforms={"owner": lambda x: x.get("DisplayName") if x else None}))
     elif args.action == "put":
         for principal in principals:
-            for secret in args.secrets:
-                secret_name, secret_value = secret.split("=", 1)
+            for secret_name in args.secrets:
+                if secret_name in os.environ:
+                    secret_value = os.environ[secret_name]
+                else:
+                    secret_value = sys.stdin.read()
                 bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name)).put(Body=secret_value.encode(), ServerSideEncryption='AES256')
     elif args.action == "delete":
         for principal in principals:
@@ -150,13 +118,10 @@ def secrets(args):
                 bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name)).delete()
 
 parser = register_parser(secrets, help='Manage credentials (secrets)', description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument('action', choices=["list", "put", "delete"])
-parser.add_argument('secrets', nargs='*', help='For put, list secrets as name=value assignments, e.g. "aegea secrets put password=foo". For delete, list just the secret names.')
-parser.add_argument('--bucket-name')
+parser.add_argument('action', choices=["ls", "put", "delete"])
+parser.add_argument('secrets', nargs='*', help=fill('List the secret names. For put, supply the secret value on stdin (and supply only one secret), or pass multiple secret values via environment variables with the same name as the secret.'))
 parser.add_argument('--instance-profiles', nargs='+', default=[])
 parser.add_argument('--iam-roles', nargs='+', default=[])
 parser.add_argument('--iam-groups', nargs='+', default=[])
-parser.add_argument('--iam-users', nargs='+', default=[])
-#instance_profile_arn = ARN(role["InstanceProfileArn"])
-#path = os.path.join(instance_profile_arn.resource, args.secret_name)
-#print(s3.Bucket(args.bucket_name).Object(path).get())
+parser.add_argument('--iam-users', nargs='+', default=[], help=fill("Name(s) of IAM instance profiles, roles, groups, or users who will be granted access to the secret"))
+parser.add_argument("--columns", nargs="+", default=["bucket_name", "key", "owner", "size", "last_modified", "storage_class"])
