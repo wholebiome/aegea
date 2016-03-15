@@ -97,6 +97,7 @@ def secrets(args):
                                        PolicyDocument=json.dumps(build_iam_policy(ARN(principal.arn).resource, bucket.name)))
         principal.attach_policy(PolicyArn=policy.arn)
     for user_name in args.iam_users:
+        # Users are subject to the /user/${aws:userid} parametric bucket policy, so don't get policies attached to them
         principals.append(iam.User(user_name))
     if len(principals) == 0 and args.action != "ls":
         raise AegeaException('Please supply one or more principals with "--instance-profiles" or "--iam-{roles,users,groups}".')

@@ -6,7 +6,7 @@ from io import open
 
 import os, sys, argparse, logging, socket, time, json, ipaddress, subprocess, zipfile, io, uuid, pkgutil, importlib
 logging.basicConfig(level=logging.INFO)
-
+logging.getLogger("botocore.vendored.requests").setLevel(logging.ERROR)
 import argcomplete
 
 import aegea
