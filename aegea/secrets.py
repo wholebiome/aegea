@@ -28,6 +28,12 @@ For more information about credential storage best practices, see
 http://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html
 and https://www.vaultproject.io/.
 
+Examples:
+
+    aegea secrets put deploy.foo.bar --generate-ssh-key --iam-roles aegea.launch > deploy.foo.bar.pub
+
+    RAILGUN_PASSWORD=passw0rd aegea secrets put RAILGUN_PASSWORD --iam-groups space_marines
+
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -40,6 +46,8 @@ from . import register_parser
 from .util.aws import ARN
 from .util.printing import format_table, page_output, tabulate
 from .util.exceptions import AegeaException
+from .util.crypto import new_ssh_key, hostkey_line
+from .util.compat import StringIO
 
 class IAMPolicyBuilder:
     def __init__(self, **kwargs):
@@ -108,7 +116,13 @@ def secrets(args):
     elif args.action == "put":
         for principal in principals:
             for secret_name in args.secrets:
-                if secret_name in os.environ:
+                if args.generate_ssh_key:
+                    ssh_key = new_ssh_key()
+                    buf = StringIO()
+                    ssh_key.write_private_key(buf)
+                    secret_value = buf.getvalue()
+                    print(hostkey_line(hostnames=[], key=ssh_key).strip())
+                elif secret_name in os.environ:
                     secret_value = os.environ[secret_name]
                 else:
                     secret_value = sys.stdin.read()
@@ -120,9 +134,14 @@ def secrets(args):
 
 parser = register_parser(secrets, help='Manage credentials (secrets)', description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('action', choices=["ls", "put", "delete"])
-parser.add_argument('secrets', nargs='*', help=fill('List the secret names. For put, supply the secret value on stdin (and supply only one secret), or pass multiple secret values via environment variables with the same name as the secret.'))
+parser.add_argument('secrets', nargs='*',
+                    help=fill('List the secret names. For put, pass the secret value on stdin (and name only one secret), or pass multiple secret values via environment variables with the same name as the secret.'))
 parser.add_argument('--instance-profiles', nargs='+', default=[])
 parser.add_argument('--iam-roles', nargs='+', default=[])
 parser.add_argument('--iam-groups', nargs='+', default=[])
-parser.add_argument('--iam-users', nargs='+', default=[], help=fill("Name(s) of IAM instance profiles, roles, groups, or users who will be granted access to the secret"))
-parser.add_argument("--columns", nargs="+", default=["bucket_name", "key", "owner", "size", "last_modified", "storage_class"])
+parser.add_argument('--iam-users', nargs='+', default=[],
+                    help=fill("Name(s) of IAM instance profiles, roles, groups, or users who will be granted access to the secret"))
+parser.add_argument('--generate-ssh-key', action='store_true',
+                    help=fill("Generate a new SSH key pair and write the private key as the secret value; write the public key to stdout"))
+parser.add_argument("--columns", nargs="+",
+                    default=["bucket_name", "key", "owner", "size", "last_modified", "storage_class"])
