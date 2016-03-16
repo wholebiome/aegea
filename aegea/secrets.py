@@ -1,4 +1,5 @@
-"""Manage secrets (credentials) using an S3 bucket.
+"""
+Manage secrets (credentials) using an S3 bucket.
 
 Secrets are credentials (private SSH keys, API keys, passwords, etc.)  for use
 by services that run in your AWS account. This utility does not manage AWS
@@ -8,7 +9,7 @@ used as primary credentials to access any other credentials needed by your
 services.
 
 When you run ``aegea secrets`` with AWS admin credentials, it creates an S3
-bucket with the name ``credentials-<ACCOUNT-ID>``, where ACCOUNT-ID is the
+bucket with the name ``credentials-<ACCOUNT-ID>``, where <ACCOUNT-ID> is the
 numeric ID of your AWS account. It then sets access policies on the bucket and
 on your IAM users, groups, and roles to ensure that they have read-only access
 only to paths within that bucket. For example, an IAM user ``alice`` will only
