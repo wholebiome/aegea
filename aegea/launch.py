@@ -28,6 +28,7 @@ def get_startup_commands(args):
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
+    dns_zone = DNSZone(config.dns.private_zone)
     ensure_ssh_key(args.ssh_key_name)
     try:
         i = resolve_instance_id(args.hostname)
@@ -86,7 +87,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     instance.wait_until_running()
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
     add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name, SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:])
-    DNSZone(config.dns.private_zone).update(args.hostname, instance.private_dns_name)
+    dns_zone.update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
         instance = ec2.Instance(instance.id)
         time.sleep(1)

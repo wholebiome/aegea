@@ -21,7 +21,7 @@ az = get_metadata("placement/availability-zone")
 services_domain = get_metadata("services/domain")
 #subnet = get_metadata("network/interfaces/macs/{}/subnet-id".format(get_metadata("mac")))
 
-efs = boto3.session.Session(region_name=az[:-1]).client("efs")
+efs = boto3.Session(region_name=az[:-1]).client("efs")
 
 mountpoints = {}
 
