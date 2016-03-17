@@ -35,6 +35,10 @@ Examples:
 
     RAILGUN_PASSWORD=passw0rd aegea secrets put RAILGUN_PASSWORD --iam-groups space_marines
 
+    eval $(ssh-agent -s)
+    aegea-get-secret deploy.bitbucket.my-private-repo | ssh-add /dev/stdin
+    git clone git@bitbucket.org:my-org/my-private-repo.git
+
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
