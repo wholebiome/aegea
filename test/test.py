@@ -26,7 +26,7 @@ class TestAegea(unittest.TestCase):
                 args += ["--dry-run", "test"]
             elif subcommand == "rm":
                 args += [resolve_ami()]
-            elif subcommand == "rm":
+            elif subcommand == "secrets":
                 args += ["ls"]
             subprocess.check_call(["aegea", subcommand] + args)
 
