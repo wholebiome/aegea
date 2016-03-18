@@ -14,5 +14,10 @@ for importer, modname, is_pkg in pkgutil.iter_modules(aegea.__path__):
     importlib.import_module((aegea.__package__ or "aegea") + "." + modname)
 
 argcomplete.autocomplete(aegea.parser)
+
+if len(sys.argv) < 2:
+    aegea.parser.print_help()
+    aegea.parser.exit(1)
+
 args = aegea.parser.parse_args()
 args.entry_point(args)

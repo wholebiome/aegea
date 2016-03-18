@@ -17,6 +17,7 @@ class TestAegea(unittest.TestCase):
         pass
 
     def test_basic_aegea_commands(self):
+        subprocess.check_call(["aegea"])
         subprocess.check_call(["aegea", "--help"])
         for subcommand in aegea.parser._actions[-1].choices:
             args = []
