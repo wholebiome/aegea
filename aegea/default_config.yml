@@ -17,14 +17,17 @@ build_ami:
     - libssl-dev
     - libxml2-dev
     - libxslt1-dev
+    - libyaml-dev
     - htop
     - pydf
     - jq
     - httpie
     - python-pip
     - python-setuptools
+    - python-virtualenv
     - python3-pip
     - python3-setuptools
+    - python3-virtualenv
     - nfs-common
     - fail2ban
     - awscli
@@ -35,6 +38,7 @@ build_ami:
     - cgmanager-utils
     - unzip
     - nmap
+    - build-essential
     - cmake
   commands:
     - "sed -i -e '/disk_setup/ d' /etc/cloud/cloud.cfg"
