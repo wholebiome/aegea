@@ -22,7 +22,7 @@ def ls(args):
         return instance
     instances = [add_name(i) for i in ec2.instances.all()]
     args.columns = ["name"] + args.columns
-    page_output(tabulate(instances, args, cell_transforms={"state": lambda x: x["Name"]}))
+    page_output(tabulate(instances, args, cell_transforms={"state": lambda x: x["Name"], "iam_instance_profile": lambda x: x.get("Arn", "").split("/")[-1] if x else None}))
 
 parser = register_parser(ls, help='List EC2 instances')
 parser.add_argument("--columns", nargs="+", default=["id", "state", "instance_type", "launch_time", "public_dns_name", "image_id", "tags", "iam_instance_profile"])
