@@ -28,7 +28,8 @@ def get_startup_commands(args):
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
-    dns_zone = DNSZone(config.dns.private_zone)
+    if not args.no_dns:
+        dns_zone = DNSZone(config.dns.private_zone)
     ensure_ssh_key(args.ssh_key_name)
     try:
         i = resolve_instance_id(args.hostname)
@@ -86,8 +87,10 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         exit()
     instance.wait_until_running()
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
-    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name, SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:])
-    dns_zone.update(args.hostname, instance.private_dns_name)
+    tags = dict([tag.split("=", 1) for tag in args.tags])
+    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name, SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:], **tags)
+    if not args.no_dns:
+        dns_zone.update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
         instance = ec2.Instance(instance.id)
         time.sleep(1)
@@ -103,10 +106,12 @@ parser.add_argument('--instance-type', '-t', default="t2.micro")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument('--ami')
 parser.add_argument('--spot', action='store_true')
+parser.add_argument('--no-dns', action='store_true')
 parser.add_argument('--spot-bid', type=float, default=1.0)
 parser.add_argument('--subnet')
 parser.add_argument('--availability-zone', '-z')
 parser.add_argument('--security-groups', nargs="+")
+parser.add_argument('--tags', nargs="+", default=[])
 parser.add_argument('--wait-for-ssh', action='store_true')
 parser.add_argument('--iam-role', default=__name__)
 parser.add_argument('--iam-policies', nargs="+", default=["IAMReadOnlyAccess", "AmazonElasticFileSystemFullAccess"],
