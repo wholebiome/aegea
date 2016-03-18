@@ -31,7 +31,7 @@ def reboot(args):
     ec2.meta.client.reboot_instances(InstanceIds=ids)
 
 def terminate(args):
-    dns_zone = DNSZone(config.dns.private_zone)
+    dns_zone = DNSZone(config.dns.get("private_zone"))
     ec2, ids, names = resolve_instance_ids(args.names)
     ec2.meta.client.terminate_instances(InstanceIds=ids)
     for name in names:

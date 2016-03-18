@@ -1,6 +1,3 @@
-dns:
-  private_zone: xb
-
 build_ami:
   base: auto
   rootfs_skel: auto
@@ -52,3 +49,10 @@ build_ami:
     - "apt-get clean"
     - "apt-get install --yes docker.io || true"
     - "activate-global-python-argcomplete"
+
+# Name your Route 53 private DNS zone here. If you leave the value as
+# null, Aegea will enumerate the private DNS zones in your account,
+# and if only one exists, select and use that one. Otherwise, Aegea
+# will raise an error.
+dns:
+  private_zone: null

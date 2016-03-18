@@ -23,13 +23,13 @@ def get_startup_commands(args):
         "blockdev --setra 16384 /dev/md0",
         "mkfs.btrfs --force /dev/md0",
         "mount /dev/md0 /mnt"
-    ]
+    ] + args.commands
 
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
     if not args.no_dns:
-        dns_zone = DNSZone(config.dns.private_zone)
+        dns_zone = DNSZone(config.dns.get("private_zone"))
     ensure_ssh_key(args.ssh_key_name)
     try:
         i = resolve_instance_id(args.hostname)
@@ -58,7 +58,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                        BlockDeviceMappings=get_bdm(),
                        UserData=get_user_data(host_key=ssh_host_key,
                                               commands=user_data_commands or get_startup_commands(args),
-                                              packages=user_data_packages,
+                                              packages=user_data_packages or args.packages,
                                               files=user_data_files))
     if args.iam_role:
         instance_profile = ensure_instance_profile(args.iam_role, policies=args.iam_policies)
@@ -102,6 +102,8 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
 
 parser = register_parser(launch, help='Launch a new EC2 instance')
 parser.add_argument('hostname')
+parser.add_argument('--commands', nargs="+", default=[])
+parser.add_argument('--packages', nargs="+", default=[])
 parser.add_argument('--instance-type', '-t', default="t2.micro")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument('--ami')

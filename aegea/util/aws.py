@@ -111,18 +111,30 @@ def ensure_security_group(name, vpc):
     return security_group
 
 class DNSZone:
-    def __init__(self, zone_name):
+    def __init__(self, zone_name=None, use_unique_private_zone=True):
         self.route53 = boto3.client("route53")
-        self.zone_name = zone_name
-        self.zone = self.route53.list_hosted_zones_by_name(DNSName=zone_name)["HostedZones"][0]
+        if zone_name:
+            self.zone = self.route53.list_hosted_zones_by_name(DNSName=zone_name)["HostedZones"][0]
+            assert self.zone["Name"] == zone_name + "."
+        elif use_unique_private_zone:
+            private_zones = []
+            for page in self.route53.get_paginator('list_hosted_zones').paginate():
+                for zone in page["HostedZones"]:
+                    if zone.get("Config", {}).get("PrivateZone") is True:
+                        private_zones.append(zone)
+            if len(private_zones) == 1:
+                self.zone = zone
+            else:
+                raise AegeaException("Found {} private DNS zones; unable to determine zone to use".format(len(private_zones)))
+        else:
+            raise AegeaException("Unable to determine DNS zone to use")
         self.zone_id = os.path.basename(self.zone["Id"])
-        assert self.zone["Name"] == zone_name + "."
 
     def update(self, name, value, action="UPSERT", record_type="CNAME", ttl=60):
         if not isinstance(value, list):
             value = [{"Value": value}]
         dns_update = dict(Action=action,
-                          ResourceRecordSet=dict(Name=name + "." + self.zone_name + ".",
+                          ResourceRecordSet=dict(Name=name + "." + self.zone["Name"],
                                                  Type=record_type,
                                                  TTL=ttl,
                                                  ResourceRecords=value))
@@ -132,14 +144,14 @@ class DNSZone:
     def delete(self, name, value=None, record_type="CNAME", missing_ok=True):
         if value is None:
             res = self.route53.list_resource_record_sets(HostedZoneId=self.zone_id,
-                                                         StartRecordName=name + "." + self.zone_name + ".",
+                                                         StartRecordName=name + "." + self.zone["Name"],
                                                          StartRecordType=record_type)
             for rrs in res["ResourceRecordSets"]:
-                if rrs["Name"] == name + "." + self.zone_name + "." and rrs["Type"] == record_type:
+                if rrs["Name"] == name + "." + self.zone["Name"] and rrs["Type"] == record_type:
                     value = rrs["ResourceRecords"]
                     break
             else:
-                msg = "Could not find {t} record {n} in Route53 zone {z}".format(t=record_type, n=name, z=self.zone_name)
+                msg = "Could not find {t} record {n} in Route53 zone {z}".format(t=record_type, n=name, z=self.zone["Name"])
                 if missing_ok:
                     warn(msg)
                     return
