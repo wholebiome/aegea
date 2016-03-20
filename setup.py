@@ -17,7 +17,7 @@ setup(
         'argcomplete >= 1.1.0',
         'paramiko >= 1.16.0',
         'requests >= 2.9.1',
-        'tweak >= 0.1.1',
+        'tweak >= 0.1.2',
         'keymaker >= 0.1.7',
         'pyyaml >= 3.11'
     ],
