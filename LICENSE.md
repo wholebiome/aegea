@@ -1,6 +1,8 @@
 Exascale Biosystems License, version 1.0, March 2016
+====================================================
 
 Aegea - Terms and conditions
+----------------------------
 
 Aegea is Copyright (c) 2016 Exascale Biosystems, Inc. All rights reserved.
 
