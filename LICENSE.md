@@ -34,7 +34,7 @@ use the Software.
    Software and Licensee’s end-equipment, computers, other software or any 3rd
    party, end-equipment, computer or services.  Moreover, Licensor shall never
    be liable for any defect in source code written by Licensee when relying on
-   The Software or using The Software’s source code.
+   the Software or using the Software’s source code.
 
 4. Submission of Contributions. Unless Licensee explicitly states otherwise, any
    Contribution intentionally submitted for inclusion in the Software by
