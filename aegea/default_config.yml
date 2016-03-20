@@ -1,3 +1,7 @@
+# This config file (aegea/default_config.yml) is written to each user's home directory under the path
+# ~/.config/aegea/config.yml if that path is not present. Run any aegea command to cause this to happen.
+# Once the file is written, you can modify it with your site or user-specific settings.
+
 build_ami:
   base: auto
   rootfs_skel: auto
