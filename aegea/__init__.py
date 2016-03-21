@@ -4,11 +4,13 @@ Amazon Web Services Operator Interface
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, logging, shutil
+import os, sys, argparse, logging, shutil, pkg_resources
 
 from tweak import Config
 
 from .util.printing import BOLD, RED, ENDC
+
+__version__ = pkg_resources.require(__name__)[0].version
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ if not os.path.exists(config._config_file):
     config = Config(__name__, use_yaml=True, save_on_exit=False)
 
 parser = argparse.ArgumentParser(description="{}: {}".format(BOLD() + RED() + __name__.capitalize() + ENDC(), __doc__))
+parser.add_argument("--version", action="version", version='%(prog)s {version}'.format(version=__version__))
 subparsers = parser.add_subparsers(title='commands')
 
 def register_parser(function, **kwargs):

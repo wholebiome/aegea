@@ -195,6 +195,9 @@ def ensure_instance_profile(iam_role_name, policies=frozenset()):
 def add_tags(resource, **tags):
     return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()])
 
+#def filter_by_tags(collection, **tags):
+#    return collection.filter(Filters=[dict(Name="tag:"+k, Values=[v]) for k, v in tags.items()])
+
 def resolve_instance_id(name):
     if name.startswith("i-"):
         return name
