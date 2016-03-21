@@ -53,11 +53,10 @@ def users(args):
     current_user = iam.CurrentUser()
     if "user_id" not in args.columns:
         args.columns.append("user_id")
-    data = filter_collection(iam.users, args)
-    table = [[">>>" if i.user_id == current_user.user_id else ""] + [get_cell(i, f) for f in args.columns] for i in data]
+    table = [[">>>" if i.user_id == current_user.user_id else ""] + [get_cell(i, f) for f in args.columns] for i in iam.users.all()]
     page_output(format_table(table, column_names=["cur"] + args.columns, max_col_width=args.max_col_width))
 
-parser = register_listing_parser(users, help='List IAM users')
+parser = register_parser(users, help='List IAM users')
 parser.add_argument("--columns", nargs="+", default=["name", "user_id", "create_date", "password_last_used", "groups"])
 
 def groups(args):

@@ -13,6 +13,7 @@ setup(
     description='Amazon Web Services Operator Interface',
     long_description=open('README.rst').read(),
     install_requires=[
+        'setuptools',
         'boto3 >= 1.3.0',
         'argcomplete >= 1.1.0',
         'paramiko >= 1.16.0',

@@ -4,13 +4,17 @@ Amazon Web Services Operator Interface
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, logging, shutil, pkg_resources
+import os, sys, argparse, logging, shutil
 
 from tweak import Config
 
 from .util.printing import BOLD, RED, ENDC
 
-__version__ = pkg_resources.require(__name__)[0].version
+try:
+    import pkg_resources
+    __version__ = pkg_resources.require(__name__)[0].version
+except Exception:
+    __version__ = "UNKNOWN_VERSION"
 
 logger = logging.getLogger(__name__)
 
