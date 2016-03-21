@@ -60,15 +60,15 @@ parser = register_parser(users, help='List IAM users')
 parser.add_argument("--columns", nargs="+", default=["name", "user_id", "create_date", "password_last_used", "groups"])
 
 def groups(args):
-    page_output(filter_and_tabulate(boto3.resource("iam").groups, args))
+    page_output(tabulate(boto3.resource("iam").groups.all(), args))
 
-parser = register_listing_parser(groups, help='List IAM groups')
+parser = register_parser(groups, help='List IAM groups')
 parser.add_argument("--columns", nargs="+", default=["name", "group_id", "create_date", "users"])
 
 def roles(args):
-    page_output(filter_and_tabulate(boto3.resource("iam").roles, args))
+    page_output(tabulate(boto3.resource("iam").roles.all(), args))
 
-parser = register_listing_parser(roles, help='List IAM roles')
+parser = register_parser(roles, help='List IAM roles')
 parser.add_argument("--columns", nargs="+", default=["name", "role_id", "create_date", "instance_profiles"])
 
 def volumes(args):
