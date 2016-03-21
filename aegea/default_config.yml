@@ -19,6 +19,7 @@ build_ami:
     - libxml2-dev
     - libxslt1-dev
     - libyaml-dev
+    - libcurl4-openssl-dev
     - htop
     - pydf
     - jq
