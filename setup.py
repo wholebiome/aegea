@@ -5,9 +5,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='aegea',
-    version='0.2.1',
+    version='0.2.2',
     url='https://github.com/kislyuk/aegea',
-    license='Proprietary',
+    license=open('LICENSE.md').readline().strip(),
     author='Andrey Kislyuk',
     author_email='kislyuk@gmail.com',
     description='Amazon Web Services Operator Interface',
