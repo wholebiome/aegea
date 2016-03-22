@@ -17,12 +17,7 @@ def get_startup_commands(args):
     return [
         "hostnamectl set-hostname {}.{}".format(args.hostname, config.dns.private_zone),
         "service awslogs restart",
-        "sed -i '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers",
-        "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource",
-        "bash -c 'devices=(/dev/xvd[b-m]); yes|mdadm --create --force --verbose /dev/md0 --level=0 --raid-devices=${#devices[@]} ${devices[@]}'",
-        "blockdev --setra 16384 /dev/md0",
-        "mkfs.btrfs --force /dev/md0",
-        "mount /dev/md0 /mnt"
+        "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource"
     ] + args.commands
 
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):

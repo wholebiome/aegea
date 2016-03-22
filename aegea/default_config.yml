@@ -43,7 +43,9 @@ build_ami:
     - build-essential
     - cmake
   commands:
-    - "sed -i -e '/disk_setup/ d' /etc/cloud/cloud.cfg"
+    - "sed -i -e '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers"
+    - "sed -i -e '/disk_setup/ d' -e '/mounts/ d' /etc/cloud/cloud.cfg"
+    - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "apt-get remove --yes popularity-contest postfix apport"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
     - "update-grub"

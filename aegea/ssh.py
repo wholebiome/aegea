@@ -9,7 +9,7 @@ def ssh(args):
     ec2 = boto3.resource("ec2")
     prefix, at, name = args.name.rpartition("@")
     instance = ec2.Instance(resolve_instance_id(name))
-    tags = {tag["Key"]: tag["Value"] for tag in instance.tags}
+    tags = {tag["Key"]: tag["Value"] for tag in instance.tags or []}
     ssh_host_key = tags.get("SSHHostPublicKeyPart1", "") + tags.get("SSHHostPublicKeyPart2", "")
     if ssh_host_key:
         # FIXME: this results in duplicates. Use paramiko to detect if the key is already listed and not insert it then (or only insert if different)
