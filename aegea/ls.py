@@ -71,6 +71,13 @@ def roles(args):
 parser = register_parser(roles, help='List IAM roles')
 parser.add_argument("--columns", nargs="+", default=["name", "role_id", "create_date", "instance_profiles"])
 
+def policies(args):
+    page_output(tabulate(boto3.resource("iam").policies.all(), args))
+
+parser = register_parser(policies, help='List IAM policies')
+parser.add_argument("--columns", nargs="+", default=["policy_name", "arn", "description", "create_date", "update_date", "attachment_count"])
+parser.add_argument("--sort-by", default="attachment_count")
+
 def volumes(args):
     ec2 = boto3.resource("ec2")
     table = [[get_cell(i, f) for f in args.columns] for i in filter_collection(ec2.volumes, args)]
