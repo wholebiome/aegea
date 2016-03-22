@@ -48,32 +48,11 @@ from textwrap import fill
 import boto3
 
 from . import register_parser
-from .util.aws import ARN
+from .util.aws import ARN, IAMPolicyBuilder
 from .util.printing import format_table, page_output, tabulate
 from .util.exceptions import AegeaException
 from .util.crypto import new_ssh_key, hostkey_line
 from .util.compat import StringIO
-
-class IAMPolicyBuilder:
-    def __init__(self, **kwargs):
-        self.policy = dict(Version="2012-10-17", Statement=[])
-        self.add_statement(**kwargs)
-
-    def add_statement(self, principal=None, action=None, effect="Allow", resource=None):
-        statement = dict(Action=[], Effect=effect, Resource=[])
-        if principal:
-            statement["Principal"] = principal
-        self.policy["Statement"].append(statement)
-        if action:
-            self.add_action(action)
-        if resource:
-            self.add_resource(resource)
-
-    def add_action(self, action):
-        self.policy["Statement"][-1]["Action"].append(action)
-
-    def add_resource(self, resource):
-        self.policy["Statement"][-1]["Resource"].append(resource)
 
 def build_s3_bucket_policy(account_id, bucket):
     resource = "arn:aws:s3:::" + bucket + "/user/${aws:userid}/*"

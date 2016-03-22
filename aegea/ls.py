@@ -196,6 +196,12 @@ def sirs(args):
 parser = register_parser(sirs, help='List EC2 spot instance requests')
 parser.add_argument("--columns", nargs="+", default=["SpotInstanceRequestId", "CreateTime", "SpotPrice", "LaunchSpecification.InstanceType", "State", "Status.Message", "InstanceId"])
 
+def sfrs(args):
+    page_output(tabulate(boto3.client('ec2').describe_spot_fleet_requests()['SpotFleetRequestConfigs'], args))
+
+parser = register_parser(sfrs, help='List EC2 spot fleet requests')
+parser.add_argument("--columns", nargs="+", default=["SpotFleetRequestId", "SpotFleetRequestState", "SpotFleetRequestConfig.TargetCapacity"])
+
 def key_pairs(args):
     page_output(tabulate(boto3.resource("ec2").key_pairs.all(), args))
 

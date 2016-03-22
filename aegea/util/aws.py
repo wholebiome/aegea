@@ -13,19 +13,11 @@ from .. import logger
 from .crypto import get_public_key_from_pair
 from .compat import StringIO
 
-def get_assume_role_policy_doc(service="lambda"):
-    return json.dumps({
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Principal": {
-                    "Service": "{}.amazonaws.com".format(service)
-                },
-                "Action": "sts:AssumeRole"
-            }
-        ]
-    })
+def get_assume_role_policy_doc(*services):
+    p = IAMPolicyBuilder()
+    for service in services:
+        p.add_statement(principal={"Service": service + ".amazonaws.com"}, action="sts:AssumeRole")
+    return json.dumps(p.policy)
 
 def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", region="us-east-1", root_store="ebs", virt="hvm"):
     partition = "aws"
@@ -167,16 +159,40 @@ class ARN:
     def __str__(self):
         return ":".join(getattr(self, field) for field in self.fields)
 
-def ensure_iam_role(iam_role_name, policies=frozenset()):
+class IAMPolicyBuilder:
+    def __init__(self, **kwargs):
+        self.policy = dict(Version="2012-10-17", Statement=[])
+        if kwargs:
+            self.add_statement(**kwargs)
+
+    def add_statement(self, principal=None, action=None, effect="Allow", resource=None):
+        statement = dict(Action=[], Effect=effect)
+        if principal:
+            statement["Principal"] = principal
+        self.policy["Statement"].append(statement)
+        if action:
+            self.add_action(action)
+        if resource:
+            self.add_resource(resource)
+
+    def add_action(self, action):
+        self.policy["Statement"][-1]["Action"].append(action)
+
+    def add_resource(self, resource):
+        self.policy["Statement"][-1].setdefault("Resource", [])
+        self.policy["Statement"][-1]["Resource"].append(resource)
+
+def ensure_iam_role(iam_role_name, policies=frozenset(), trusted_services=frozenset("ec2")):
     iam = boto3.resource("iam")
     for role in iam.roles.all():
         if role.name == iam_role_name:
             break
     else:
-        role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc("ec2"))
+        role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc(*trusted_services))
     for policy in policies:
         # TODO: enumerate policies to avoid requiring IAM write access
         role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
+    # TODO: accommodate IAM eventual consistency (role waiter)
     return role
 
 def ensure_instance_profile(iam_role_name, policies=frozenset()):
