@@ -161,8 +161,8 @@ class DNSZone:
 
 class ARN:
     fields = "arn partition service region account_id resource".split()
-    def __init__(self, arn):
-        self.__dict__.update(dict(zip(self.fields, arn.split(":", 5))))
+    def __init__(self, arn="arn:aws::::", **kwargs):
+        self.__dict__.update(dict(zip(self.fields, arn.split(":", 5)), **kwargs))
 
     def __str__(self):
         return ":".join(getattr(self, field) for field in self.fields)
