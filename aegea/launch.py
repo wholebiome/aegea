@@ -25,6 +25,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     iam = boto3.resource("iam")
     if not args.no_dns:
         dns_zone = DNSZone(config.dns.get("private_zone"))
+        config.dns.private_zone = dns_zone.zone["Name"]
     ensure_ssh_key(args.ssh_key_name)
     try:
         i = resolve_instance_id(args.hostname)
