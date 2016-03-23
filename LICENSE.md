@@ -27,16 +27,7 @@ use the Software.
 2. No redistribution. Licensee may not redistribute, publicly display, or
    sublicense the Software without express agreement from the Licensor.
 
-3. To the extent permitted under Law, the Software is provided under an AS-IS
-   basis. Licensor shall never, and without any limit, be liable for any damage,
-   cost, expense or any other payment incurred by Licensee as a result of
-   Software’s actions, failure, bugs and/or any other interaction between The
-   Software and Licensee’s end-equipment, computers, other software or any 3rd
-   party, end-equipment, computer or services.  Moreover, Licensor shall never
-   be liable for any defect in source code written by Licensee when relying on
-   the Software or using the Software’s source code.
-
-4. Submission of Contributions. Unless Licensee explicitly states otherwise, any
+3. Submission of Contributions. Unless Licensee explicitly states otherwise, any
    Contribution intentionally submitted for inclusion in the Software by
    Licensee to the Licensor shall be under the terms and conditions of this
    License, without any additional terms or conditions.  Notwithstanding the
@@ -44,7 +35,7 @@ use the Software.
    license agreement Licensee may have executed with Licensor regarding such
    Contributions.
 
-5. Disclaimer of Warranty. Unless required by applicable law or agreed to in
+4. Disclaimer of Warranty. Unless required by applicable law or agreed to in
    writing, Licensor provides the Software on an "AS IS" BASIS, WITHOUT
    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including,
    without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT,
@@ -53,7 +44,7 @@ use the Software.
    the Software and assume any risks associated with Licensor's exercise of
    permissions under this License.
 
-6. Limitation of Liability. In no event and under no legal theory, whether in
+5. Limitation of Liability. In no event and under no legal theory, whether in
    tort (including negligence), contract, or otherwise, unless required by
    applicable law (such as deliberate and grossly negligent acts) or agreed to
    in writing, shall Licensor be liable to Licensee for damages, including any
