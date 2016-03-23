@@ -154,6 +154,7 @@ def logs(args):
     table = []
     group_cols = ["logGroupName"]
     stream_cols = ["logStreamName", "lastIngestionTime", "storedBytes"]
+    cols = group_cols + stream_cols
     for page in logs.get_paginator('describe_log_groups').paginate():
         for group in page["logGroups"]:
             if args.log_group and group["logGroupName"] != args.log_group:
@@ -163,11 +164,13 @@ def logs(args):
                     if "lastIngestionTime" in stream:
                         stream["lastIngestionTime"] = datetime.utcnow() - datetime.utcfromtimestamp(stream["lastIngestionTime"]/1000)
                     table.append([get_field(group, f) for f in group_cols] + [get_field(stream, f) for f in stream_cols])
-    page_output(format_table(table, column_names=group_cols + stream_cols, max_col_width=args.max_col_width))
+    table = sorted(table, key=lambda x: x[cols.index(args.sort_by)], reverse=True)
+    page_output(format_table(table, column_names=cols, max_col_width=args.max_col_width))
 
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
 parser.add_argument("--log-group")
 parser.add_argument("log_streams", nargs="*")
+parser.add_argument("--sort-by", default="lastIngestionTime")
 
 def clusters(args):
     ecs = boto3.client('ecs')
