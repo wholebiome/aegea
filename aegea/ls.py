@@ -200,7 +200,7 @@ def sfrs(args):
     page_output(tabulate(boto3.client('ec2').describe_spot_fleet_requests()['SpotFleetRequestConfigs'], args))
 
 parser = register_parser(sfrs, help='List EC2 spot fleet requests')
-parser.add_argument("--columns", nargs="+", default=["SpotFleetRequestId", "SpotFleetRequestState", "SpotFleetRequestConfig.TargetCapacity"])
+parser.add_argument("--columns", nargs="+", default=["SpotFleetRequestId", "SpotFleetRequestState", "SpotFleetRequestConfig.TargetCapacity", "SpotFleetRequestConfig.ExcessCapacityTerminationPolicy", "SpotFleetRequestConfig.AllocationStrategy"])
 
 def key_pairs(args):
     page_output(tabulate(boto3.resource("ec2").key_pairs.all(), args))

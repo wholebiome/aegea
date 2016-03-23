@@ -21,6 +21,8 @@ def rm(args):
                     boto3.resource("ec2").Snapshot(snapshot_id).delete(DryRun=not args.force)
             elif name.startswith("sir-"):
                 boto3.client("ec2").cancel_spot_instance_requests(SpotInstanceRequestIds=[name], DryRun=not args.force)
+            elif name.startswith("sfr-"):
+                boto3.client("ec2").cancel_spot_fleet_requests(SpotFleetRequestIds=[name], TerminateInstances=False, DryRun=not args.force)
             elif name.startswith("AKIA") and len(name) == 20 and name.upper() == name:
                 boto3.client("iam").delete_access_key(AccessKeyId=name) if args.force else True
             elif name.startswith("AROA") and len(name) == 21 and name.upper() == name:

@@ -46,16 +46,17 @@ build_ami:
     - "sed -i -e '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers"
     - "sed -i -e '/disk_setup/ d' -e '/mounts/ d' /etc/cloud/cloud.cfg"
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
-    - "apt-get remove --yes popularity-contest postfix apport"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
     - "update-grub"
     - "grub-install /dev/xvda"
     - "pip install awscli-cwlogs"
     - "pip3 install keymaker"
     - "keymaker install"
-    - "apt-get clean"
-    - "apt-get install --yes docker.io || true"
     - "activate-global-python-argcomplete"
+    - "dpkg-reconfigure debconf -f noninteractive -p critical"
+    - "apt-get install --yes docker.io || true"
+    - "apt-get remove --yes popularity-contest postfix apport"
+    - "apt-get clean"
 
 # Name your Route 53 private DNS zone here. If you leave the value as
 # null, Aegea will enumerate the private DNS zones in your account,
