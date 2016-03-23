@@ -156,8 +156,8 @@ def logs(args):
     stream_cols = ["logStreamName", "lastIngestionTime", "storedBytes"]
     for page in logs.get_paginator('describe_log_groups').paginate():
         for group in page["logGroups"]:
-            #if args.log_groups and group["logGroupName"] not in args.log_groups:
-            #    continue
+            if args.log_group and group["logGroupName"] != args.log_group:
+                continue
             for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"]):
                 for stream in page2["logStreams"]:
                     if "lastIngestionTime" in stream:
@@ -166,6 +166,7 @@ def logs(args):
     page_output(format_table(table, column_names=group_cols + stream_cols, max_col_width=args.max_col_width))
 
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
+parser.add_argument("--log-group")
 parser.add_argument("log_streams", nargs="*")
 
 def clusters(args):
