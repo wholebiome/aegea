@@ -64,3 +64,171 @@ build_ami:
 # will raise an error.
 dns:
   private_zone: null
+
+ls:
+  sort_by: launch_time
+  columns:
+    - id
+    - state
+    - instance_type
+    - launch_time
+    - public_dns_name
+    - image_id
+    - tags
+    - iam_instance_profile
+
+users:
+  columns:
+    - name
+    - user_id
+    - create_date
+    - password_last_used
+    - groups
+
+groups:
+  columns:
+    - name
+    - group_id
+    - create_date
+    - users
+
+roles:
+  columns:
+    - name
+    - role_id
+    - create_date
+    - instance_profiles
+
+policies:
+  columns:
+    - policy_name
+    - arn
+    - description
+    - create_date
+    - update_date
+    - attachment_count
+  sort_by: attachment_count
+
+volumes:
+  columns:
+    - id
+    - size
+    - volume_type
+    - iops
+    - encrypted
+    - state
+    - create_time
+    - attachments
+    - availability_zone
+
+snapshots:
+  columns:
+    - id
+    - description
+    - volume
+    - volume_size
+    - state
+    - progress
+    - encrypted
+    - owner_id
+    - start_time
+    - tags
+
+buckets:
+  columns:
+    - name
+    - creation_date
+
+images:
+  columns:
+    - id
+    - name
+    - description
+    - creation_date
+    - public
+    - virtualization_type
+    - state
+    - tags
+  sort_by: creation_date
+
+security_groups:
+  columns:
+    - id
+    - group_name
+    - description
+    - ip_permissions
+    - ip_permissions_egress
+    - vpc_id
+
+clusters:
+  columns:
+    - clusterName
+    - clusterArn
+    - status
+    - registeredContainerInstancesCount
+    - runningTasksCount
+    - pendingTasksCount
+
+tasks:
+  columns:
+    - taskArn
+    - taskDefinitionArn
+    - clusterArn
+    - lastStatus
+    - desiredStatus
+    - createdAt
+    - overrides
+
+sirs:
+  columns:
+    - SpotInstanceRequestId
+    - CreateTime
+    - SpotPrice
+    - LaunchSpecification.InstanceType
+    - State
+    - Status.Message
+    - InstanceId
+
+sfrs:
+  columns:
+    - SpotFleetRequestId
+    - SpotFleetRequestState
+    - SpotFleetRequestConfig.TargetCapacity
+    - SpotFleetRequestConfig.ExcessCapacityTerminationPolicy
+    - SpotFleetRequestConfig.AllocationStrategy
+
+subnets:
+  columns:
+    - id
+    - vpc_id
+    - availability_zone
+    - cidr_block
+    - default_for_az
+    - map_public_ip_on_launch
+    - state
+    - tags
+
+tables:
+  columns:
+    - name
+    - key_schema
+    - attribute_definitions
+    - item_count
+    - provisioned_throughput
+    - creation_date_time
+    - table_size_bytes
+    - table_status
+
+filesystems:
+  columns:
+    - Name
+    - FileSystemId
+    - SizeInBytes
+    - CreationTime
+    - LifeCycleState
+  mount_target_columns:
+    - MountTargetId
+    - SubnetId
+    - IpAddress
+    - NetworkInterfaceId
+    - tags

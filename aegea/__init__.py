@@ -33,4 +33,5 @@ def register_parser(function, **kwargs):
     parser = subparsers.add_parser(function.__name__, **kwargs)
     parser.add_argument("--max-col-width", "-w", type=int, default=32)
     parser.set_defaults(entry_point=function)
+    parser.set_defaults(**config.get(function.__name__, {}))
     return parser
