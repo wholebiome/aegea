@@ -272,12 +272,12 @@ def get_pricing_data(offer, max_cache_age_days=30):
         with gzip.open(offer_filename) as fh:
             pricing_data = json.loads(fh.read().decode("utf-8"))
     except Exception as e:
-        logger.info("Fetching pricing data. This may take a few moments.")
+        logger.info("Fetching pricing data for %s. This may take time.", offer)
         url = offers_api + "/aws/{offer}/current/index.json".format(offer=offer)
         pricing_data = requests.get(url).json()
         try:
             with gzip.open(offer_filename, "w") as fh:
-                json.dump(pricing_data, fh)
+                fh.write(json.dumps(pricing_data).encode("utf-8"))
         except Exception as e:
             print(e, file=sys.stderr)
     return pricing_data
