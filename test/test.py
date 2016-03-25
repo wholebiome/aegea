@@ -29,6 +29,8 @@ class TestAegea(unittest.TestCase):
                 args += [resolve_ami()]
             elif subcommand == "secrets":
                 args += ["ls"]
+            elif subcommand == "pricing":
+                args += ["AmazonEC2"]
             subprocess.check_call(["aegea", subcommand] + args)
 
 if __name__ == '__main__':
