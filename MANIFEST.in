@@ -1,3 +1,4 @@
 include LICENSE.md
 include aegea/*.yml
+include aegea/*.json
 recursive-include aegea/rootfs.skel *
