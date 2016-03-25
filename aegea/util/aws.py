@@ -1,15 +1,17 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, json, io
+import os, sys, json, io, gzip, time
 import requests
 from collections import OrderedDict
 from warnings import warn
+from datetime import datetime, timedelta
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.utils import parse_to_aware_datetime
 
 from .exceptions import AegeaException
-from .. import logger
+from .. import logger, config
 from .crypto import get_public_key_from_pair
 from .compat import StringIO
 
@@ -245,3 +247,50 @@ def resolve_ami(ami=None):
         amis = sorted(ec2.images.filter(**filters), key=lambda x: x.creation_date)
         ami = amis[-1].id
     return ami
+
+offers_api = "https://pricing.us-east-1.amazonaws.com/offers/v1.0"
+region_ids = {
+    "US East (N. Virginia)": "us-east-1",
+    "US West (N. California)": "us-west-1",
+    "US West (Oregon)": "us-west-2",
+    "EU (Ireland)": "eu-west-1",
+    "EU (Frankfurt)": "eu-central-1",
+    "Asia Pacific (Tokyo)": "ap-northeast-1",
+    "Asia Pacific (Seoul)": "ap-northeast-2",
+    "Asia Pacific (Singapore)": "ap-southeast-1",
+    "Asia Pacific (Sydney)": "ap-southeast-2",
+    "South America (Sao Paulo)": "sa-east-1",
+    "AWS GovCloud (US)": "us-gov-west-1",
+}
+region_names = {v: k for k, v in region_ids.items()}
+
+def get_pricing_data(offer, max_cache_age_days=30):
+    offer_filename = os.path.join(config._config_dir, offer + "_pricing_cache.json.gz")
+    try:
+        if datetime.fromtimestamp(os.path.getmtime(offer_filename)) < datetime.now() - timedelta(days=max_cache_age_days):
+            raise Exception("Cache is too old, discard")
+        with gzip.open(offer_filename) as fh:
+            pricing_data = json.loads(fh.read().decode("utf-8"))
+    except Exception as e:
+        logger.info("Fetching pricing data. This may take a few moments.")
+        url = offers_api + "/aws/{offer}/current/index.json".format(offer=offer)
+        pricing_data = requests.get(url).json()
+        try:
+            with gzip.open(offer_filename, "w") as fh:
+                json.dump(pricing_data, fh)
+        except Exception as e:
+            print(e, file=sys.stderr)
+    return pricing_data
+
+def get_ondemand_price_usd(region, instance_type):
+    pricing_data = get_pricing_data("AmazonEC2")
+    for product in pricing_data["products"].values():
+        required_attributes = dict(location=region_names[region],
+                                   tenancy="Shared",
+                                   operatingSystem="Linux",
+                                   instanceType=instance_type)
+        if not all(product["attributes"].get(i) == required_attributes[i] for i in required_attributes):
+            continue
+        ondemand_terms = list(pricing_data["terms"]["OnDemand"][product["sku"]].values())[0]
+        product.update(list(ondemand_terms["priceDimensions"].values())[0])
+        return product["pricePerUnit"]["USD"]

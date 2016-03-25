@@ -8,10 +8,14 @@ from . import register_parser, logger, config
 from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
-                       expect_error_codes, resolve_ami)
+                       expect_error_codes, resolve_ami, get_ondemand_price_usd)
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
+
+def get_spot_bid_price(ec2, instance_type, ondemand_multiplier=1.2):
+    ondemand_price = get_ondemand_price_usd(ec2.meta.client.meta.region_name, instance_type)
+    return ondemand_price * ondemand_multiplier
 
 def get_startup_commands(args):
     return [
@@ -65,6 +69,8 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
     try:
         if args.spot:
+            if args.spot_bid is None:
+                args.spot_bid = get_spot_bid_price(ec2, args.instance_type)
             launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
             logger.info("Bidding {} for a {} spot instance".format(args.spot_bid, args.instance_type))
             res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_bid),
@@ -104,8 +110,9 @@ parser.add_argument('--instance-type', '-t', default="t2.micro")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument('--ami')
 parser.add_argument('--spot', action='store_true')
+parser.add_argument('--spot-duration-hours', help='Terminate the spot instance after this many hours. When using this option, the instance is launched using the Spot Fleet API, which provisions, monitors, and shuts down the instance. Run "aegea sfrs" to see the status of the related spot fleet request.')
 parser.add_argument('--no-dns', action='store_true')
-parser.add_argument('--spot-bid', type=float, default=1.0)
+parser.add_argument('--spot-bid', type=float, help="Defaults to 1.2x the ondemand price")
 parser.add_argument('--subnet')
 parser.add_argument('--availability-zone', '-z')
 parser.add_argument('--security-groups', nargs="+")
