@@ -161,7 +161,7 @@ def logs(args):
                 continue
             for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"]):
                 for stream in page2["logStreams"]:
-                    stream["lastIngestionTime"] = datetime.utcnow() - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)/1000)
+                    stream["lastIngestionTime"] = datetime.utcnow().replace(microsecond=0) - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)//1000)
                     table.append([get_field(group, f) for f in group_cols] + [get_field(stream, f) for f in stream_cols])
     table = sorted(table, key=lambda x: x[cols.index(args.sort_by)], reverse=True)
     page_output(format_table(table, column_names=cols, max_col_width=args.max_col_width))
