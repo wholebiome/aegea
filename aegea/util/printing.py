@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, shutil, subprocess, re
+from datetime import datetime
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 
@@ -60,9 +61,9 @@ def strip_ansi_codes(i):
     return re.sub(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]", "", i)
 
 def format_table(table, column_names=None, column_specs=None, max_col_width=32, report_dimensions=False):
-    ''' Table pretty printer.
-    Expects tables to be given as arrays of arrays.
-    Example:
+    '''
+    Table pretty printer. Expects tables to be given as arrays of arrays::
+
         print(format_table([[1, "2"], [3, "456"]], column_names=['A', 'B']))
     '''
     if len(table) > 0:
@@ -176,6 +177,11 @@ def get_field(item, field):
 def get_cell(resource, field, transform=None):
     cell = get_field(resource, field)
     cell = transform(cell) if transform else cell
+    if isinstance(cell, datetime):
+        cell = cell.replace(microsecond=0)
+        if not USING_PYTHON2:
+            # Switch from UTC to local TZ
+            cell = cell.astimezone(tz=None)
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
 def format_tags(cell):
