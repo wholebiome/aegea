@@ -6,5 +6,7 @@ USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 
 if USING_PYTHON2:
     from StringIO import StringIO
+    from repr import Repr
 else:
     from io import StringIO
+    from reprlib import Repr

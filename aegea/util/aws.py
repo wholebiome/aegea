@@ -14,7 +14,7 @@ from .exceptions import AegeaException
 from .. import logger, config
 from .crypto import get_public_key_from_pair
 from .compat import StringIO
-from . import constants
+from . import constants, VerboseRepr
 
 def get_assume_role_policy_doc(*services):
     p = IAMPolicyBuilder()
@@ -292,34 +292,51 @@ def get_ondemand_price_usd(region, instance_type, **kwargs):
     for product in get_ec2_products(region=region, instance_type=instance_type, **kwargs):
         return product["pricePerUnit"]["USD"]
 
-class SpotFleetBuilder:
-    def __init__(self, cores, memory_gb, launch_spec, spot_price="1", duration_hours=None, dry_run=False):
+class SpotFleetBuilder(VerboseRepr):
+    def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0, spot_price=None, duration_hours=None, dry_run=False):
+        if spot_price is None:
+            spot_price = 1
         if "SecurityGroupIds" in launch_spec:
             launch_spec["SecurityGroups"] = [dict(GroupId=i) for i in launch_spec["SecurityGroupIds"]]
             del launch_spec["SecurityGroupIds"]
-        self.dry_run = dry_run
         self.launch_spec = launch_spec
+        self.cores = cores
+        self.min_cores_per_instance = min_cores_per_instance
+        if cores < min_cores_per_instance:
+            raise AegeaException("SpotFleetBuilder: cores cannot be less than min_cores_per_instance")
+        self.min_mem_per_core_gb = min_mem_per_core_gb
+        self.gpus_per_instance = gpus_per_instance
+        self.dry_run = dry_run
         self.iam_fleet_role = ensure_iam_role("SpotFleet",
                                               policies=["service-role/AmazonEC2SpotFleetRole"],
                                               trusted_services=["spotfleet"])
-        self.spot_fleet_request_config = dict(SpotPrice=spot_price,
+        self.spot_fleet_request_config = dict(SpotPrice=str(spot_price),
                                               TargetCapacity=cores,
-                                              IamFleetRole=self.iam_fleet_role.arn,
-                                              LaunchSpecifications=[{}])
+                                              IamFleetRole=self.iam_fleet_role.arn)
         if duration_hours:
             deadline = datetime.utcnow().replace(microsecond=0) + timedelta(hours=duration_hours)
             self.spot_fleet_request_config.update(ValidUntil=deadline,
                                                   TerminateInstancesWithExpiration=True)
 
-    def instance_types(self):
+    def instance_types(self, max_overprovision=3, restrict_to_families=None):
+        max_cores = self.cores * max_overprovision
+        max_mem_per_core = self.min_mem_per_core_gb * max_overprovision
+        max_gpus = self.gpus_per_instance * max_overprovision
         for instance_type, instance_data in constants.get("instance_types").items():
-            # FIXME
-            if not instance_type.startswith("c3"):
+            cores, gpus = int(instance_data["vcpu"]), int(instance_data["gpu"] or 0)
+            mem_per_core = float(instance_data["memory"].rstrip(" GiB")) / cores
+            if cores < self.min_cores_per_instance or cores > max_cores:
+                continue
+            if mem_per_core < self.min_mem_per_core_gb or mem_per_core > max_mem_per_core:
+                continue
+            if gpus < self.gpus_per_instance or gpus > max_gpus:
+                continue
+            if restrict_to_families and not any(instance_type.startswith(fam + ".") for fam in restrict_to_families):
                 continue
             yield instance_type, int(instance_data["vcpu"])
 
-    def launch_specs(self):
-        for instance_type, weighted_capacity in self.instance_types():
+    def launch_specs(self, **kwargs):
+        for instance_type, weighted_capacity in self.instance_types(**kwargs):
             yield dict(self.launch_spec,
                        InstanceType=instance_type,
                        WeightedCapacity=weighted_capacity)

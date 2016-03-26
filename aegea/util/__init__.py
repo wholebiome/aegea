@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys, re, socket, errno, time
 
 from .printing import GREEN
+from .compat import Repr
 
 def wait_for_port(host, port, timeout=600, print_progress=True):
     if print_progress:
@@ -31,3 +32,12 @@ def validate_hostname(hostname):
     allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
     if not all(allowed.match(x) for x in hostname.split(".")):
         raise Exception("Hostname {} is not RFC 1123 compliant".format(hostname))
+
+class VerboseRepr:
+    def __repr__(self):
+        return "<{module}.{classname} object at 0x{mem_loc:x}: {dict}>".format(
+            module=self.__module__,
+            classname=self.__class__.__name__,
+            mem_loc=id(self),
+            dict=Repr().repr(self.__dict__)
+        )

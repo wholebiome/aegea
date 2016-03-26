@@ -69,16 +69,15 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
     try:
         if args.spot or args.spot_bid or args.spot_duration_hours:
-            if args.spot_bid is None:
-                args.spot_bid = get_spot_bid_price(ec2, args.instance_type)
             launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
 
-            if args.spot_duration_hours:
-                spot_fleet_builder = SpotFleetBuilder(cores=2,
-                                                      memory_gb=1,
-                                                      spot_price=str(args.spot_bid),
+            if args.spot_duration_hours or args.cores or args.min_memory_per_core_gb:
+                spot_fleet_builder = SpotFleetBuilder(launch_spec=launch_spec,
+                                                      cores=args.cores,
+                                                      min_cores_per_instance=args.cores,
+                                                      min_mem_per_core_gb=args.min_mem_per_core_gb,
+                                                      spot_price=args.spot_bid,
                                                       duration_hours=args.spot_duration_hours,
-                                                      launch_spec=launch_spec,
                                                       dry_run=args.dry_run)
                 logger.info("Launching {}".format(spot_fleet_builder))
                 sfr_id = spot_fleet_builder(ec2.meta.client)
@@ -88,6 +87,8 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                 # FIXME: there may be multiple instances, and spot fleet provides no indication of whether the SFR is fulfilled
                 instance = ec2.Instance(instances[0]["InstanceId"])
             else:
+                if args.spot_bid is None:
+                    args.spot_bid = get_spot_bid_price(ec2, args.instance_type)
                 logger.info("Bidding {} for a {} spot instance".format(args.spot_bid, args.instance_type))
                 res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_bid),
                                                              ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
@@ -122,13 +123,16 @@ parser = register_parser(launch, help='Launch a new EC2 instance')
 parser.add_argument('hostname')
 parser.add_argument('--commands', nargs="+", default=[])
 parser.add_argument('--packages', nargs="+", default=[])
-parser.add_argument('--instance-type', '-t', default="t2.micro")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument('--ami')
 parser.add_argument('--spot', action='store_true')
 parser.add_argument('--spot-duration-hours', type=float,
                     help='Terminate the spot instance after this many hours. When using this option, the instance is launched using the Spot Fleet API, which provisions, monitors, and shuts down the instance. Run "aegea sfrs" to see the status of the related spot fleet request.')
-parser.add_argument('--no-dns', action='store_true')
+parser.add_argument('--cores', type=int)
+parser.add_argument('--min-mem-per-core-gb', type=float)
+parser.add_argument('--instance-type', '-t', default="t2.micro")
+parser.add_argument('--no-dns', action='store_true',
+                    help="Do not register instance name in private DNS. Use this if you don't use private DNS, or don't want the launching principal to have Route53 write access.")
 parser.add_argument('--spot-bid', type=float, help="Defaults to 1.2x the ondemand price")
 parser.add_argument('--subnet')
 parser.add_argument('--availability-zone', '-z')
