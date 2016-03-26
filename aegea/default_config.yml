@@ -199,6 +199,7 @@ sfrs:
     - CreateTime
     - SpotFleetRequestConfig.ValidFrom
     - SpotFleetRequestConfig.ValidUntil
+  sort_by: CreateTime
 
 subnets:
   columns:

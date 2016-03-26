@@ -307,7 +307,8 @@ class SpotFleetBuilder:
                                               IamFleetRole=self.iam_fleet_role.arn,
                                               LaunchSpecifications=[{}])
         if duration_hours:
-            self.spot_fleet_request_config.update(ValidUntil=datetime.utcnow().replace(microsecond=0) + timedelta(minutes=10),
+            deadline = datetime.utcnow().replace(microsecond=0) + timedelta(hours=duration_hours)
+            self.spot_fleet_request_config.update(ValidUntil=deadline,
                                                   TerminateInstancesWithExpiration=True)
 
     def instance_types(self):

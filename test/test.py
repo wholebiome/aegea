@@ -33,5 +33,11 @@ class TestAegea(unittest.TestCase):
                 args += ["AmazonEC2"]
             subprocess.check_call(["aegea", subcommand] + args)
 
+    def test_dry_run_commands(self):
+        subprocess.check_call("aegea launch unittest --dry-run", shell=True)
+        subprocess.check_call("aegea launch unittest --dry-run --spot", shell=True)
+        subprocess.check_call("aegea launch unittest --dry-run --spot-duration-hours 1", shell=True)
+        subprocess.check_call("aegea build_image i --dry-run", shell=True)
+
 if __name__ == '__main__':
     unittest.main()

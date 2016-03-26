@@ -82,7 +82,11 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                                                       dry_run=args.dry_run)
                 logger.info("Launching {}".format(spot_fleet_builder))
                 sfr_id = spot_fleet_builder(ec2.meta.client)
-                print(ec2.meta.client.describe_spot_fleet_instances(SpotFleetRequestId=sfr_id)["ActiveInstances"])
+                instances = []
+                while not instances:
+                    instances = ec2.meta.client.describe_spot_fleet_instances(SpotFleetRequestId=sfr_id)["ActiveInstances"]
+                # FIXME: there may be multiple instances, and spot fleet provides no indication of whether the SFR is fulfilled
+                instance = ec2.Instance(instances[0]["InstanceId"])
             else:
                 logger.info("Bidding {} for a {} spot instance".format(args.spot_bid, args.instance_type))
                 res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_bid),
@@ -122,7 +126,7 @@ parser.add_argument('--instance-type', '-t', default="t2.micro")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument('--ami')
 parser.add_argument('--spot', action='store_true')
-parser.add_argument('--spot-duration-hours',
+parser.add_argument('--spot-duration-hours', type=float,
                     help='Terminate the spot instance after this many hours. When using this option, the instance is launched using the Spot Fleet API, which provisions, monitors, and shuts down the instance. Run "aegea sfrs" to see the status of the related spot fleet request.')
 parser.add_argument('--no-dns', action='store_true')
 parser.add_argument('--spot-bid', type=float, help="Defaults to 1.2x the ondemand price")

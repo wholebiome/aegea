@@ -205,6 +205,7 @@ def sfrs(args):
 parser = register_parser(sfrs, help='List EC2 spot fleet requests')
 parser.add_argument("--columns", nargs="+")
 parser.add_argument("--trim-col-names", nargs="+", default=["SpotFleetRequestConfig.", "SpotFleetRequest"])
+parser.add_argument("--sort-by")
 
 def key_pairs(args):
     page_output(tabulate(boto3.resource("ec2").key_pairs.all(), args))
