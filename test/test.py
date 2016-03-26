@@ -37,8 +37,8 @@ class TestAegea(unittest.TestCase):
     def test_dry_run_commands(self):
         subprocess.check_call("aegea launch unittest --dry-run", shell=True)
         subprocess.check_call("aegea launch unittest --dry-run --spot", shell=True)
-        subprocess.check_call("aegea launch unittest --dry-run --spot-duration-hours 1", shell=True)
-        subprocess.check_call("aegea launch unittest --spot-duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run",
+        subprocess.check_call("aegea launch unittest --dry-run --duration-hours 1", shell=True)
+        subprocess.check_call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run",
                               shell=True)
         subprocess.check_call("aegea build_image i --dry-run", shell=True)
 
