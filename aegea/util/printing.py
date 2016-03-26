@@ -182,6 +182,13 @@ def format_tags(cell):
     tags = {tag["Key"]: tag["Value"] for tag in cell} if cell else {}
     return ", ".join("{}={}".format(k, v) for k, v in tags.items())
 
+def trim_names(names, *prefixes):
+    for name in names:
+        for prefix in prefixes:
+            if name.startswith(prefix):
+                name = name[len(prefix):]
+        yield name
+
 def tabulate(collection, args, cell_transforms=None):
     if cell_transforms is None:
         cell_transforms = {}
@@ -189,4 +196,5 @@ def tabulate(collection, args, cell_transforms=None):
     table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
     if getattr(args, "sort_by", None):
         table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)])
-    return format_table(table, column_names=args.columns, max_col_width=args.max_col_width)
+    args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
+    return format_table(table, column_names=getattr(args, "display_column_names", args.columns), max_col_width=args.max_col_width)

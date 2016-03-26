@@ -196,6 +196,9 @@ sfrs:
     - SpotFleetRequestConfig.TargetCapacity
     - SpotFleetRequestConfig.ExcessCapacityTerminationPolicy
     - SpotFleetRequestConfig.AllocationStrategy
+    - CreateTime
+    - SpotFleetRequestConfig.ValidFrom
+    - SpotFleetRequestConfig.ValidUntil
 
 subnets:
   columns:

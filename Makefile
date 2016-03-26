@@ -1,9 +1,19 @@
 SHELL=/bin/bash
 
-flake8:
-	./setup.py flake8
+wheel: lint build_constants
+	./setup.py bdist_wheel
 
-test: flake8 install
+build_constants: aegea/constants.json
+
+aegea/constants.json:
+	python -c "from aegea.util.constants import write; write()"
+
+lint:
+	./setup.py flake8
+#	flake8 scripts/*
+#	pylint -E --disable=no-member aegea
+
+test: lint install
 	./setup.py test
 
 init_docs:
@@ -12,10 +22,12 @@ init_docs:
 docs:
 	$(MAKE) -C docs html
 
-install:
-	./setup.py install
+install: lint build_constants
+	-rm -rf dist
+	python3 ./setup.py bdist_wheel
+	pip3 install --upgrade dist/*.whl
 
 clean:
 	-rm -rf *.egg-info
 
-.PHONY: flake8 test docs install clean
+.PHONY: lint test docs install clean

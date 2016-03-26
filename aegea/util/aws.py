@@ -6,7 +6,7 @@ from collections import OrderedDict
 from warnings import warn
 from datetime import datetime, timedelta
 
-import boto3
+import boto3, botocore
 from botocore.exceptions import ClientError
 from botocore.utils import parse_to_aware_datetime
 
@@ -14,6 +14,7 @@ from .exceptions import AegeaException
 from .. import logger, config
 from .crypto import get_public_key_from_pair
 from .compat import StringIO
+from . import constants
 
 def get_assume_role_policy_doc(*services):
     p = IAMPolicyBuilder()
@@ -249,20 +250,11 @@ def resolve_ami(ami=None):
     return ami
 
 offers_api = "https://pricing.us-east-1.amazonaws.com/offers/v1.0"
-region_ids = {
-    "US East (N. Virginia)": "us-east-1",
-    "US West (N. California)": "us-west-1",
-    "US West (Oregon)": "us-west-2",
-    "EU (Ireland)": "eu-west-1",
-    "EU (Frankfurt)": "eu-central-1",
-    "Asia Pacific (Tokyo)": "ap-northeast-1",
-    "Asia Pacific (Seoul)": "ap-northeast-2",
-    "Asia Pacific (Singapore)": "ap-southeast-1",
-    "Asia Pacific (Sydney)": "ap-southeast-2",
-    "South America (Sao Paulo)": "sa-east-1",
-    "AWS GovCloud (US)": "us-gov-west-1",
-}
-region_names = {v: k for k, v in region_ids.items()}
+
+region_names, region_ids = {}, {}
+for partition_data in botocore.loaders.create_loader().load_data('endpoints')["partitions"]:
+    region_names.update({k: v["description"] for k, v in partition_data["regions"].items()})
+    region_ids.update({v: k for k, v in region_names.items()})
 
 def get_pricing_data(offer, max_cache_age_days=30):
     offer_filename = os.path.join(config._config_dir, offer + "_pricing_cache.json.gz")
@@ -282,15 +274,59 @@ def get_pricing_data(offer, max_cache_age_days=30):
             print(e, file=sys.stderr)
     return pricing_data
 
-def get_ondemand_price_usd(region, instance_type):
+def get_ec2_products(region=None, instance_type=None, tenancy="Shared", operating_system="Linux"):
     pricing_data = get_pricing_data("AmazonEC2")
+    required_attributes = dict(tenancy=tenancy, operatingSystem=operating_system)
+    if region:
+        required_attributes.update(location=region_names[region])
+    if instance_type:
+        required_attributes.update(instanceType=instance_type)
     for product in pricing_data["products"].values():
-        required_attributes = dict(location=region_names[region],
-                                   tenancy="Shared",
-                                   operatingSystem="Linux",
-                                   instanceType=instance_type)
         if not all(product["attributes"].get(i) == required_attributes[i] for i in required_attributes):
             continue
         ondemand_terms = list(pricing_data["terms"]["OnDemand"][product["sku"]].values())[0]
         product.update(list(ondemand_terms["priceDimensions"].values())[0])
+        yield product
+
+def get_ondemand_price_usd(region, instance_type, **kwargs):
+    for product in get_ec2_products(region=region, instance_type=instance_type, **kwargs):
         return product["pricePerUnit"]["USD"]
+
+class SpotFleetBuilder:
+    def __init__(self, cores, memory_gb, launch_spec, spot_price="1", duration_hours=None, dry_run=False):
+        if "SecurityGroupIds" in launch_spec:
+            launch_spec["SecurityGroups"] = [dict(GroupId=i) for i in launch_spec["SecurityGroupIds"]]
+            del launch_spec["SecurityGroupIds"]
+        self.dry_run = dry_run
+        self.launch_spec = launch_spec
+        self.iam_fleet_role = ensure_iam_role("SpotFleet",
+                                              policies=["service-role/AmazonEC2SpotFleetRole"],
+                                              trusted_services=["spotfleet"])
+        self.spot_fleet_request_config = dict(SpotPrice=spot_price,
+                                              TargetCapacity=cores,
+                                              IamFleetRole=self.iam_fleet_role.arn,
+                                              LaunchSpecifications=[{}])
+        if duration_hours:
+            self.spot_fleet_request_config.update(ValidUntil=datetime.utcnow().replace(microsecond=0) + timedelta(minutes=10),
+                                                  TerminateInstancesWithExpiration=True)
+
+    def instance_types(self):
+        for instance_type, instance_data in constants.get("instance_types").items():
+            # FIXME
+            if not instance_type.startswith("c3"):
+                continue
+            yield instance_type, int(instance_data["vcpu"])
+
+    def launch_specs(self):
+        for instance_type, weighted_capacity in self.instance_types():
+            yield dict(self.launch_spec,
+                       InstanceType=instance_type,
+                       WeightedCapacity=weighted_capacity)
+
+    def __call__(self, client=None, **kwargs):
+        self.spot_fleet_request_config["LaunchSpecifications"] = list(self.launch_specs())
+        if client is None:
+            client = boto3.client("ec2")
+        logger.debug(self.spot_fleet_request_config)
+        res = client.request_spot_fleet(DryRun=self.dry_run, SpotFleetRequestConfig=self.spot_fleet_request_config, **kwargs)
+        return res["SpotFleetRequestId"]
