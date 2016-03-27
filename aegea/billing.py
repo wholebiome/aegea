@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json, zipfile, csv, io
 from io import BytesIO, TextIOWrapper
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import boto3, requests
 from botocore.exceptions import ClientError
@@ -21,6 +21,10 @@ def filter_line_items(args):
     def filter_fn(item):
         if args.min_cost and float(item["Cost"]) < args.min_cost:
             return False
+        if args.days and item["UsageStartDate"]:
+            window_start = datetime.utcnow() - timedelta(days=args.days)
+            if datetime.strptime(item["UsageStartDate"], "%Y-%m-%d %H:%M:%S") < window_start:
+                return False
         return True
     return filter_fn
 
@@ -52,3 +56,4 @@ parser.add_argument("--year", type=int, help="Year to get billing reports for. D
 parser.add_argument("--month", type=int, help="Month (numeral) to get billing reports for. Defaults to current month")
 parser.add_argument("--detailed-billing-reports-bucket", help="Name of S3 bucket to retrieve detailed billing reports from")
 parser.add_argument("--min-cost", type=float, help="Omit billing line items below this cost")
+parser.add_argument("--days", type=float, help="Only look at line items from this many past days")
