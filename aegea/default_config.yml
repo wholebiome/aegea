@@ -236,3 +236,13 @@ filesystems:
     - IpAddress
     - NetworkInterfaceId
     - tags
+
+billing:
+  detailed_billing_reports_bucket: "detailed-billing-reports-{account_id}"
+  columns:
+    - ProductName
+    - UsageType
+    - UsageQuantity
+    - UsageStartDate
+    - UsageEndDate
+    - Cost

@@ -32,6 +32,8 @@ class TestAegea(unittest.TestCase):
                 args += ["ls"]
             elif subcommand == "pricing":
                 args += ["AmazonEC2"]
+            elif subcommand == "billing":
+                args += ["--min-cost", "0.1"]
             subprocess.check_call(["aegea", subcommand] + args)
 
     def test_dry_run_commands(self):
