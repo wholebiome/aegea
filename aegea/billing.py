@@ -17,16 +17,15 @@ from . import register_parser
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
 from .util.aws import ARN
 
-def filter_line_items(args):
-    def filter_fn(item):
+def filter_line_items(items, args):
+    for item in items:
         if args.min_cost and float(item["Cost"]) < args.min_cost:
-            return False
+            continue
         if args.days and item["UsageStartDate"]:
             window_start = datetime.utcnow() - timedelta(days=args.days)
             if datetime.strptime(item["UsageStartDate"], "%Y-%m-%d %H:%M:%S") < window_start:
-                return False
-        return True
-    return filter_fn
+                continue
+        yield item
 
 def billing(args):
     s3 = boto3.resource("s3")
@@ -47,7 +46,7 @@ def billing(args):
     with zipfile.ZipFile(zbuf) as zfile:
         with TextIOWrapper(zfile.open(report.rstrip(".zip"))) as fh:
             reader = csv.DictReader(fh)
-            page_output(tabulate(filter(filter_line_items(args), reader), args))
+            page_output(tabulate(filter_line_items(reader, args), args))
 
 parser = register_parser(billing, help='List contents of AWS detailed billing reports', description=__doc__)
 parser.add_argument("--columns", nargs="+")
