@@ -1,5 +1,5 @@
 """
-View detailed billing reports.
+View AWS detailed billing reports.
 
 Detailed billing reports can be configured at https://console.aws.amazon.com/billing/home#/preferences.
 """
