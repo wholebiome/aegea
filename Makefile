@@ -6,7 +6,7 @@ wheel: lint build_constants
 build_constants: aegea/constants.json
 
 aegea/constants.json:
-	python -c "from aegea.util.constants import write; write()"
+	python -c "import aegea; aegea.initialize(); from aegea.util.constants import write; write()"
 
 lint:
 	./setup.py flake8
