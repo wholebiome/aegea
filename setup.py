@@ -20,7 +20,8 @@ setup(
         'requests >= 2.9.1',
         'tweak >= 0.1.2',
         'keymaker >= 0.1.7',
-        'pyyaml >= 3.11'
+        'pyyaml >= 3.11',
+        'python-dateutil >= 2.1'
     ],
     extras_require={
         ':python_version == "2.7"': ['enum34 >= 1.0.4', 'ipaddress >= 1.0.16'],

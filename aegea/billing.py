@@ -10,7 +10,7 @@ import os, sys, json, zipfile, csv, io
 from io import BytesIO, TextIOWrapper
 from datetime import datetime, timedelta
 
-import boto3, requests
+import boto3, requests, dateutil
 from botocore.exceptions import ClientError
 
 from . import register_parser
@@ -23,7 +23,7 @@ def filter_line_items(items, args):
             continue
         if args.days and item["UsageStartDate"]:
             window_start = datetime.utcnow() - timedelta(days=args.days)
-            if datetime.strptime(item["UsageStartDate"], "%Y-%m-%d %H:%M:%S") < window_start:
+            if dateutil.parser.parse(item["UsageStartDate"]) < window_start:
                 continue
         yield item
 
