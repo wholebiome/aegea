@@ -27,12 +27,12 @@ build_ami:
     - httpie
     - python-pip
     - python-setuptools
-    - python-virtualenv
     - python-wheel
+    - python-virtualenv
     - python3-pip
     - python3-setuptools
-    - python3-virtualenv
     - python3-wheel
+    - virtualenv
     - nfs-common
     - fail2ban
     - awscli
