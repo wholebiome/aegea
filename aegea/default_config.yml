@@ -6,6 +6,7 @@ build_ami:
   base: auto
   rootfs_skel: auto
   packages:
+    - language-pack-en
     - iptables-persistent
     - debian-goodies
     - bridge-utils
@@ -27,9 +28,11 @@ build_ami:
     - python-pip
     - python-setuptools
     - python-virtualenv
+    - python-wheel
     - python3-pip
     - python3-setuptools
     - python3-virtualenv
+    - python3-wheel
     - nfs-common
     - fail2ban
     - awscli
