@@ -10,11 +10,11 @@ import boto3, botocore
 from botocore.exceptions import ClientError
 from botocore.utils import parse_to_aware_datetime
 
+from .. import logger
+from . import constants, VerboseRepr
 from .exceptions import AegeaException
-from .. import logger, config
 from .crypto import get_public_key_from_pair
 from .compat import StringIO
-from . import constants, VerboseRepr
 
 def get_assume_role_policy_doc(*services):
     p = IAMPolicyBuilder()
@@ -257,6 +257,7 @@ for partition_data in botocore.loaders.create_loader().load_data('endpoints')["p
     region_ids.update({v: k for k, v in region_names.items()})
 
 def get_pricing_data(offer, max_cache_age_days=30):
+    from .. import config
     offer_filename = os.path.join(config._config_dir, offer + "_pricing_cache.json.gz")
     try:
         if datetime.fromtimestamp(os.path.getmtime(offer_filename)) < datetime.now() - timedelta(days=max_cache_age_days):
@@ -293,6 +294,7 @@ def get_ondemand_price_usd(region, instance_type, **kwargs):
         return product["pricePerUnit"]["USD"]
 
 class SpotFleetBuilder(VerboseRepr):
+    # TODO: vivify from SFR ID; update with incremental cores/memory requirements
     def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0, spot_price=None, duration_hours=None, dry_run=False):
         if spot_price is None:
             spot_price = 1
@@ -302,8 +304,8 @@ class SpotFleetBuilder(VerboseRepr):
         self.launch_spec = launch_spec
         self.cores = cores
         self.min_cores_per_instance = min_cores_per_instance
-        if cores < min_cores_per_instance:
-            raise AegeaException("SpotFleetBuilder: cores cannot be less than min_cores_per_instance")
+        if min_cores_per_instance > cores:
+            raise AegeaException("SpotFleetBuilder: min_cores_per_instance cannot exceed cores")
         self.min_mem_per_core_gb = min_mem_per_core_gb
         self.gpus_per_instance = gpus_per_instance
         self.dry_run = dry_run

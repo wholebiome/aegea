@@ -18,18 +18,24 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-config = Config(__name__, use_yaml=True, save_on_exit=False)
-if not os.path.exists(config._config_file):
-    config.save()
-    shutil.copy(os.path.join(os.path.dirname(__file__), "default_config.yml"), config._config_file)
-    logger.info("Wrote new config file %s with default values", config._config_file)
-    config = Config(__name__, use_yaml=True, save_on_exit=False)
+config, parser, subparsers = None, None, None
 
-parser = argparse.ArgumentParser(description="{}: {}".format(BOLD() + RED() + __name__.capitalize() + ENDC(), __doc__))
-parser.add_argument("--version", action="version", version='%(prog)s {version}'.format(version=__version__))
-subparsers = parser.add_subparsers(title='commands')
+def initialize():
+    global config, parser, subparsers
+    config = Config(__name__, use_yaml=True, save_on_exit=False)
+    if not os.path.exists(config._config_file):
+        config.save()
+        shutil.copy(os.path.join(os.path.dirname(__file__), "default_config.yml"), config._config_file)
+        logger.info("Wrote new config file %s with default values", config._config_file)
+        config = Config(__name__, use_yaml=True, save_on_exit=False)
+
+    parser = argparse.ArgumentParser(description="{}: {}".format(BOLD() + RED() + __name__.capitalize() + ENDC(), __doc__))
+    parser.add_argument("--version", action="version", version='%(prog)s {version}'.format(version=__version__))
+    subparsers = parser.add_subparsers(title='commands')
 
 def register_parser(function, **kwargs):
+    if config is None:
+        initialize()
     parser = subparsers.add_parser(function.__name__, **kwargs)
     parser.add_argument("--max-col-width", "-w", type=int, default=32)
     parser.set_defaults(entry_point=function)
