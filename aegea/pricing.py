@@ -1,16 +1,34 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, json
+from datetime import datetime, timedelta
+from statistics import median
 
 import boto3, requests
 
 from . import register_parser
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate
+from .util.printing import format_table, page_output, tabulate, format_datetime
 from .util.aws import region_names, get_pricing_data, offers_api
 
 def pricing(args):
-    if args.offer:
-        table = []
+    table = []
+    if args.offer == "spot":
+        window_start = datetime.utcnow() - timedelta(hours=1)
+        spot_prices, hours = {}, set()
+        paginator = boto3.client("ec2").get_paginator('describe_spot_price_history')
+        for page in paginator.paginate(StartTime=window_start, Filters=[dict(Name="product-description", Values=["Linux/UNIX"])]):
+            for line in page["SpotPriceHistory"]:
+                hour = line["Timestamp"].replace(minute=0, second=0)
+                hours.add(hour)
+                spot_prices.setdefault(line["InstanceType"], {})
+                spot_prices[line["InstanceType"]].setdefault(hour, [])
+                spot_prices[line["InstanceType"]][hour].append(float(line["SpotPrice"]))
+        for instance_type in sorted(spot_prices.keys()):
+            prices = [spot_prices[instance_type].get(h) for h in sorted(hours)]
+            prices = ["%.4f (max=%.4f, n=%d)" % (median(p), max(p), len(p)) if p else p for p in prices]
+            table.append([instance_type] + prices)
+        page_output(format_table(table, column_names=["InstanceType"] + [format_datetime(h) for h in sorted(hours)], max_col_width=args.max_col_width))
+    elif args.offer:
         if args.region is None:
             args.region = boto3.client("ec2").meta.region_name
         pricing_data = get_pricing_data(args.offer)
@@ -31,7 +49,7 @@ def pricing(args):
         page_output(tabulate(table, args))
     else:
         offer_index = offers_api + "/aws/index.json"
-        print("Choose from:", ", ".join(requests.get(offer_index).json()["offers"]))
+        print("Choose from:", ", ".join(["spot"] + requests.get(offer_index).json()["offers"]))
 
 parser = register_parser(pricing, help='List AWS prices')
 parser.add_argument("offer", nargs="?", help="AWS product offer to list prices for. Run without this argument to see the list of available products.")

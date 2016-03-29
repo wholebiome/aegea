@@ -174,14 +174,18 @@ def get_field(item, field):
             item = item.get(element)
     return item
 
+def format_datetime(d):
+    d = d.replace(microsecond=0)
+    if not USING_PYTHON2:
+        # Switch from UTC to local TZ
+        d = d.astimezone(tz=None)
+    return str(d)
+
 def get_cell(resource, field, transform=None):
     cell = get_field(resource, field)
     cell = transform(cell) if transform else cell
     if isinstance(cell, datetime):
-        cell = cell.replace(microsecond=0)
-        if not USING_PYTHON2:
-            # Switch from UTC to local TZ
-            cell = cell.astimezone(tz=None)
+        cell = format_datetime(cell)
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
 def format_tags(cell):
