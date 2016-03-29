@@ -39,6 +39,8 @@ def get_startup_commands(args):
     ] + args.commands
 
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
+    if args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
+        args.spot = True
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
     if not args.no_dns:
@@ -82,7 +84,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     if args.availability_zone:
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
     try:
-        if args.spot or args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
+        if args.spot:
             launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
             if args.duration_hours or args.cores or args.min_mem_per_core_gb:
                 spot_fleet_args = dict(launch_spec=launch_spec)

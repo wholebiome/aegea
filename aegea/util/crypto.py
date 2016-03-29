@@ -2,11 +2,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys
 import boto3
-from paramiko import SSHClient, SFTPClient, RSAKey, SSHException, hostkeys
 
 from .. import logger
 
 def new_ssh_key(bits=2048):
+    from paramiko import RSAKey
     return RSAKey.generate(bits=bits)
 
 def get_public_key_from_pair(key):
@@ -19,6 +19,7 @@ def get_ssh_key_path(name):
     return os.path.expanduser("~/.ssh/{}.pem".format(name))
 
 def ensure_ssh_key(name):
+    from paramiko import RSAKey
     ec2 = boto3.resource("ec2")
     for key_pair in ec2.key_pairs.all():
         if key_pair.name == name:
@@ -35,6 +36,7 @@ def ensure_ssh_key(name):
         logger.info("Imported SSH key %s", get_ssh_key_path(name))
 
 def hostkey_line(hostnames, key):
+    from paramiko import hostkeys
     return hostkeys.HostKeyEntry(hostnames=hostnames, key=key).to_line()
 
 def add_ssh_host_key_to_known_hosts(host_key_line):
