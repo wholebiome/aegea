@@ -25,10 +25,14 @@ build_ami:
     - pydf
     - jq
     - httpie
+    - python-dev
+    - python-cffi
     - python-pip
     - python-setuptools
     - python-wheel
     - python-virtualenv
+    - python3-dev
+    - python3-cffi
     - python3-pip
     - python3-setuptools
     - python3-wheel
@@ -47,7 +51,7 @@ build_ami:
     - cmake
   commands:
     - "sed -i -e '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers"
-    - "sed -i -e '/disk_setup/ d' -e '/mounts/ d' /etc/cloud/cloud.cfg"
+    - "sed -i -e '/disk_setup/ d' -e '/mounts/ d' -e '/grub-dpkg/ d' -e '/locale/ d' /etc/cloud/cloud.cfg"
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
     - "update-grub"
