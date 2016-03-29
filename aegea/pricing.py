@@ -2,7 +2,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json
 from datetime import datetime, timedelta
-from statistics import median
+try:
+    from statistics import median
+except ImportError:
+    from backports.statistics import median
 
 import boto3, requests
 
