@@ -42,20 +42,19 @@ def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", region="us-
             return ami["id"]
     raise AegeaException("No AMI found for {} {} {} {} {}".format(product, version, region, root_store, virt))
 
-def get_user_data(host_key, commands=None, packages=None, files=None):
+def get_user_data(host_key=None, commands=None, packages=None, files=None):
     if packages is None:
         packages = []
     if commands is None:
         commands = []
     if files is None:
         files = []
-    buf = StringIO()
-    host_key.write_private_key(buf)
-    cloud_config_data = OrderedDict(ssh_keys=dict(rsa_private=buf.getvalue(),
-                                                  rsa_public=get_public_key_from_pair(host_key)),
-                                    packages=packages,
-                                    write_files=files,
-                                    runcmd=commands)
+    cloud_config_data = OrderedDict(packages=packages, write_files=files, runcmd=commands)
+    if host_key is not None:
+        buf = StringIO()
+        host_key.write_private_key(buf)
+        cloud_config_data["ssh_keys"] = dict(rsa_private=buf.getvalue(),
+                                             rsa_public=get_public_key_from_pair(host_key))
     return "#cloud-config\n" + json.dumps(cloud_config_data)
 
 def ensure_vpc():
