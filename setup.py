@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aegea',
-    version='0.2.2',
+    version='0.2.3',
     url='https://github.com/kislyuk/aegea',
     license=open('LICENSE.md').readline().strip(),
     author='Andrey Kislyuk',
