@@ -16,10 +16,16 @@ from .exceptions import AegeaException
 from .crypto import get_public_key_from_pair
 from .compat import StringIO
 
-def get_assume_role_policy_doc(*services):
+def get_assume_role_policy_doc(*principals):
+    # See http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html#Principal
     p = IAMPolicyBuilder()
-    for service in services:
-        p.add_statement(principal={"Service": service + ".amazonaws.com"}, action="sts:AssumeRole")
+    for principal in principals:
+        if isinstance(principal, dict):
+            p.add_statement(principal=principal, action="sts:AssumeRole")
+        elif hasattr(principal, "arn"):
+            p.add_statement(principal={"AWS": principal.arn}, action="sts:AssumeRole")
+        else:
+            p.add_statement(principal={"Service": principal + ".amazonaws.com"}, action="sts:AssumeRole")
     return json.dumps(p.policy)
 
 def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", region="us-east-1", root_store="ebs", virt="hvm"):
@@ -184,17 +190,17 @@ class IAMPolicyBuilder:
         self.policy["Statement"][-1].setdefault("Resource", [])
         self.policy["Statement"][-1]["Resource"].append(resource)
 
-def ensure_iam_role(iam_role_name, policies=frozenset(), trusted_services=frozenset("ec2")):
+def ensure_iam_role(iam_role_name, policies=frozenset(), trust=frozenset()):
     iam = boto3.resource("iam")
     for role in iam.roles.all():
         if role.name == iam_role_name:
             break
     else:
-        role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc(*trusted_services))
+        role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc(*trust))
     for policy in policies:
         # TODO: enumerate policies to avoid requiring IAM write access
         role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
-    # TODO: accommodate IAM eventual consistency (role waiter)
+    # TODO: accommodate IAM eventual consistency
     return role
 
 def ensure_instance_profile(iam_role_name, policies=frozenset()):
@@ -205,7 +211,7 @@ def ensure_instance_profile(iam_role_name, policies=frozenset()):
     else:
         instance_profile = iam.create_instance_profile(InstanceProfileName=iam_role_name)
         iam.meta.client.get_waiter('instance_profile_exists').wait(InstanceProfileName=iam_role_name)
-    role = ensure_iam_role(iam_role_name, policies=policies)
+    role = ensure_iam_role(iam_role_name, policies=policies, trust=["ec2"])
     if not any(r.name == iam_role_name for r in instance_profile.roles):
         instance_profile.add_role(RoleName=role.name)
     return instance_profile
@@ -293,7 +299,7 @@ def get_ondemand_price_usd(region, instance_type, **kwargs):
         return product["pricePerUnit"]["USD"]
 
 class SpotFleetBuilder(VerboseRepr):
-    # TODO: vivify from SFR ID; update with incremental cores/memory requirements
+    # TODO: vivify from toolspec; vivify from SFR ID; update with incremental cores/memory requirements
     def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0, spot_price=None, duration_hours=None, dry_run=False):
         if spot_price is None:
             spot_price = 1
@@ -310,7 +316,7 @@ class SpotFleetBuilder(VerboseRepr):
         self.dry_run = dry_run
         self.iam_fleet_role = ensure_iam_role("SpotFleet",
                                               policies=["service-role/AmazonEC2SpotFleetRole"],
-                                              trusted_services=["spotfleet"])
+                                              trust=["spotfleet"])
         self.spot_fleet_request_config = dict(SpotPrice=str(spot_price),
                                               TargetCapacity=cores,
                                               IamFleetRole=self.iam_fleet_role.arn)
