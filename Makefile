@@ -8,7 +8,10 @@ build_constants: aegea/constants.json
 aegea/constants.json:
 	python -c "import aegea; aegea.initialize(); from aegea.util.constants import write; write()"
 
-lint:
+lint_deps:
+	pip install flake8
+
+lint: lint_deps
 	./setup.py flake8
 #	flake8 scripts/*
 #	pylint -E --disable=no-member aegea
