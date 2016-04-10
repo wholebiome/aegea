@@ -49,6 +49,7 @@ build_ami:
     - nmap
     - build-essential
     - cmake
+    - libtool
   commands:
     - "sed -i -e '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers"
     - "sed -i -e '/disk_setup/ d' -e '/mounts/ d' -e '/grub-dpkg/ d' -e '/locale/ d' /etc/cloud/cloud.cfg"
