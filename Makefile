@@ -25,7 +25,7 @@ init_docs:
 docs:
 	$(MAKE) -C docs html
 
-install: lint build_constants
+install: build_constants
 	-rm -rf dist
 	./setup.py bdist_wheel
 	pip install --upgrade dist/*.whl
