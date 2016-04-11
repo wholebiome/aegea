@@ -52,8 +52,6 @@ build_ami:
     - libtool
     - autoconf
   commands:
-    - "sed -i -e '/%sudo/ s/ALL$/NOPASSWD:ALL/' /etc/sudoers"
-    - "sed -i -e '/disk_setup/ d' -e '/mounts/ d' -e '/grub-dpkg/ d' -e '/locale/ d' /etc/cloud/cloud.cfg"
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
     - "update-grub"
