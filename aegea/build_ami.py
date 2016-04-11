@@ -72,8 +72,8 @@ def build_image(args):
                        key_filename=os.path.join(os.path.expanduser("~/.ssh"), args.ssh_key_name + ".pem"))
     while True:
         try:
-            if ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json").strip() != "[]":
-                raise Exception("cloud-init encountered errors")
+            # if ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json").strip() != "[]":
+            #     raise Exception("cloud-init encountered errors")
             break
         except Exception as e:
             if "ENOENT" in str(e) or "EPERM" in str(e):
