@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, logging, pkgutil, importlib
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 logging.getLogger("botocore.vendored.requests").setLevel(logging.ERROR)
 
 import argcomplete
