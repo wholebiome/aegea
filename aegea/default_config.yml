@@ -253,3 +253,11 @@ billing:
     - UsageStartDate
     - UsageEndDate
     - Cost
+
+launch:
+  commands:
+    - "echo launchtime>/launchtime"
+  packages:
+    - php
+
+log_level: "INFO"

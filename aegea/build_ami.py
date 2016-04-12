@@ -4,28 +4,13 @@ import os, sys, json, time
 from argparse import Namespace
 
 import boto3
-from paramiko import SSHClient, SFTPClient, RSAKey, SSHException
 
 from . import register_parser, logger, config
+from .util import AegeaSSHClient
 from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
                        ensure_security_group, add_tags, get_bdm, resolve_instance_id)
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts
 from .launch import launch
-
-class AegeaSSHClient(SSHClient):
-    def check_call(self, *args, **kwargs):
-        sys.stdout.write(self.check_output(*args, **kwargs))
-
-    def check_output(self, command, input_data=None):
-        logger.info('Running "%s"', command)
-        stdin, stdout, stderr = self.exec_command(command)
-        if input_data is not None:
-            stdin.write(input_data)
-        exit_code = stdout.channel.recv_exit_status()
-        sys.stderr.write(stderr.read().decode("utf-8"))
-        if exit_code != os.EX_OK:
-            raise Exception('Error while running "{}": {}'.format(command, os.errno.errorcode.get(exit_code)))
-        return stdout.read().decode("utf-8")
 
 def get_bootstrap_files():
     manifest = []
@@ -70,7 +55,7 @@ def build_image(args):
     ssh_client.connect(instance.public_dns_name,
                        username="ubuntu",
                        key_filename=os.path.join(os.path.expanduser("~/.ssh"), args.ssh_key_name + ".pem"))
-    while True:
+    for i in range(900):
         try:
             if ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json").strip() != "[]":
                 raise Exception("cloud-init encountered errors")
@@ -80,6 +65,8 @@ def build_image(args):
                 time.sleep(1)
             else:
                 raise
+    else:
+        raise Exception("cloud-init encountered errors")
 
     description = "Built by {} for {}".format(__name__, iam.CurrentUser().user.name)
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())

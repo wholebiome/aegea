@@ -5,10 +5,7 @@ Amazon Web Services Operator Interface
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, argparse, logging, shutil
-
 from tweak import Config
-
-from .util.printing import BOLD, RED, ENDC
 
 try:
     import pkg_resources
@@ -22,6 +19,7 @@ config, parser, subparsers = None, None, None
 
 def initialize():
     global config, parser, subparsers
+    from .util.printing import BOLD, RED, ENDC
     config = Config(__name__, use_yaml=True, save_on_exit=False)
     if not os.path.exists(config._config_file):
         config.save()
@@ -38,7 +36,7 @@ def register_parser(function, **kwargs):
         initialize()
     parser = subparsers.add_parser(function.__name__, **kwargs)
     parser.add_argument("--max-col-width", "-w", type=int, default=32)
-    parser.add_argument("--log-level", type=logging.getLogger().setLevel)
+    parser.add_argument("--log-level", type=logging.getLogger().setLevel, choices=[logging.getLevelName(i) for i in range(0, 60, 10)], default=config.get("log_level"))
     parser.set_defaults(entry_point=function)
     parser.set_defaults(**config.get(function.__name__, {}))
     if parser.description is None:

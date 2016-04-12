@@ -19,7 +19,7 @@ import boto3
 
 from . import register_parser, logger, config
 
-from .util import wait_for_port, validate_hostname
+from .util import wait_for_port, validate_hostname, AegeaSSHClient
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder)
@@ -39,6 +39,7 @@ def get_startup_commands(args):
     ] + args.commands
 
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
+    print(args)
     if args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
         args.spot = True
     ec2 = boto3.resource("ec2")
@@ -131,13 +132,20 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     add_ssh_host_key_to_known_hosts(hostkey_line([instance.public_dns_name], ssh_host_key))
     if args.wait_for_ssh:
         wait_for_port(instance.public_dns_name, 22)
+    try:
+        ssh_client = AegeaSSHClient()
+        ssh_client.load_system_host_keys()
+        ssh_client.connect(instance.public_dns_name)
+        ssh_client.check_output("systemctl")
+    except Exception as e:
+        print(e)
     logger.info("Launched %s in %s", instance, subnet)
     return instance
 
 parser = register_parser(launch, help='Launch a new EC2 instance', description=__doc__)
 parser.add_argument('hostname')
-parser.add_argument('--commands', nargs="+", default=[])
-parser.add_argument('--packages', nargs="+", default=[])
+parser.add_argument('--commands', nargs="+")
+parser.add_argument('--packages', nargs="+")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument('--ami')
 parser.add_argument('--spot', action='store_true')
