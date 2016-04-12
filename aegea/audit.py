@@ -1,24 +1,78 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, time, datetime, random
+import os, sys, time, csv, json
 import boto3
+from botocore.exceptions import ClientError
+import dateutil.parser
+from datetime import datetime, timedelta, timezone
 
 from . import register_parser, logger, config
-
-from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami)
-from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key
-from .util.exceptions import AegeaException
 from .util.printing import RED, GREEN, WHITE, page_output, format_table
-from botocore.exceptions import ClientError
+
+class Auditor:
+    _credential_report = None
+    @property
+    def credential_report(self):
+        if self._credential_report is None:
+            iam = boto3.client("iam")
+            iam.generate_credential_report()
+            while True:
+                try:
+                    self._credential_report = iam.get_credential_report()
+                    break
+                except ClientError as e:
+                    expect_error_codes(e, "ReportInProgress")
+        return csv.DictReader(self._credential_report["Content"].decode("utf-8").splitlines())
+
+    def audit_1_1(self):
+        """1.1 Avoid the use of the "root" account (Scored)"""
+        for row in self.credential_report:
+            if row["user"] == "<root_account>":
+                for field in "password_last_used", "access_key_1_last_used_date", "access_key_2_last_used_date":
+                    if row[field] != "N/A" and dateutil.parser.parse(row[field]) > datetime.now(timezone.utc) - timedelta(days=1):
+                        raise Exception("Root account last used less than a day ago ({})".format(field))
+
+    def audit_1_2(self):
+        """1.2 Ensure multi-factor authentication (MFA) is enabled for all IAM users that have a console password (Scored)"""
+        for row in self.credential_report:
+            if row["user"] == "<root_account>" or json.loads(row["password_enabled"]):
+                if not json.loads(row["mfa_active"]):
+                    raise Exception("Account {} has a console password but no MFA".format(row["user"]))
+
+    def audit_1_3(self):
+        """1.3 Ensure credentials unused for 90 days or greater are disabled (Scored)"""
+        for row in self.credential_report:
+            for access_key in "1", "2":
+                if json.loads(row["access_key_{}_active".format(access_key)]):
+                    last_used = row["access_key_{}_last_used_date".format(access_key)]
+                    if last_used != "N/A" and dateutil.parser.parse(last_used) < datetime.now(timezone.utc) - timedelta(days=90):
+                        raise Exception("Active access key {} in account {} last used over 90 days ago".format(access_key, row["user"]))
+
+    def audit_1_4(self):
+        """1.4 Ensure access keys are rotated every 90 days or less (Scored)"""
+        for row in self.credential_report:
+            for access_key in "1", "2":
+                if json.loads(row["access_key_{}_active".format(access_key)]):
+                    last_rotated = row["access_key_{}_last_rotated".format(access_key)]
+                    if dateutil.parser.parse(last_rotated) < datetime.now(timezone.utc) - timedelta(days=90):
+                        raise Exception("Active access key {} in account {} last rotated over 90 days ago".format(access_key, row["user"]))
 
 def audit(args):
+    auditor = Auditor()
     table = []
-    results = [GREEN("PASS"), RED("FAIL"), WHITE("NO TEST")]
-    for test in tests.splitlines():
-        table.append([random.choice(results[1:]) if "Scored" in test else "", test])
+    for method_name in dir(auditor):
+        if method_name.startswith("audit"):
+            method = getattr(auditor, method_name)
+            try:
+                method()
+                table.append([GREEN("PASS"), method.__doc__])
+            except Exception as e:
+                logger.debug("%s: %s", method, e)
+                table.append([RED("FAIL"), method.__doc__])
+    # TODO: WHITE("NO TEST")
     page_output(format_table(table, column_names=["Result", "Test"], max_col_width=120))
 
 parser = register_parser(audit, help='Generate a security report using the CIS AWS Foundations Benchmark')
