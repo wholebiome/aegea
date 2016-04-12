@@ -1,6 +1,11 @@
 #!/bin/bash -eu
 
+shopt -s nullglob
 devices=(/dev/xvd[b-m])
+if [[ ${#devices[@]} == 0 ]]; then
+    echo "No ephemeral devices found"
+    exit
+fi
 yes|mdadm --create --force --verbose /dev/md0 --level=0 --raid-devices=${#devices[@]} ${devices[@]}
 blockdev --setra 16384 /dev/md0
 mkfs.btrfs --force /dev/md0

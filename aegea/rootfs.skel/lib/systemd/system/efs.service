@@ -4,6 +4,7 @@ Description=Mount EFS filesystems
 [Service]
 Environment=AWS_CONFIG_FILE=/etc/aws.conf
 ExecStart=/usr/bin/aegea-efs-mount
+StandardOutput=syslog
 
 [Install]
 WantedBy=remote-fs.target
