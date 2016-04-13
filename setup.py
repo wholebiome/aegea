@@ -24,7 +24,11 @@ setup(
         'python-dateutil >= 2.1'
     ],
     extras_require={
-        ':python_version == "2.7"': ['enum34 >= 1.0.4', 'ipaddress >= 1.0.16', 'backports.statistics >= 0.1.0']
+        ':python_version == "2.7"': [
+            'enum34 >= 1.0.4',
+            'ipaddress >= 1.0.16',
+            'backports.statistics >= 0.1.0'
+        ]
     },
     packages=find_packages(exclude=['test']),
     scripts=glob.glob('scripts/*'),
