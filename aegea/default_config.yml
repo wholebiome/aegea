@@ -1,7 +1,8 @@
-# This config file (aegea/default_config.yml) is written to each user's home directory under the path
-# ~/.config/aegea/config.yml if that path is not present. Run any aegea command to cause this to happen.
-# Once the file is written, you can modify it with your site or user-specific settings.
-
+# This config file (aegea/default_config.yml) is written to each
+# user's home directory under the path ~/.config/aegea/config.yml if
+# that path is not present. Run any aegea command to cause this to
+# happen.  Once the file is written, you can modify it with your site
+# or user-specific settings.
 build_ami:
   base: auto
   rootfs_skel: auto
@@ -21,6 +22,7 @@ build_ami:
     - libxslt1-dev
     - libyaml-dev
     - libcurl4-openssl-dev
+    - libhdf5-dev
     - htop
     - pydf
     - jq
@@ -78,11 +80,6 @@ ls:
     - id
     - state
     - instance_type
-    - launch_time
-    - public_dns_name
-    - image_id
-    - tags
-    - iam_instance_profile
 
 users:
   columns:
@@ -255,9 +252,7 @@ billing:
     - Cost
 
 launch:
-  commands:
-    - "echo launchtime>/launchtime"
-  packages:
-    - php
+  commands: []
+  packages: []
 
 log_level: "INFO"
