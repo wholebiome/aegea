@@ -4,7 +4,7 @@ import os, sys, time, csv, json
 import boto3
 from botocore.exceptions import ClientError
 import dateutil.parser
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from . import register_parser, logger, config
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
@@ -27,12 +27,15 @@ class Auditor:
                     expect_error_codes(e, "ReportInProgress")
         return csv.DictReader(self._credential_report["Content"].decode("utf-8").splitlines())
 
+    def parse_date(self, d):
+        return dateutil.parser.parse(d, ignoretz=True)
+
     def audit_1_1(self):
         """1.1 Avoid the use of the "root" account (Scored)"""
         for row in self.credential_report:
             if row["user"] == "<root_account>":
                 for field in "password_last_used", "access_key_1_last_used_date", "access_key_2_last_used_date":
-                    if row[field] != "N/A" and dateutil.parser.parse(row[field]) > datetime.now(timezone.utc) - timedelta(days=1):
+                    if row[field] != "N/A" and self.parse_date(row[field]) > datetime.utcnow() - timedelta(days=1):
                         raise Exception("Root account last used less than a day ago ({})".format(field))
 
     def audit_1_2(self):
@@ -48,7 +51,7 @@ class Auditor:
             for access_key in "1", "2":
                 if json.loads(row["access_key_{}_active".format(access_key)]):
                     last_used = row["access_key_{}_last_used_date".format(access_key)]
-                    if last_used != "N/A" and dateutil.parser.parse(last_used) < datetime.now(timezone.utc) - timedelta(days=90):
+                    if last_used != "N/A" and self.parse_date(last_used) < datetime.utcnow() - timedelta(days=90):
                         raise Exception("Active access key {} in account {} last used over 90 days ago".format(access_key, row["user"]))
 
     def audit_1_4(self):
@@ -57,7 +60,7 @@ class Auditor:
             for access_key in "1", "2":
                 if json.loads(row["access_key_{}_active".format(access_key)]):
                     last_rotated = row["access_key_{}_last_rotated".format(access_key)]
-                    if dateutil.parser.parse(last_rotated) < datetime.now(timezone.utc) - timedelta(days=90):
+                    if self.parse_date(last_rotated) < datetime.utcnow() - timedelta(days=90):
                         raise Exception("Active access key {} in account {} last rotated over 90 days ago".format(access_key, row["user"]))
 
 def audit(args):
