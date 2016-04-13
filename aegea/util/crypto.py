@@ -18,12 +18,12 @@ def host_key_fingerprint(key):
 def get_ssh_key_path(name):
     return os.path.expanduser("~/.ssh/{}.pem".format(name))
 
-def ensure_ssh_key(name):
+def ensure_ssh_key(name, verify_pem_file=True):
     from paramiko import RSAKey
     ec2 = boto3.resource("ec2")
     for key_pair in ec2.key_pairs.all():
         if key_pair.name == name:
-            if not os.path.exists(get_ssh_key_path(name)):
+            if verify_pem_file and not os.path.exists(get_ssh_key_path(name)):
                 msg = "Key {} found in EC2, but not in ~/.ssh. Delete the key in EC2, copy it to {}, or specify another key."
                 raise KeyError(msg.format(name, get_ssh_key_path(name)))
             break

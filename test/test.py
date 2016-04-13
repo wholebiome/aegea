@@ -26,6 +26,8 @@ class TestAegea(unittest.TestCase):
                 args += ["--help"]
             elif subcommand in ("launch", "build_image"):
                 args += ["--dry-run", "test"]
+                if subcommand == "launch":
+                    args += ["--no-verify-ssh-key-pem-file"]
             elif subcommand == "rm":
                 args += [resolve_ami()]
             elif subcommand == "secrets":

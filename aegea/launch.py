@@ -14,7 +14,7 @@ API.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, time, datetime, base64
+import os, sys, time, datetime, base64, json
 import boto3
 
 from . import register_parser, logger, config
@@ -43,10 +43,10 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         args.spot = True
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
-    if not args.no_dns:
+    if args.use_dns:
         dns_zone = DNSZone(config.dns.get("private_zone"))
         config.dns.private_zone = dns_zone.zone["Name"]
-    ensure_ssh_key(args.ssh_key_name)
+    ensure_ssh_key(args.ssh_key_name, verify_pem_file=args.verify_ssh_key_pem_file)
     try:
         i = resolve_instance_id(args.hostname)
         raise Exception("The hostname {} is being used by {} (state: {})".format(args.hostname, i, ec2.Instance(i).state["Name"]))
@@ -123,7 +123,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
     tags = dict([tag.split("=", 1) for tag in args.tags])
     add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name, SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:], **tags)
-    if not args.no_dns:
+    if args.use_dns:
         dns_zone.update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
         instance = ec2.Instance(instance.id)
@@ -146,6 +146,7 @@ parser.add_argument('hostname')
 parser.add_argument('--commands', nargs="+")
 parser.add_argument('--packages', nargs="+")
 parser.add_argument("--ssh-key-name", default=__name__)
+parser.add_argument('--no-verify-ssh-key-pem-file', dest='verify_ssh_key_pem_file', action='store_false')
 parser.add_argument('--ami')
 parser.add_argument('--spot', action='store_true')
 parser.add_argument('--duration-hours', type=float, help='Terminate the spot instance after this number of hours')
@@ -153,8 +154,8 @@ parser.add_argument('--cores', type=int)
 parser.add_argument('--min-mem-per-core-gb', type=float)
 parser.add_argument('--instance-type', '-t', default="t2.micro")
 parser.add_argument('--spot-price', type=float, help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
-parser.add_argument('--no-dns', action='store_true',
-                    help="Do not register instance name in private DNS. Use this if you don't use private DNS, or don't want the launching principal to have Route53 write access.")
+parser.add_argument('--no-dns', dest='use_dns', action='store_false',
+                    help="Skip registering instance name in private DNS. Use if you don't use private DNS, or don't want the launching principal to have Route53 write access.")
 parser.add_argument('--subnet')
 parser.add_argument('--availability-zone', '-z')
 parser.add_argument('--security-groups', nargs="+")
