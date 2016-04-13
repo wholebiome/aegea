@@ -23,6 +23,9 @@ def ensure_ssh_key(name):
     ec2 = boto3.resource("ec2")
     for key_pair in ec2.key_pairs.all():
         if key_pair.name == name:
+            if not os.path.exists(get_ssh_key_path(name)):
+                msg = "Key {} found in EC2, but not in ~/.ssh. Delete the key in EC2, copy it to {}, or specify another key."
+                raise KeyError(msg.format(name, get_ssh_key_path(name)))
             break
     else:
         if os.path.exists(get_ssh_key_path(name)):
@@ -34,6 +37,7 @@ def ensure_ssh_key(name):
         ec2.import_key_pair(KeyName=name,
                             PublicKeyMaterial=get_public_key_from_pair(ssh_key))
         logger.info("Imported SSH key %s", get_ssh_key_path(name))
+    return get_ssh_key_path(name)
 
 def hostkey_line(hostnames, key):
     from paramiko import hostkeys

@@ -33,10 +33,23 @@ def get_bootstrap_commands():
 def get_bootstrap_packages():
     return config.build_ami.packages
 
+def get_ssh_key_filename(args):
+    if args.ssh_key_name is None:
+        try:
+            args.ssh_key_name = __name__
+            return ensure_ssh_key(args.ssh_key_name)
+        except KeyError:
+            from getpass import getuser
+            from socket import gethostname
+            args.ssh_key_name = __name__ + "." + getuser() + "." + gethostname()
+            return ensure_ssh_key(args.ssh_key_name)
+    else:
+        return ensure_ssh_key(args.ssh_key_name)
+
 def build_image(args):
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
-    ensure_ssh_key(args.ssh_key_name)
+    ssh_key_filename = get_ssh_key_filename(args)
     if args.snapshot_existing_host:
         instance = ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
@@ -52,13 +65,11 @@ def build_image(args):
                           user_data_files=get_bootstrap_files())
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
-    ssh_client.connect(instance.public_dns_name,
-                       username="ubuntu",
-                       key_filename=os.path.join(os.path.expanduser("~/.ssh"), args.ssh_key_name + ".pem"))
+    ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
     for i in range(900):
         try:
-            # if ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json").strip() != "[]":
-            #     raise Exception("cloud-init encountered errors")
+            if ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json").strip() != "[]":
+                raise Exception("cloud-init encountered errors")
             break
         except Exception as e:
             if "ENOENT" in str(e) or "EPERM" in str(e):
@@ -84,7 +95,7 @@ parser = register_parser(build_image, help='Build an EC2 AMI')
 parser.add_argument("name", default="test")
 parser.add_argument("--snapshot-existing-host", type=str)
 parser.add_argument("--wait-for-ami", action="store_true")
-parser.add_argument("--ssh-key-name", default=__name__)
+parser.add_argument("--ssh-key-name")
 parser.add_argument("--instance-type", default="c3.xlarge")
 parser.add_argument('--security-groups', nargs="+")
 parser.add_argument('--base-ami', default=config.get("base_ami"))

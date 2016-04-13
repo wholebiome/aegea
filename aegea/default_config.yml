@@ -80,6 +80,11 @@ ls:
     - id
     - state
     - instance_type
+    - launch_time
+    - public_dns_name
+    - image_id
+    - tags
+    - iam_instance_profile
 
 users:
   columns:
