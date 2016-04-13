@@ -47,3 +47,16 @@ def add_ssh_host_key_to_known_hosts(host_key_line):
     ssh_known_hosts_path = os.path.expanduser("~/.ssh/known_hosts")
     with open(ssh_known_hosts_path, "a") as fh:
         fh.write(host_key_line)
+
+def get_ssh_key_filename(args, base_name):
+    if args.ssh_key_name is None:
+        try:
+            args.ssh_key_name = base_name
+            return ensure_ssh_key(args.ssh_key_name)
+        except KeyError:
+            from getpass import getuser
+            from socket import gethostname
+            args.ssh_key_name = base_name + "." + getuser() + "." + gethostname()
+            return ensure_ssh_key(args.ssh_key_name)
+    else:
+        return ensure_ssh_key(args.ssh_key_name)

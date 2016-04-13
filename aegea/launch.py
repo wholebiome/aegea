@@ -23,7 +23,7 @@ from .util import wait_for_port, validate_hostname, AegeaSSHClient
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder)
-from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line
+from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line, get_ssh_key_filename
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
 

@@ -9,7 +9,7 @@ from . import register_parser, logger, config
 from .util import AegeaSSHClient
 from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
                        ensure_security_group, add_tags, get_bdm, resolve_instance_id)
-from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts
+from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
 from .launch import launch
 
 def get_bootstrap_files():
@@ -33,23 +33,10 @@ def get_bootstrap_commands():
 def get_bootstrap_packages():
     return config.build_ami.packages
 
-def get_ssh_key_filename(args):
-    if args.ssh_key_name is None:
-        try:
-            args.ssh_key_name = __name__
-            return ensure_ssh_key(args.ssh_key_name)
-        except KeyError:
-            from getpass import getuser
-            from socket import gethostname
-            args.ssh_key_name = __name__ + "." + getuser() + "." + gethostname()
-            return ensure_ssh_key(args.ssh_key_name)
-    else:
-        return ensure_ssh_key(args.ssh_key_name)
-
 def build_image(args):
     ec2 = boto3.resource("ec2")
     iam = boto3.resource("iam")
-    ssh_key_filename = get_ssh_key_filename(args)
+    ssh_key_filename = get_ssh_key_filename(args, base_name=__name__)
     if args.snapshot_existing_host:
         instance = ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
@@ -57,7 +44,6 @@ def build_image(args):
         args.ami = args.base_ami or locate_ubuntu_ami(region=ec2.meta.client.meta.region_name)
         args.hostname = "{}-{}".format(__name__.replace(".", "-").replace("_", "-"), int(time.time()))
         args.wait_for_ssh = True
-        args.verify_ssh_key_pem_file = True
         for field in "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb".split():
             setattr(args, field, None)
         instance = launch(args,
@@ -97,6 +83,7 @@ parser.add_argument("name", default="test")
 parser.add_argument("--snapshot-existing-host", type=str)
 parser.add_argument("--wait-for-ami", action="store_true")
 parser.add_argument("--ssh-key-name")
+parser.add_argument('--no-verify-ssh-key-pem-file', dest='verify_ssh_key_pem_file', action='store_false')
 parser.add_argument("--instance-type", default="c3.xlarge")
 parser.add_argument('--security-groups', nargs="+")
 parser.add_argument('--base-ami', default=config.get("base_ami"))
