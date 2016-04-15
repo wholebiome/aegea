@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 from dateutil.tz import tzutc
 
-from . import register_parser, logger
+from . import register_parser, logger, config
 from .util import natural_sort
 from .util.aws import expect_error_codes, ARN
 from .util.printing import RED, GREEN, WHITE, page_output, format_table
@@ -173,8 +173,8 @@ class Auditor(unittest.TestCase):
     def audit_2_5(self):
         """2.5 Ensure AWS Config is enabled in all regions (Scored)"""
         for region in boto3.Session().get_available_regions("config"):
-            config = boto3.session.Session(region_name=region).client("config")
-            self.assertGreater(len(config.describe_configuration_recorder_status()["ConfigurationRecordersStatus"]), 0)
+            aws_config = boto3.session.Session(region_name=region).client("config")
+            self.assertGreater(len(aws_config.describe_configuration_recorder_status()["ConfigurationRecordersStatus"]), 0)
 
     def audit_2_6(self):
         """2.6 Ensure S3 bucket access logging is enabled on the CloudTrail S3 bucket (Scored)"""
@@ -188,13 +188,13 @@ class Auditor(unittest.TestCase):
         """2.8 Ensure rotation for customer created CMKs is enabled (Scored)"""
         raise NotImplementedError()
 
-    def ensure_alarm(self, name, pattern, log_group_name, email='akislyuk@exabio.com'):
+    def ensure_alarm(self, name, pattern, log_group_name):
         # See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/CW_Support_For_AWS.html
         sns = boto3.resource("sns")
         logs = boto3.client("logs")
         cloudwatch = boto3.client("cloudwatch")
         topic = sns.create_topic(Name=name)
-        topic.subscribe(Protocol='email', Endpoint=email)
+        topic.subscribe(Protocol='email', Endpoint=self.email)
         logs.put_metric_filter(logGroupName=log_group_name,
                                filterName=name,
                                filterPattern=pattern,
@@ -315,6 +315,7 @@ class Auditor(unittest.TestCase):
 
 def audit(args):
     auditor = Auditor()
+    auditor.__dict__.update(vars(args))
     table = []
     for method_name in natural_sort(dir(auditor)):
         if method_name.startswith("audit"):
@@ -329,3 +330,4 @@ def audit(args):
     page_output(format_table(table, column_names=["Result", "Test"], max_col_width=120))
 
 parser = register_parser(audit, help='Generate a security report using the CIS AWS Foundations Benchmark')
+parser.add_argument('--email', help="Administrative contact email")

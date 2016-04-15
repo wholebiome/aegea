@@ -261,3 +261,6 @@ launch:
   packages: []
 
 log_level: "INFO"
+
+audit:
+  email: "akislyuk@exabio.com"
