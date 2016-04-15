@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 from dateutil.tz import tzutc
 
-from . import register_parser, logger, config
+from . import register_parser, logger
 from .util import natural_sort
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
@@ -40,7 +40,6 @@ class Auditor(unittest.TestCase):
 
     @property
     def trails(self):
-        cloudtrail = boto3.client("cloudtrail")
         if "trails" not in self.cache:
             self.cache["trails"] = boto3.client("cloudtrail").describe_trails()["trailList"]
         return self.cache["trails"]
@@ -144,10 +143,10 @@ class Auditor(unittest.TestCase):
         """2.3 Ensure the S3 bucket CloudTrail logs to is not publicly accessible (Scored)"""
         raise Exception("TODO")
         s3 = boto3.session.Session(region_name="us-east-1").resource("s3")
-#        s3 = boto3.resource("s3")
-#        for trail in self.trails:
-            #for grant in s3.Bucket(trail["S3BucketName"]).Acl().grants:
-#            print(s3.Bucket(trail["S3BucketName"]).Policy().policy)
+        # s3 = boto3.resource("s3")
+        # for trail in self.trails:
+        #    for grant in s3.Bucket(trail["S3BucketName"]).Acl().grants:
+        #    print(s3.Bucket(trail["S3BucketName"]).Policy().policy)
         for bucket in s3.buckets.all():
             print(bucket)
             try:
@@ -176,7 +175,7 @@ class Auditor(unittest.TestCase):
     def audit_2_6(self):
         """2.6 Ensure S3 bucket access logging is enabled on the CloudTrail S3 bucket (Scored)"""
         raise NotImplementedError()
-        
+
     def audit_2_7(self):
         """2.7 Ensure CloudTrail logs are encrypted at rest using KMS CMKs (Scored)"""
         raise NotImplementedError()
@@ -184,63 +183,83 @@ class Auditor(unittest.TestCase):
     def audit_2_8(self):
         """2.8 Ensure rotation for customer created CMKs is enabled (Scored)"""
         raise NotImplementedError()
+
     def audit_3_1(self):
         """3.1 Ensure a log metric filter and alarm exist for unauthorized API calls (Scored)"""
         raise NotImplementedError()
+
     def audit_3_2(self):
         """3.2 Ensure a log metric filter and alarm exist for Management Console sign-in without MFA (Scored)"""
         raise NotImplementedError()
+
     def audit_3_3(self):
         """3.3 Ensure a log metric filter and alarm exist for usage of "root" account (Scored)"""
         raise NotImplementedError()
+
     def audit_3_4(self):
         """3.4 Ensure a log metric filter and alarm exist for IAM policy changes (Scored)"""
         raise NotImplementedError()
+
     def audit_3_5(self):
         """3.5 Ensure a log metric filter and alarm exist for CloudTrail configuration changes (Scored)"""
         raise NotImplementedError()
+
     def audit_3_6(self):
         """3.6 Ensure a log metric filter and alarm exist for AWS Management Console authentication failures (Scored)"""
         raise NotImplementedError()
+
     def audit_3_7(self):
         """3.7 Ensure a log metric filter and alarm exist for disabling or scheduled deletion of customer created CMKs (Scored)"""
         raise NotImplementedError()
+
     def audit_3_8(self):
         """3.8 Ensure a log metric filter and alarm exist for S3 bucket policy changes (Scored)"""
         raise NotImplementedError()
+
     def audit_3_9(self):
         """3.9 Ensure a log metric filter and alarm exist for AWS Config configuration changes (Scored)"""
         raise NotImplementedError()
+
     def audit_3_10(self):
         """3.10 Ensure a log metric filter and alarm exist for security group changes (Scored)"""
         raise NotImplementedError()
+
     def audit_3_11(self):
         """3.11 Ensure a log metric filter and alarm exist for changes to Network Access Control Lists (NACL) (Scored)"""
         raise NotImplementedError()
+
     def audit_3_12(self):
         """3.12 Ensure a log metric filter and alarm exist for changes to network gateways (Scored)"""
         raise NotImplementedError()
+
     def audit_3_13(self):
         """3.13 Ensure a log metric filter and alarm exist for route table changes (Scored)"""
         raise NotImplementedError()
+
     def audit_3_14(self):
         """3.14 Ensure a log metric filter and alarm exist for VPC changes (Scored)"""
         raise NotImplementedError()
+
     def audit_3_15(self):
         """3.15 Ensure security contact information is registered (Scored)"""
         raise NotImplementedError()
+
     def audit_3_16(self):
         """3.16 Ensure appropriate subscribers to each SNS topic (Not Scored)"""
         raise NotImplementedError()
+
     def audit_4_1(self):
         """4.1 Ensure no security groups allow ingress from 0.0.0.0/0 to port 22 (Scored)"""
         raise NotImplementedError()
+
     def audit_4_2(self):
         """4.2 Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389 (Scored)"""
         raise NotImplementedError()
+
     def audit_4_3(self):
         """4.3 Ensure VPC Flow Logging is Enabled in all Applicable Regions (Scored)"""
         raise NotImplementedError()
+
     def audit_4_4(self):
         """4.4 Ensure the default security group restricts all traffic (Scored)"""
         raise NotImplementedError()
