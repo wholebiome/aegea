@@ -57,3 +57,6 @@ class AegeaSSHClient(SSHClient):
         if exit_code != os.EX_OK:
             raise Exception('Error while running "{}": {}'.format(command, os.errno.errorcode.get(exit_code)))
         return stdout.read().decode("utf-8")
+
+def natural_sort(i):
+    return sorted(i, key=lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)])
