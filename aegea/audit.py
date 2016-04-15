@@ -9,9 +9,7 @@ from dateutil.tz import tzutc
 
 from . import register_parser, logger
 from .util import natural_sort
-from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
-                       ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
-                       expect_error_codes, resolve_ami)
+from .util.aws import expect_error_codes, ARN
 from .util.printing import RED, GREEN, WHITE, page_output, format_table
 
 class Auditor(unittest.TestCase):
@@ -43,6 +41,12 @@ class Auditor(unittest.TestCase):
         if "trails" not in self.cache:
             self.cache["trails"] = boto3.client("cloudtrail").describe_trails()["trailList"]
         return self.cache["trails"]
+
+    @property
+    def alarms(self):
+        if "alarms" not in self.cache:
+            self.cache["alarms"] = list(boto3.resource("cloudwatch").alarms.all())
+        return self.cache["alarms"]
 
     def parse_date(self, d):
         return dateutil.parser.parse(d)
@@ -141,7 +145,7 @@ class Auditor(unittest.TestCase):
 
     def audit_2_3(self):
         """2.3 Ensure the S3 bucket CloudTrail logs to is not publicly accessible (Scored)"""
-        raise Exception("TODO")
+        raise NotImplementedError()
         s3 = boto3.session.Session(region_name="us-east-1").resource("s3")
         # s3 = boto3.resource("s3")
         # for trail in self.trails:
@@ -184,61 +188,106 @@ class Auditor(unittest.TestCase):
         """2.8 Ensure rotation for customer created CMKs is enabled (Scored)"""
         raise NotImplementedError()
 
+    def ensure_alarm(self, name, pattern, log_group_name, email='akislyuk@exabio.com'):
+        # See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/CW_Support_For_AWS.html
+        sns = boto3.resource("sns")
+        logs = boto3.client("logs")
+        cloudwatch = boto3.client("cloudwatch")
+        topic = sns.create_topic(Name=name)
+        topic.subscribe(Protocol='email', Endpoint=email)
+        logs.put_metric_filter(logGroupName=log_group_name,
+                               filterName=name,
+                               filterPattern=pattern,
+                               metricTransformations=[dict(metricName=name,
+                                                           metricNamespace=__name__,
+                                                           metricValue="1")])
+        cloudwatch.put_metric_alarm(AlarmName=name,
+                                    MetricName=name,
+                                    Namespace=__name__,
+                                    Statistic="Sum",
+                                    Period=300,
+                                    Threshold=1,
+                                    ComparisonOperator="GreaterThanOrEqualToThreshold",
+                                    EvaluationPeriods=1,
+                                    AlarmActions=[topic.arn])
+
+    def assert_alarm(self, name, pattern, remediate=True):
+        logs = boto3.client("logs")
+        sns = boto3.resource("sns")
+        alarm_ok = False
+        for trail in self.trails:
+            log_group_name = ARN(trail["CloudWatchLogsLogGroupArn"]).resource.split(":")[1]
+            for metric_filter in logs.describe_metric_filters(logGroupName=log_group_name)["metricFilters"]:
+                if metric_filter["filterPattern"] == pattern:
+                    for alarm in self.alarms:
+                        try:
+                            self.assertEqual(alarm.metric_name, metric_filter["metricTransformations"][0]["metricName"])
+                            self.assertGreater(len(list(sns.Topic(alarm.alarm_actions[0]).subscriptions.all())), 0)
+                            alarm_ok = True
+                        except Exception:
+                            pass
+        if remediate and not alarm_ok:
+            self.ensure_alarm(name=name,
+                              pattern=pattern,
+                              log_group_name=log_group_name)
+            alarm_ok = True
+        self.assertTrue(alarm_ok)
+
     def audit_3_1(self):
         """3.1 Ensure a log metric filter and alarm exist for unauthorized API calls (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("UnauthorizedAPICalls", '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }')
 
     def audit_3_2(self):
         """3.2 Ensure a log metric filter and alarm exist for Management Console sign-in without MFA (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("ConsoleUseWithoutMFA", '{ $.userIdentity.sessionContext.attributes.mfaAuthenticated != "true" }')
 
     def audit_3_3(self):
         """3.3 Ensure a log metric filter and alarm exist for usage of "root" account (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("RootAccountUsed", '{ $.userIdentity.type = \"Root\" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != \"AwsServiceEvent\" }')
 
     def audit_3_4(self):
         """3.4 Ensure a log metric filter and alarm exist for IAM policy changes (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("IAMPolicyChanged", '{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}')
 
     def audit_3_5(self):
         """3.5 Ensure a log metric filter and alarm exist for CloudTrail configuration changes (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("CloudTrailConfigChanged", '{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }')
 
     def audit_3_6(self):
         """3.6 Ensure a log metric filter and alarm exist for AWS Management Console authentication failures (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("ConsoleLoginFailed", '{ ($.eventName = ConsoleLogin) && ($.errorMessage = \"Failed authentication\") }')
 
     def audit_3_7(self):
         """3.7 Ensure a log metric filter and alarm exist for disabling or scheduled deletion of customer created CMKs (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("KMSCMKDisabled", '{($.eventSource = kms.amazonaws.com) && (($.eventName=DisableKey)||($.eventName=ScheduleKeyDeletion))}')
 
     def audit_3_8(self):
         """3.8 Ensure a log metric filter and alarm exist for S3 bucket policy changes (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("S3BucketPolicyChanged", '{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }')
 
     def audit_3_9(self):
         """3.9 Ensure a log metric filter and alarm exist for AWS Config configuration changes (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("AWSConfigServiceChanged", '{($.eventSource = config.amazonaws.com) && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel)||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder))}')
 
     def audit_3_10(self):
         """3.10 Ensure a log metric filter and alarm exist for security group changes (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("EC2SecurityGroupChanged", '{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup)}')
 
     def audit_3_11(self):
         """3.11 Ensure a log metric filter and alarm exist for changes to Network Access Control Lists (NACL) (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("EC2NACLChanged", '{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }')
 
     def audit_3_12(self):
         """3.12 Ensure a log metric filter and alarm exist for changes to network gateways (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("EC2NetworkGatewayChanged", '{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }')
 
     def audit_3_13(self):
         """3.13 Ensure a log metric filter and alarm exist for route table changes (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("EC2RouteTableChanged", '{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }')
 
     def audit_3_14(self):
         """3.14 Ensure a log metric filter and alarm exist for VPC changes (Scored)"""
-        raise NotImplementedError()
+        self.assert_alarm("EC2VPCChanged", '{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }')
 
     def audit_3_15(self):
         """3.15 Ensure security contact information is registered (Scored)"""
