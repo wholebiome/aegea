@@ -211,7 +211,7 @@ class Auditor(unittest.TestCase):
                                     EvaluationPeriods=1,
                                     AlarmActions=[topic.arn])
 
-    def assert_alarm(self, name, pattern, remediate=True):
+    def assert_alarm(self, name, pattern, remediate=False):
         logs = boto3.client("logs")
         sns = boto3.resource("sns")
         alarm_ok = False
