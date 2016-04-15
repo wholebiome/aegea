@@ -37,12 +37,12 @@ class TestAegea(unittest.TestCase):
             subprocess.check_call(["aegea", subcommand] + args)
 
     def test_dry_run_commands(self):
-        subprocess.check_call("aegea launch unittest --dry-run", shell=True)
-        subprocess.check_call("aegea launch unittest --dry-run --spot", shell=True)
-        subprocess.check_call("aegea launch unittest --dry-run --duration-hours 1", shell=True)
-        subprocess.check_call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run",
+        subprocess.check_call("aegea launch unittest --dry-run --no-verify-ssh-key-pem-file", shell=True)
+        subprocess.check_call("aegea launch unittest --dry-run --spot --no-verify-ssh-key-pem-file", shell=True)
+        subprocess.check_call("aegea launch unittest --dry-run --duration-hours 1 --no-verify-ssh-key-pem-file", shell=True)
+        subprocess.check_call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file",
                               shell=True)
-        subprocess.check_call("aegea build_image i --dry-run", shell=True)
+        subprocess.check_call("aegea build_image i --dry-run --no-verify-ssh-key-pem-file", shell=True)
 
     def test_spot_fleet_builder(self):
         builder = SpotFleetBuilder(launch_spec={})
