@@ -19,11 +19,12 @@ import boto3
 
 from . import register_parser, logger, config
 
-from .util import wait_for_port, validate_hostname, AegeaSSHClient
+from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder)
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line, get_ssh_key_filename
+from .util.ssh import AegeaSSHClient
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
 
@@ -134,7 +135,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     try:
         ssh_client = AegeaSSHClient()
         ssh_client.load_system_host_keys()
-        ssh_client.connect(instance.public_dns_name)
+        ssh_client.connect(instance.public_dns_name, password="password", look_for_keys=False)
         ssh_client.check_output("systemctl")
     except Exception as e:
         print(e)
