@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Docker Event SNS Relay
+
+[Service]
+Environment=AWS_CONFIG_FILE=/etc/aws.conf
+ExecStart=/usr/bin/aegea-docker-event-relay
+
+[Install]
+WantedBy=multi-user.target

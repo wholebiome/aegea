@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+import os, sys, subprocess, json, logging, argparse
+import boto3, requests, dateutil.parser
+
+class ARN:
+    fields = "arn partition service region account_id resource".split()
+    def __init__(self, arn="arn:aws::::", **kwargs):
+        self.__dict__.update(dict(zip(self.fields, arn.split(":", 5)), **kwargs))
+
+    def __str__(self):
+        return ":".join(getattr(self, field) for field in self.fields)
+
+def get_metadata(path):
+    return requests.get("http://169.254.169.254/latest/meta-data/{}".format(path)).content.decode()
+
+logging.basicConfig(level=logging.ERROR)
+parser = argparse.ArgumentParser()
+parser.add_argument("--get-ecs-agent-metadata", action="store_true")
+args = parser.parse_args()
+
+az = get_metadata("placement/availability-zone")
+sns = boto3.Session(region_name=az[:-1]).resource('sns')
+sns_topic_name = os.environ.get("GAMAYUN_SNS_TOPIC", "container_events")
+account_id = ARN(json.loads(get_metadata("iam/info"))["InstanceProfileArn"]).account_id
+sns_topic_arn = ARN(service="sns", region=sns.meta.client.meta.region_name, account_id=account_id, resource=sns_topic_name)
+sns_topic = sns.Topic(str(sns_topic_arn))
+
+fields = "date event_type event resource_id event_data".split()
+docker_events = subprocess.Popen(['docker', 'events', '--filter', 'type=container'], stdout=subprocess.PIPE)
+logging.info("Listening to docker events")
+for event in docker_events.stdout:
+    message = dict(zip(fields, event.decode().strip().split(maxsplit=len(fields)-1)))
+    message["event_data"] = {i.partition("=")[0]: i.partition("=")[2] for i in message["event_data"].strip("()").split(", ")}
+    try:
+        if args.get_ecs_agent_metadata:
+            message.update(requests.get("http://localhost:51678/v1/tasks", params=dict(dockerid=message["resource_id"])).json())
+        sns_topic.publish(Message=json.dumps(message))
+    except Exception as e:
+        logging.error(e)
