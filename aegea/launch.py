@@ -86,7 +86,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
     try:
         if args.spot:
-            launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"].encode()).decode()
+            launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"]).decode()
             if args.duration_hours or args.cores or args.min_mem_per_core_gb:
                 spot_fleet_args = dict(launch_spec=launch_spec)
                 for arg in "cores", "min_mem_per_core_gb", "spot_price", "duration_hours", "dry_run":
