@@ -61,7 +61,11 @@ def get_user_data(host_key=None, commands=None, packages=None, files=None):
         host_key.write_private_key(buf)
         cloud_config_data["ssh_keys"] = dict(rsa_private=buf.getvalue(),
                                              rsa_public=get_public_key_from_pair(host_key))
-    return "#cloud-config\n" + json.dumps(cloud_config_data)
+    payload = "#cloud-config\n" + json.dumps(cloud_config_data)
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode="w") as gzfh:
+        gzfh.write(payload.encode())
+    return buf.getvalue()
 
 def ensure_vpc():
     ec2 = boto3.resource("ec2")
