@@ -6,7 +6,17 @@ if [[ ${#devices[@]} == 0 ]]; then
     echo "No ephemeral devices found"
     exit
 fi
-yes|mdadm --create --force --verbose /dev/md0 --level=0 --raid-devices=${#devices[@]} ${devices[@]}
-blockdev --setra 16384 /dev/md0
-mkfs.btrfs --force /dev/md0
-mount /dev/md0 /var/lib/docker
+
+if [[ -e /dev/md0 ]]; then
+    echo "/dev/md0 already exists"
+else
+    yes|mdadm --create --force --verbose /dev/md0 --level=0 --raid-devices=${#devices[@]} ${devices[@]}
+    blockdev --setra 16384 /dev/md0
+    mkfs.btrfs --force /dev/md0
+fi
+
+if grep -q "/dev/md0 /var/lib/docker" /proc/mounts; then
+    echo "/dev/md0 already mounted on /var/lib/docker"
+else
+    mount /dev/md0 /var/lib/docker
+fi
