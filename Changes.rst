@@ -1,3 +1,8 @@
+Version 0.4.0 (2016-04-19)
+--------------------------
+- aegea audit implementation (except section 4)
+- numerous image improvements
+
 Version 0.3.0 (2016-04-12)
 --------------------------
 - Rollup: many changes
