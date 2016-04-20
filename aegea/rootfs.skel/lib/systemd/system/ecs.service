@@ -18,6 +18,7 @@ ExecStart=/usr/bin/docker run --name ecs-agent \
     --env=ECS_LOGFILE=/log/ecs-agent.log \
     --env=ECS_LOGLEVEL=info \
     --env=ECS_DATADIR=/data \
+    --env-file=/etc/ecs/ecs.config \
     amazon/amazon-ecs-agent:latest
 
 [Install]

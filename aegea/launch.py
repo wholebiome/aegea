@@ -132,13 +132,14 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     add_ssh_host_key_to_known_hosts(hostkey_line([instance.public_dns_name], ssh_host_key))
     if args.wait_for_ssh:
         wait_for_port(instance.public_dns_name, 22)
-    try:
-        ssh_client = AegeaSSHClient()
-        ssh_client.load_system_host_keys()
-        ssh_client.connect(instance.public_dns_name, password="password", look_for_keys=False)
-        ssh_client.check_output("systemctl")
-    except Exception as e:
-        print(e)
+    # FIXME: this doesn't work. Figure out a way to vivify current user's account
+    #try:
+    #    ssh_client = AegeaSSHClient()
+    #    ssh_client.load_system_host_keys()
+    #    ssh_client.connect(instance.public_dns_name, password="password", look_for_keys=False)
+    #    ssh_client.check_output("systemctl")
+    #except Exception as e:
+    #    print(e)
     logger.info("Launched %s in %s", instance, subnet)
     return instance
 

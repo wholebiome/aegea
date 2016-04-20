@@ -5,7 +5,8 @@
 # or user-specific settings.
 build_ami:
   base: auto
-  rootfs_skel: auto
+  rootfs_skel_dirs:
+    - auto
   packages:
     - language-pack-en
     - iptables-persistent
@@ -58,7 +59,7 @@ build_ami:
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
     - "update-grub"
     - "grub-install /dev/xvda"
-    - "pip3 install awscli-cwlogs keymaker"
+    - "pip3 install boto3 awscli-cwlogs keymaker"
     - "keymaker install"
     - "activate-global-python-argcomplete"
     - "dpkg-reconfigure debconf -f noninteractive -p critical"

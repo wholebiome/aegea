@@ -14,17 +14,17 @@ from .launch import launch
 
 def get_bootstrap_files():
     manifest = []
-    rootfs_skel_dir = config.build_ami.rootfs_skel
-    if rootfs_skel_dir == "auto":
-        rootfs_skel_dir = os.path.join(os.path.dirname(__file__), "rootfs.skel")
-    if not os.path.exists(rootfs_skel_dir):
-        raise Exception("rootfs_skel directory {} not found".format(rootfs_skel_dir))
-    for root, dirs, files in os.walk(rootfs_skel_dir):
-        for file_ in files:
-            with open(os.path.join(root, file_)) as fh:
-                manifest.append(dict(path=os.path.join("/", os.path.relpath(root, rootfs_skel_dir), file_),
-                                     content=fh.read(),
-                                     permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:]))
+    for rootfs_skel_dir in config.build_ami.rootfs_skel_dirs:
+        if rootfs_skel_dir == "auto":
+            rootfs_skel_dir = os.path.join(os.path.dirname(__file__), "rootfs.skel")
+        if not os.path.exists(rootfs_skel_dir):
+            raise Exception("rootfs_skel directory {} not found".format(rootfs_skel_dir))
+        for root, dirs, files in os.walk(rootfs_skel_dir):
+            for file_ in files:
+                with open(os.path.join(root, file_)) as fh:
+                    manifest.append(dict(path=os.path.join("/", os.path.relpath(root, rootfs_skel_dir), file_),
+                                         content=fh.read(),
+                                         permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:]))
     return manifest
 
 def get_bootstrap_commands():
