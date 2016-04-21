@@ -193,6 +193,17 @@ def tasks(args):
 parser = register_parser(tasks, help='List ECS tasks')
 parser.add_argument("--columns", nargs="+")
 
+def taskdefs(args):
+    ecs = boto3.client('ecs')
+    table = []
+    for taskdef_arn in ecs.list_task_definitions()['taskDefinitionArns']:
+        taskdef = ecs.describe_task_definition(taskDefinition=taskdef_arn)["taskDefinition"]
+        table.append([get_field(taskdef, f) for f in args.columns])
+    page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
+
+parser = register_parser(taskdefs, help='List ECS task definitions')
+parser.add_argument("--columns", nargs="+", default=["family", "revision", "containerDefinitions"])
+
 def sirs(args):
     page_output(tabulate(boto3.client('ec2').describe_spot_instance_requests()['SpotInstanceRequests'], args))
 
