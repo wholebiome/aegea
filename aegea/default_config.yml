@@ -34,6 +34,8 @@ build_ami:
     - python-setuptools
     - python-wheel
     - python-virtualenv
+    - python-tz
+    - python-psutil
     - python3-dev
     - python3-cffi
     - python3-pip
@@ -54,6 +56,7 @@ build_ami:
     - cmake
     - libtool
     - autoconf
+    - ruby
   commands:
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
