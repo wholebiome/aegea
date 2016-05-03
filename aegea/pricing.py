@@ -52,7 +52,7 @@ def pricing(args):
         page_output(tabulate(table, args))
     else:
         offer_index = offers_api + "/aws/index.json"
-        print("Choose from:", ", ".join(["spot"] + requests.get(offer_index).json()["offers"]))
+        print("Choose from:", ", ".join(["spot"] + list(requests.get(offer_index).json()["offers"])))
 
 parser = register_parser(pricing, help='List AWS prices')
 parser.add_argument("offer", nargs="?", help="AWS product offer to list prices for. Run without this argument to see the list of available products.")

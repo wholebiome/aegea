@@ -20,6 +20,7 @@ class TestAegea(unittest.TestCase):
     def test_basic_aegea_commands(self):
         #subprocess.check_call(["aegea"])
         subprocess.check_call(["aegea", "--help"])
+        subprocess.check_call(["aegea", "pricing"])
         for subcommand in aegea.parser._actions[-1].choices:
             args = []
             if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh"):
