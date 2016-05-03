@@ -44,6 +44,6 @@ def rm(args):
     if not args.force:
         logger.info("Dry run succeeded. Run %s again with --force (-f) to actually remove.", __name__)
 
-parser = register_parser(rm, help='Remove resources', description="List resources to be removed by their ID or ARN, such as ami-eb957a8b, AIDAJYZD67Q2SUMUA2JBC, or arn:aws:iam::123456789012:user/foo.")
+parser = register_parser(rm, help='Remove or deprovision resources', description="List resources to be removed by their ID or ARN, such as ami-eb957a8b, AIDAJYZD67Q2SUMUA2JBC, or arn:aws:iam::123456789012:user/foo.")
 parser.add_argument('names', nargs='+')
 parser.add_argument('-f', '--force', action="store_true")
