@@ -1,3 +1,7 @@
+Version 0.5.0 (2016-05-05)
+--------------------------
+- Rollup: many changes
+
 Version 0.4.0 (2016-04-19)
 --------------------------
 - aegea audit implementation (except section 4)
