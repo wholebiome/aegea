@@ -24,6 +24,11 @@ build_ami:
     - libyaml-dev
     - libcurl4-openssl-dev
     - libhdf5-dev
+    - libjemalloc-dev
+    - libzip-dev
+    - libsnappy-dev
+    - liblz4-dev
+    - libboost-dev
     - htop
     - pydf
     - jq
