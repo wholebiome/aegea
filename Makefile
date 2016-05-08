@@ -27,6 +27,7 @@ docs:
 
 install:
 	-rm -rf dist
+	pip uninstall paramiko --yes
 	./setup.py bdist_wheel
 	pip install --upgrade dist/*.whl
 
