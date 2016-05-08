@@ -25,13 +25,13 @@ init_docs:
 docs:
 	$(MAKE) -C docs html
 
-install:
-	-rm -rf dist
-	pip uninstall paramiko --yes
+install: clean
+	pip uninstall paramiko --yes || true
 	./setup.py bdist_wheel
 	pip install --upgrade dist/*.whl
 
 clean:
+	-rm -rf dist
 	-rm -rf *.egg-info
 
 .PHONY: lint test docs install clean
