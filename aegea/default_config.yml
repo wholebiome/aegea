@@ -60,6 +60,9 @@ build_ami:
     - libtool
     - autoconf
     - ruby
+    - sysstat
+    - dstat
+    - numactl
   commands:
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
