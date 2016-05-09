@@ -36,6 +36,7 @@ def register_parser(function, **kwargs):
         initialize()
     parser = subparsers.add_parser(function.__name__, **kwargs)
     parser.add_argument("--max-col-width", "-w", type=int, default=32)
+    parser.add_argument("--json", action="store_true")
     parser.add_argument("--log-level", type=logging.getLogger().setLevel, help=str([logging.getLevelName(i) for i in range(0, 60, 10)]), default=config.get("log_level"))
     parser.set_defaults(entry_point=function)
     parser.set_defaults(**config.get(function.__name__, {}))

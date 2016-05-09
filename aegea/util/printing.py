@@ -1,7 +1,7 @@
 # coding: utf-8
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, shutil, subprocess, re
+import os, sys, json, shutil, subprocess, re
 from datetime import datetime
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
@@ -203,8 +203,12 @@ def tabulate(collection, args, cell_transforms=None):
     if cell_transforms is None:
         cell_transforms = {}
     cell_transforms["tags"] = format_tags
-    table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
-    if getattr(args, "sort_by", None):
-        table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)])
-    args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
-    return format_table(table, column_names=getattr(args, "display_column_names", args.columns), max_col_width=args.max_col_width)
+    if getattr(args, "json", None):
+        table = [{f: get_cell(i, f, cell_transforms.get(f)) for f in args.columns} for i in collection]
+        return json.dumps(table, indent=2)
+    else:
+        table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
+        if getattr(args, "sort_by", None):
+            table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)])
+        args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
+        return format_table(table, column_names=getattr(args, "display_column_names", args.columns), max_col_width=args.max_col_width)
