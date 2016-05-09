@@ -32,7 +32,7 @@ class TestAegea(unittest.TestCase):
             elif subcommand == "secrets":
                 args += ["ls"]
             elif subcommand == "pricing":
-                args += ["AmazonEC2"]
+                args += ["AmazonEC2", "--json"]
             elif subcommand == "billing":
                 args += ["--min-cost", "0.1"]
             subprocess.check_call(["aegea", subcommand] + args)
