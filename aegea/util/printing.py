@@ -171,7 +171,10 @@ def get_field(item, field):
         try:
             item = getattr(item, element)
         except AttributeError:
-            item = item.get(element)
+            try:
+                item = item.get(element)
+            except AttributeError:
+                raise Exception('Unable to access field or attribute "{}" of {}'.format(field, item))
     return item
 
 def format_datetime(d):
