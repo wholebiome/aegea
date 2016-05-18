@@ -144,13 +144,9 @@ parser.add_argument("--columns", nargs="+")
 
 def logs(args):
     logs = boto3.client("logs")
-    if args.log_streams:
-        for log_stream in args.log_streams:
-            group, stream = log_stream.split(".", 1)
-            for page in logs.get_paginator('filter_log_events').paginate(logGroupName=group, logStreamNames=[stream]):
-                for event in page["events"]:
-                    print(event["timestamp"], event["message"])
-        return
+    if args.log_group and args.log_stream:
+        args.pattern = None
+        return grep(args)
     table = []
     group_cols = ["logGroupName"]
     stream_cols = ["logStreamName", "lastIngestionTime", "storedBytes"]
@@ -159,17 +155,40 @@ def logs(args):
         for group in page["logGroups"]:
             if args.log_group and group["logGroupName"] != args.log_group:
                 continue
-            for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"]):
+            n = 0
+            for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"], orderBy="LastEventTime", descending=True):
                 for stream in page2["logStreams"]:
                     stream["lastIngestionTime"] = datetime.utcnow().replace(microsecond=0) - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)//1000)
                     table.append([get_field(group, f) for f in group_cols] + [get_field(stream, f) for f in stream_cols])
+                    n += 1
+                    if n >= args.max_streams_per_group:
+                        break
+                if n >= args.max_streams_per_group:
+                    break
     table = sorted(table, key=lambda x: x[cols.index(args.sort_by)], reverse=True)
     page_output(format_table(table, column_names=cols, max_col_width=args.max_col_width))
 
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
-parser.add_argument("--log-group")
-parser.add_argument("log_streams", nargs="*")
+parser.add_argument("--max-streams-per-group", "-n", type=int, default=8)
 parser.add_argument("--sort-by", default="lastIngestionTime")
+parser.add_argument("log_group", nargs="?")
+parser.add_argument("log_stream", nargs="?")
+
+def grep(args):
+    logs = boto3.client("logs")
+    filter_args = dict(logGroupName=args.log_group)
+    if args.log_stream:
+        filter_args.update(logStreamNames=[args.log_stream])
+    if args.pattern:
+        filter_args.update(filterPattern=args.pattern)
+    for page in logs.get_paginator('filter_log_events').paginate(**filter_args):
+        for event in page["events"]:
+            print(event["timestamp"], event["message"])
+
+parser = register_parser(grep, help='Filter and print events in a CloudWatch Logs stream or group of streams')
+parser.add_argument("pattern")
+parser.add_argument("log_group")
+parser.add_argument("log_stream", nargs="?")
 
 def clusters(args):
     ecs = boto3.client('ecs')
