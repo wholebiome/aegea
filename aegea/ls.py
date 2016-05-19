@@ -278,3 +278,10 @@ def filesystems(args):
 parser = register_parser(filesystems, help='List EFS filesystems')
 parser.add_argument("--columns", nargs="+")
 parser.add_argument("--mount-target-columns", nargs="+")
+
+def limits(args):
+    # https://aws.amazon.com/about-aws/whats-new/2014/06/19/amazon-ec2-service-limits-report-now-available/
+    # http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Client.describe_limits
+    print("Not implemented yet")
+
+parser = register_parser(limits, help='Describe limits in effect on your AWS account')
