@@ -23,7 +23,7 @@ class TestAegea(unittest.TestCase):
         subprocess.check_call(["aegea", "pricing"])
         for subcommand in aegea.parser._actions[-1].choices:
             args = []
-            if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh"):
+            if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh", "grep"):
                 args += ["--help"]
             elif subcommand in ("launch", "build_image"):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]

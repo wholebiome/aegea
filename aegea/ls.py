@@ -172,8 +172,8 @@ def logs(args):
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
 parser.add_argument("--max-streams-per-group", "-n", type=int, default=8)
 parser.add_argument("--sort-by", default="lastIngestionTime")
-parser.add_argument("log_group", nargs="?")
-parser.add_argument("log_stream", nargs="?")
+parser.add_argument("log_group", nargs="?", help="CloudWatch log group")
+parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
 
 def grep(args):
     logs = boto3.client("logs")
@@ -191,9 +191,9 @@ def grep(args):
             print(event["timestamp"], event["message"])
 
 parser = register_parser(grep, help='Filter and print events in a CloudWatch Logs stream or group of streams')
-parser.add_argument("pattern")
-parser.add_argument("log_group")
-parser.add_argument("log_stream", nargs="?")
+parser.add_argument("pattern", help="CloudWatch filter pattern to use. See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html")
+parser.add_argument("log_group", help="CloudWatch log group")
+parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
 parser.add_argument("--start-time", type=parse_time_input)
 parser.add_argument("--end-time", type=parse_time_input)
 
