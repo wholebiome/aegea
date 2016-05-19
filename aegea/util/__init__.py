@@ -1,8 +1,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, re, socket, errno, time
+from datetime import datetime
+from dateutil.parser import parse as dateutil_parse
+from dateutil.relativedelta import relativedelta
 from .printing import GREEN
-from .compat import Repr
+from .compat import Repr, str
 from .. import logger
 
 def wait_for_port(host, port, timeout=600, print_progress=True):
@@ -44,3 +47,17 @@ class VerboseRepr:
 
 def natural_sort(i):
     return sorted(i, key=lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)])
+
+def parse_time_input(t):
+    if not isinstance(t, (str, bytes)):
+        raise ValueError("Expected a string, but got {}".format(type(t)))
+    if t.isdigit():
+        return datetime.utcfromtimestamp(int(t)/1000)
+    try:
+        return dateutil_parse(t)
+    except (ValueError, OverflowError, AssertionError):
+        units = {"weeks", "days", "hours", "minutes", "seconds"}
+        diffs = {u: float(t[:-1]) for u in units if u.startswith(t[-1])}
+        if len(diffs) != 1:
+            raise ValueError('Could not parse "{}" as a timestamp or time delta'.format(t))
+        return datetime.utcnow().replace(microsecond=0) + relativedelta(**diffs)

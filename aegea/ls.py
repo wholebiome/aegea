@@ -6,6 +6,7 @@ from datetime import datetime
 import boto3
 
 from . import register_parser
+from .util import parse_time_input
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
 from .util.aws import ARN, resolve_instance_id
 
@@ -181,6 +182,10 @@ def grep(args):
         filter_args.update(logStreamNames=[args.log_stream])
     if args.pattern:
         filter_args.update(filterPattern=args.pattern)
+    if args.start_time:
+        filter_args.update(startTime=int(args.start_time.timestamp() * 1000))
+    if args.end_time:
+        filter_args.update(endTime=int(args.end_time.timestamp() * 1000))
     for page in logs.get_paginator('filter_log_events').paginate(**filter_args):
         for event in page["events"]:
             print(event["timestamp"], event["message"])
@@ -189,6 +194,8 @@ parser = register_parser(grep, help='Filter and print events in a CloudWatch Log
 parser.add_argument("pattern")
 parser.add_argument("log_group")
 parser.add_argument("log_stream", nargs="?")
+parser.add_argument("--start-time", type=parse_time_input)
+parser.add_argument("--end-time", type=parse_time_input)
 
 def clusters(args):
     ecs = boto3.client('ecs')
