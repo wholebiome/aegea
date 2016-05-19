@@ -146,7 +146,7 @@ parser.add_argument("--columns", nargs="+")
 def logs(args):
     logs = boto3.client("logs")
     if args.log_group and args.log_stream:
-        args.pattern = None
+        args.pattern, args.start_time, args.end_time = None, None, None
         return grep(args)
     table = []
     group_cols = ["logGroupName"]
