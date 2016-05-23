@@ -5,6 +5,24 @@ Aegea: Amazon Web Services Operator Interface
 operators of Amazon Web Services (AWS) accounts. It is intended to be used in conjunction with the existing
 functionality of the `AWS CLI <https://aws.amazon.com/cli/>`_.
 
+Installation
+~~~~~~~~~~~~
+Run ``pip install .`` in this directory to install Aegea. Before you do this, you will also need to install some system library dependencies:
+
++--------------+---------+-----------------------------------------------------------------------------------------+
+| OS           | Python  | Command                                                                                 |
++==============+=========+=========================================================================================+
+| Ubuntu       | Python 2| apt-get install python-dev python-cffi libssl-dev                                       |
++--------------+---------+-----------------------------------------------------------------------------------------+
+| Ubuntu       | Python 3| apt-get install python3-dev python3-cffi libssl-dev                                     |
++--------------+---------+-----------------------------------------------------------------------------------------+
+| Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel                                      |
++--------------+---------+-----------------------------------------------------------------------------------------+
+| Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel                                    |
++--------------+---------+-----------------------------------------------------------------------------------------+
+| OS X/Homebrew|         | Install Xcode or Xcode Command Line Tools                                               |
++--------------+---------+-----------------------------------------------------------------------------------------+
+
 Configuration management
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Aegea supports ingesting configuration from a configurable array of sources. Each source is a JSON or YAML file.
