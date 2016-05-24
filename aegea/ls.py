@@ -151,7 +151,7 @@ def logs(args):
     table = []
     group_cols = ["logGroupName"]
     stream_cols = ["logStreamName", "lastIngestionTime", "storedBytes"]
-    cols = group_cols + stream_cols
+    args.columns = group_cols + stream_cols
     for page in logs.get_paginator('describe_log_groups').paginate():
         for group in page["logGroups"]:
             if args.log_group and group["logGroupName"] != args.log_group:
@@ -160,18 +160,17 @@ def logs(args):
             for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"], orderBy="LastEventTime", descending=True):
                 for stream in page2["logStreams"]:
                     stream["lastIngestionTime"] = datetime.utcnow().replace(microsecond=0) - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)//1000)
-                    table.append([get_field(group, f) for f in group_cols] + [get_field(stream, f) for f in stream_cols])
+                    table.append(dict(group, **stream))
                     n += 1
                     if n >= args.max_streams_per_group:
                         break
                 if n >= args.max_streams_per_group:
                     break
-    table = sorted(table, key=lambda x: x[cols.index(args.sort_by)], reverse=True)
-    page_output(format_table(table, column_names=cols, max_col_width=args.max_col_width))
+    page_output(tabulate(table, args))
 
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
 parser.add_argument("--max-streams-per-group", "-n", type=int, default=8)
-parser.add_argument("--sort-by", default="lastIngestionTime")
+parser.add_argument("--sort-by", default="lastIngestionTime:reverse")
 parser.add_argument("log_group", nargs="?", help="CloudWatch log group")
 parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
 
@@ -214,8 +213,8 @@ def tasks(args):
         task_arns = sum([p["taskArns"] for p in ecs.get_paginator('list_tasks').paginate(**list_tasks_args)], [])
         if task_arns:
             for task in ecs.describe_tasks(cluster=cluster_arn, tasks=task_arns)["tasks"]:
-                table.append([get_field(task, f) for f in args.columns])
-    page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
+                table.append(task)
+    page_output(tabulate(table, args))
 
 parser = register_parser(tasks, help='List ECS tasks')
 parser.add_argument("--desired-status", choices={'RUNNING', 'PENDING', 'STOPPED'}, default='RUNNING')
@@ -225,9 +224,8 @@ def taskdefs(args):
     ecs = boto3.client('ecs')
     table = []
     for taskdef_arn in ecs.list_task_definitions()['taskDefinitionArns']:
-        taskdef = ecs.describe_task_definition(taskDefinition=taskdef_arn)["taskDefinition"]
-        table.append([get_field(taskdef, f) for f in args.columns])
-    page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
+        table.append(ecs.describe_task_definition(taskDefinition=taskdef_arn)["taskDefinition"])
+    page_output(tabulate(table, args))
 
 parser = register_parser(taskdefs, help='List ECS task definitions')
 parser.add_argument("--columns", nargs="+", default=["family", "revision", "containerDefinitions"])

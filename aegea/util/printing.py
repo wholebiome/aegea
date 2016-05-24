@@ -212,6 +212,10 @@ def tabulate(collection, args, cell_transforms=None):
     else:
         table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
         if getattr(args, "sort_by", None):
-            table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)])
+            reverse = False
+            if args.sort_by.endswith(":reverse"):
+                reverse = True
+                args.sort_by = args.sort_by[:-len(":reverse")]
+            table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)], reverse=reverse)
         args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
         return format_table(table, column_names=getattr(args, "display_column_names", args.columns), max_col_width=args.max_col_width)
