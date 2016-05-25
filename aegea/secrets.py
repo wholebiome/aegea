@@ -29,15 +29,19 @@ For more information about credential storage best practices, see
 http://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html
 and https://www.vaultproject.io/.
 
-Examples:
+Examples
+========
+Using ``aegea secrets`` to generate and save an SSH key pair accessible by instances launched by ``aegea launch``::
 
     aegea secrets put deploy.foo.bar --generate-ssh-key --iam-roles aegea.launch > deploy.foo.bar.pub
-
-    RAILGUN_PASSWORD=passw0rd aegea secrets put RAILGUN_PASSWORD --iam-groups space_marines
 
     eval $(ssh-agent -s)
     aegea-get-secret deploy.bitbucket.my-private-repo | ssh-add /dev/stdin
     git clone git@bitbucket.org:my-org/my-private-repo.git
+
+Using ``aegea secrets`` to save an API key (password) accessible by the IAM group ``space_marines``::
+
+    RAILGUN_PASSWORD=passw0rd aegea secrets put RAILGUN_PASSWORD --iam-groups space_marines
 
 """
 
