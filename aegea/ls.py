@@ -262,6 +262,16 @@ def tables(args):
 parser = register_parser(tables, help='List DynamoDB tables')
 parser.add_argument("--columns", nargs="+")
 
+def subscriptions(args):
+    table = []
+    for page in boto3.client("sns").get_paginator('list_subscriptions').paginate():
+        for subscription in page["Subscriptions"]:
+            table.append(subscription)
+    page_output(tabulate(table, args))
+
+parser = register_parser(subscriptions, help='List SNS subscriptions')
+parser.add_argument("--columns", nargs="+", default=['SubscriptionArn', 'Protocol', 'Endpoint'])
+
 def filesystems(args):
     efs = boto3.client("efs")
     table = []
