@@ -1,8 +1,6 @@
 test:
   override:
     - tox
-  post:
-    - bash <(curl -s https://codecov.io/bash) -t a57887f4-abd7-434a-abad-370d85438174
 
 dependencies:
   override:
