@@ -20,5 +20,4 @@ if len(sys.argv) < 2:
     aegea.parser.print_help()
     aegea.parser.exit(1)
 
-args = aegea.parser.parse_args()
-args.entry_point(args)
+aegea.main()
