@@ -1,3 +1,7 @@
+Version 0.6.0 (2016-05-29)
+--------------------------
+- Rollup: many changes
+
 Version 0.5.0 (2016-05-05)
 --------------------------
 - Rollup: many changes
