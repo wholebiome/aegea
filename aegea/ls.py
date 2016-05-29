@@ -21,6 +21,10 @@ def filter_collection(collection, args):
     # TODO: shlex?
     for f in getattr(args, "filter", []):
         name, value = f.split("=", 1)
+        if collection.__class__.__name__ == "ec2.instancesCollectionManager":
+            name = name.replace("_", "-")
+            if name == "state":
+                name = "instance-state-name"
         filters.append(dict(Name=name, Values=[value]))
     for t in getattr(args, "tag", []):
         name, value = t.split("=", 1)

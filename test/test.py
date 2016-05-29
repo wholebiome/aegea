@@ -35,6 +35,8 @@ class TestAegea(unittest.TestCase):
                 args += ["AmazonEC2", "--json"]
             elif subcommand == "billing":
                 args += ["--min-cost", "0.1"]
+            elif subcommand == "ls":
+                args += ["--filter", "state=running"]
             subprocess.check_call(["aegea", subcommand] + args)
 
     def test_dry_run_commands(self):
