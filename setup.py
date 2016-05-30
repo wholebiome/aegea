@@ -26,7 +26,8 @@ setup(
         'tweak >= 0.3.2',
         'keymaker >= 0.1.7',
         'pyyaml >= 3.11',
-        'python-dateutil >= 2.1'
+        'python-dateutil >= 2.1',
+	'coverage >= 4.1'
     ],
     extras_require={
         ':python_version == "2.7"': [
