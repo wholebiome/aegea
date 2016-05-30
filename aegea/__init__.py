@@ -33,7 +33,7 @@ def initialize():
 
 def main(args=None):
     parsed_args = parser.parse_args(args=args)
-    if "sort_by" in parsed_args and "columns" in parsed_args and parsed_args.sort_by not in parsed_args.columns:
+    if getattr(parsed_args, "sort_by") and getattr(parsed_args, "columns") and parsed_args.sort_by not in parsed_args.columns:
         parsed_args.columns.append(parsed_args.sort_by)
     parsed_args.entry_point(parsed_args)
 
