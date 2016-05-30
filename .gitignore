@@ -30,3 +30,6 @@ npm-debug.log
 
 # OS X metadata files
 .DS_Store
+
+# Python coverage 
+.coverage
