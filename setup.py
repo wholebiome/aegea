@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
-import os, sys, glob
+import os, sys, glob, subprocess
 from setuptools import setup, find_packages
+
+try:
+    version = subprocess.check_output(["git", "describe", "--tags", "--match", "v*.*.*"]).strip("v\n")
+except:
+    version = "0.0.0"
 
 setup(
     name='aegea',
-    version='0.6.0',
+    version=version,
     url='https://github.com/kislyuk/aegea',
     license=open('LICENSE.md').readline().strip(),
     author='Andrey Kislyuk',
