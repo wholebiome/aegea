@@ -15,7 +15,7 @@ lint: lint_deps
 	./setup.py flake8
 #	flake8 scripts/*
 
-test: install
+test: lint install
 	coverage run --source=aegea ./test/test.py
 	./setup.py test
 
