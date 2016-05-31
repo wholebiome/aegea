@@ -1,10 +1,13 @@
 """
 Amazon Web Services Operator Interface
+
+For general help, run ``aegea help`` or visit https://github.com/kislyuk/aegea/wiki. For help with individual commands, run ``aegea <command> --help``.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, argparse, logging, shutil
+from textwrap import fill
 from tweak import Config
 
 try:
@@ -27,7 +30,10 @@ def initialize():
         logger.info("Wrote new config file %s with default values", config._config_files[1])
         config = Config(__name__, use_yaml=True, save_on_exit=False)
 
-    parser = argparse.ArgumentParser(description="{}: {}".format(BOLD() + RED() + __name__.capitalize() + ENDC(), __doc__))
+    parser = argparse.ArgumentParser(
+        description="{}: {}".format(BOLD() + RED() + __name__.capitalize() + ENDC(), fill(__doc__.strip())),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("--version", action="version", version='%(prog)s {version}'.format(version=__version__))
     subparsers = parser.add_subparsers(title='commands')
 
