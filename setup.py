@@ -39,7 +39,8 @@ setup(
     },
     tests_require=[
         'coverage',
-        'flake8'
+        'flake8',
+        'unittest-xml-reporting'
     ],
     packages=find_packages(exclude=['test']),
     scripts=glob.glob('scripts/*'),
