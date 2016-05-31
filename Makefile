@@ -16,8 +16,8 @@ lint: lint_deps
 #	flake8 scripts/*
 
 test: install
-#	coverage run --source=aegea ./test/test.py
-#	./setup.py test
+	coverage run --source=aegea ./test/test.py
+	./setup.py test
 
 init_docs:
 	cd docs; sphinx-quickstart
