@@ -201,9 +201,11 @@ def ensure_iam_role(iam_role_name, policies=frozenset(), trust=frozenset()):
             break
     else:
         role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc(*trust))
+    attached_policies = [policy.arn for policy in role.attached_policies.all()]
     for policy in policies:
-        # TODO: enumerate policies to avoid requiring IAM write access
-        role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
+        policy_arn = "arn:aws:iam::aws:policy/{}".format(policy)
+        if policy_arn not in attached_policies:
+            role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
     # TODO: accommodate IAM eventual consistency
     return role
 

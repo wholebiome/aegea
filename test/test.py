@@ -17,6 +17,29 @@ class TestAegea(unittest.TestCase):
     def setUp(self):
         pass
 
+    def call(self, *args, **kwargs):
+        process = subprocess.Popen(stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, *args, **kwargs)
+        out, err = process.communicate()
+        exit_code = process.poll()
+        out = out.decode(sys.stdin.encoding)
+        err = err.decode(sys.stdin.encoding)
+        if exit_code != os.EX_OK:
+            print(err)
+            cmd = kwargs.get("args", args[0])
+            e = subprocess.CalledProcessError(exit_code, cmd, output=out)
+            e.stderr = err
+            raise e
+        return out, err
+
+    def call_unauthorized_ok(self, *args, **kwargs):
+        message = kwargs.pop("message", "You are not authorized")
+        try:
+            self.call(*args, **kwargs)
+        except Exception as e:
+            if not (isinstance(e, subprocess.CalledProcessError) and message in e.stderr):
+                raise
+
     def test_basic_aegea_commands(self):
         #subprocess.check_call(["aegea"])
         subprocess.check_call(["aegea", "--help"])
@@ -35,17 +58,19 @@ class TestAegea(unittest.TestCase):
                 args += ["AmazonEC2", "--json"]
             elif subcommand == "billing":
                 args += ["--min-cost", "0.1"]
+                if "AWS_DETAILED_BILLING_REPORTS_BUCKET" in os.environ:
+                    args += ["--detailed-billing-reports-bucket", os.environ["AWS_DETAILED_BILLING_REPORTS_BUCKET"]]
             elif subcommand == "ls":
                 args += ["--filter", "state=running"]
-            subprocess.check_call(["aegea", subcommand] + args)
+            self.call_unauthorized_ok(["aegea", subcommand] + args, message="Access Denied")
 
     def test_dry_run_commands(self):
-        subprocess.check_call("aegea launch unittest --dry-run --no-verify-ssh-key-pem-file", shell=True)
-        subprocess.check_call("aegea launch unittest --dry-run --spot --no-verify-ssh-key-pem-file", shell=True)
-        subprocess.check_call("aegea launch unittest --dry-run --duration-hours 1 --no-verify-ssh-key-pem-file", shell=True)
-        subprocess.check_call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file",
-                              shell=True)
-        subprocess.check_call("aegea build_image i --dry-run --no-verify-ssh-key-pem-file", shell=True)
+        self.call_unauthorized_ok("aegea launch unittest --dry-run --no-verify-ssh-key-pem-file", shell=True)
+        self.call_unauthorized_ok("aegea launch unittest --dry-run --spot --no-verify-ssh-key-pem-file", shell=True)
+        self.call_unauthorized_ok("aegea launch unittest --dry-run --duration-hours 1 --no-verify-ssh-key-pem-file", shell=True)
+        self.call_unauthorized_ok("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file",
+                                  shell=True)
+        self.call_unauthorized_ok("aegea build_image i --dry-run --no-verify-ssh-key-pem-file", shell=True)
 
     def test_spot_fleet_builder(self):
         builder = SpotFleetBuilder(launch_spec={})
