@@ -18,32 +18,31 @@ class TestAegea(unittest.TestCase):
         pass
 
     def call(self, *args, **kwargs):
+        cmd = kwargs.get("args", args[0])
+        print('Running "{}"'.format(cmd), file=sys.stderr)
+        expect = kwargs.pop("expect", [dict(exit_codes=[os.EX_OK], stdout=None, stderr=None)])
         process = subprocess.Popen(stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, *args, **kwargs)
         out, err = process.communicate()
         exit_code = process.poll()
         out = out.decode(sys.stdin.encoding)
         err = err.decode(sys.stdin.encoding)
-        if exit_code != os.EX_OK:
+        def match(exit_code, out, err, expected):
+            exit_ok = exit_code in expected["exit_codes"]
+            stdout_ok = re.search(expected.get("stdout") or "", out)
+            stderr_ok = re.search(expected.get("stderr") or "", err)
+            return exit_ok and stdout_ok and stderr_ok
+        if not any(match(exit_code, out, err, exp) for exp in expect):
             print(err)
-            cmd = kwargs.get("args", args[0])
             e = subprocess.CalledProcessError(exit_code, cmd, output=out)
-            e.stderr = err
+            e.stdout, e.stderr = out, err
             raise e
         return out, err
 
-    def call_unauthorized_ok(self, *args, **kwargs):
-        message = kwargs.pop("message", "You are not authorized")
-        try:
-            self.call(*args, **kwargs)
-        except Exception as e:
-            if not (isinstance(e, subprocess.CalledProcessError) and message in e.stderr):
-                raise
-
     def test_basic_aegea_commands(self):
         #subprocess.check_call(["aegea"])
-        subprocess.check_call(["aegea", "--help"])
-        subprocess.check_call(["aegea", "pricing"])
+        self.call(["aegea", "--help"])
+        self.call(["aegea", "pricing"])
         for subcommand in aegea.parser._actions[-1].choices:
             args = []
             if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh", "grep"):
@@ -62,15 +61,21 @@ class TestAegea(unittest.TestCase):
                     args += ["--detailed-billing-reports-bucket", os.environ["AWS_DETAILED_BILLING_REPORTS_BUCKET"]]
             elif subcommand == "ls":
                 args += ["--filter", "state=running"]
-            self.call_unauthorized_ok(["aegea", subcommand] + args, message="Access Denied")
+            unauthorized_ok = [dict(exit_codes=[os.EX_OK]), dict(exit_codes=[1], stderr="(UnauthorizedOperation|AccessDenied")]
+            self.call(["aegea", subcommand] + args, expect=unauthorized_ok)
 
     def test_dry_run_commands(self):
-        self.call_unauthorized_ok("aegea launch unittest --dry-run --no-verify-ssh-key-pem-file", shell=True)
-        self.call_unauthorized_ok("aegea launch unittest --dry-run --spot --no-verify-ssh-key-pem-file", shell=True)
-        self.call_unauthorized_ok("aegea launch unittest --dry-run --duration-hours 1 --no-verify-ssh-key-pem-file", shell=True)
-        self.call_unauthorized_ok("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file",
-                                  shell=True)
-        self.call_unauthorized_ok("aegea build_image i --dry-run --no-verify-ssh-key-pem-file", shell=True)
+        unauthorized_ok = [dict(exit_codes=[os.EX_OK]), dict(exit_codes=[1], stderr="UnauthorizedOperation")]
+        self.call("aegea launch unittest --dry-run --no-verify-ssh-key-pem-file",
+                  shell=True, expect=unauthorized_ok)
+        self.call("aegea launch unittest --dry-run --spot --no-verify-ssh-key-pem-file",
+                  shell=True, expect=unauthorized_ok)
+        self.call("aegea launch unittest --dry-run --duration-hours 1 --no-verify-ssh-key-pem-file",
+                  shell=True, expect=unauthorized_ok)
+        self.call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file",
+                  shell=True, expect=unauthorized_ok)
+        self.call("aegea build_image i --dry-run --no-verify-ssh-key-pem-file",
+                  shell=True, expect=unauthorized_ok)
 
     def test_spot_fleet_builder(self):
         builder = SpotFleetBuilder(launch_spec={})
