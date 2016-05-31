@@ -61,7 +61,7 @@ class TestAegea(unittest.TestCase):
                     args += ["--detailed-billing-reports-bucket", os.environ["AWS_DETAILED_BILLING_REPORTS_BUCKET"]]
             elif subcommand == "ls":
                 args += ["--filter", "state=running"]
-            unauthorized_ok = [dict(exit_codes=[os.EX_OK]), dict(exit_codes=[1], stderr="(UnauthorizedOperation|AccessDenied")]
+            unauthorized_ok = [dict(exit_codes=[os.EX_OK]), dict(exit_codes=[1], stderr="(UnauthorizedOperation|AccessDenied)")]
             self.call(["aegea", subcommand] + args, expect=unauthorized_ok)
 
     def test_dry_run_commands(self):
