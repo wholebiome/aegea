@@ -1,3 +1,13 @@
+"""
+Remove or deprovision AWS EC2, IAM, and other resources. By default, this command performs a dry run; the -f/--force
+option is required to actually execute the operation.
+
+List resources to be removed by their ID or ARN, such as ami-eb957a8b, AIDAJYZD67Q2SUMUA2JBC, or
+arn:aws:iam::123456789012:user/foo.
+
+EC2 key pairs have no ARNs and no distingiushing ID prefix. To delete them by name, use the --key-pair option.
+"""
+
 import os, sys, argparse, subprocess
 import boto3
 from . import register_parser, logger
@@ -7,7 +17,9 @@ from botocore.exceptions import ClientError
 def rm(args):
     for name in args.names:
         try:
-            if name.startswith("sg-"):
+            if args.key_pair:
+                boto3.resource("ec2").KeyPair(name).delete(DryRun=not args.force)
+            elif name.startswith("sg-"):
                 boto3.resource("ec2").SecurityGroup(name).delete(DryRun=not args.force)
             elif name.startswith("vol-"):
                 boto3.resource("ec2").Volume(name).delete(DryRun=not args.force)
@@ -22,7 +34,9 @@ def rm(args):
             elif name.startswith("sir-"):
                 boto3.client("ec2").cancel_spot_instance_requests(SpotInstanceRequestIds=[name], DryRun=not args.force)
             elif name.startswith("sfr-"):
-                boto3.client("ec2").cancel_spot_fleet_requests(SpotFleetRequestIds=[name], TerminateInstances=False, DryRun=not args.force)
+                boto3.client("ec2").cancel_spot_fleet_requests(SpotFleetRequestIds=[name],
+                                                               TerminateInstances=False,
+                                                               DryRun=not args.force)
             elif name.startswith("AKIA") and len(name) == 20 and name.upper() == name:
                 boto3.client("iam").delete_access_key(AccessKeyId=name) if args.force else True
             elif name.startswith("AROA") and len(name) == 21 and name.upper() == name:
@@ -44,6 +58,8 @@ def rm(args):
     if not args.force:
         logger.info("Dry run succeeded. Run %s again with --force (-f) to actually remove.", __name__)
 
-parser = register_parser(rm, help='Remove or deprovision resources', description="List resources to be removed by their ID or ARN, such as ami-eb957a8b, AIDAJYZD67Q2SUMUA2JBC, or arn:aws:iam::123456789012:user/foo.")
+parser = register_parser(rm, help='Remove or deprovision resources', description=__doc__)
 parser.add_argument('names', nargs='+')
 parser.add_argument('-f', '--force', action="store_true")
+parser.add_argument('--key-pair', action="store_true",
+                    help='Assume input names are EC2 SSH key pair names (required when deleting key pairs, since they have no ID or ARN)')
