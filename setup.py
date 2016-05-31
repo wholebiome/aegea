@@ -27,7 +27,6 @@ setup(
         'keymaker >= 0.1.7',
         'pyyaml >= 3.11',
         'python-dateutil >= 2.1',
-	'coverage >= 4.1'
     ],
     extras_require={
         ':python_version == "2.7"': [
@@ -36,6 +35,10 @@ setup(
             'backports.statistics >= 0.1.0'
         ]
     },
+    tests_require=[
+        'coverage',
+        'flake8'
+    ],
     packages=find_packages(exclude=['test']),
     scripts=glob.glob('scripts/*'),
     platforms=['MacOS X', 'Posix'],
