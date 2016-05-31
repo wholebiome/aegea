@@ -11,7 +11,7 @@ try:
     import pkg_resources
     __version__ = pkg_resources.require(__name__)[0].version
 except Exception:
-    __version__ = "UNKNOWN_VERSION"
+    __version__ = "0.0.0"
 
 logger = logging.getLogger(__name__)
 
