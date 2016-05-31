@@ -78,6 +78,7 @@ class TestAegea(unittest.TestCase):
                   shell=True, expect=unauthorized_ok)
 
     def test_spot_fleet_builder(self):
+        self.assertTrue(False)
         builder = SpotFleetBuilder(launch_spec={})
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()),
                          {"c3.large", "c4.large", "m3.large", "m4.large", "m3.medium"})
