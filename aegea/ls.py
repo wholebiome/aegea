@@ -11,9 +11,15 @@ from .util.printing import format_table, page_output, get_field, get_cell, tabul
 from .util.aws import ARN, resolve_instance_id
 
 def register_listing_parser(function, **kwargs):
+    col_def = dict(default=kwargs.pop("column_defaults")) if "column_defaults" in kwargs else {}
     parser = register_parser(function, **kwargs)
-    parser.add_argument("--filter", nargs="+", default=[], help="Filter(s) to apply to output, e.g. --filter state=available")
-    parser.add_argument("--tag", nargs="+", default=[], help="Tag(s) to filter output by, e.g. --tag Owner=bezos")
+    parser.add_argument("-c", "--columns", nargs="+", help="Names of columns to print", **col_def)
+    return parser
+
+def register_filtering_parser(function, **kwargs):
+    parser = register_listing_parser(function, **kwargs)
+    parser.add_argument("-f", "--filter", nargs="+", default=[], help="Filter(s) to apply to output, e.g. --filter state=available")
+    parser.add_argument("-t", "--tag", nargs="+", default=[], help="Tag(s) to filter output by, e.g. --tag Owner=bezos")
     return parser
 
 def filter_collection(collection, args):
@@ -49,8 +55,7 @@ def ls(args):
     args.columns = ["name"] + args.columns
     page_output(tabulate(instances, args, cell_transforms={"state": lambda x: x["Name"], "iam_instance_profile": lambda x: x.get("Arn", "").split("/")[-1] if x else None}))
 
-parser = register_listing_parser(ls, help='List EC2 instances')
-parser.add_argument("--columns", nargs="+")
+parser = register_filtering_parser(ls, help='List EC2 instances')
 parser.add_argument("--sort-by")
 
 def users(args):
@@ -61,26 +66,22 @@ def users(args):
     table = [[">>>" if i.user_id == current_user.user_id else ""] + [get_cell(i, f) for f in args.columns] for i in iam.users.all()]
     page_output(format_table(table, column_names=["cur"] + args.columns, max_col_width=args.max_col_width))
 
-parser = register_parser(users, help='List IAM users')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(users, help='List IAM users')
 
 def groups(args):
     page_output(tabulate(boto3.resource("iam").groups.all(), args))
 
-parser = register_parser(groups, help='List IAM groups')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(groups, help='List IAM groups')
 
 def roles(args):
     page_output(tabulate(boto3.resource("iam").roles.all(), args))
 
-parser = register_parser(roles, help='List IAM roles')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(roles, help='List IAM roles')
 
 def policies(args):
     page_output(tabulate(boto3.resource("iam").policies.all(), args))
 
-parser = register_parser(policies, help='List IAM policies')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(policies, help='List IAM policies')
 parser.add_argument("--sort-by")
 
 def volumes(args):
@@ -91,21 +92,18 @@ def volumes(args):
             row[args.columns.index("attachments")] = ", ".join(a["InstanceId"] for a in row[args.columns.index("attachments")])
     page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
 
-parser = register_listing_parser(volumes, help='List EC2 EBS volumes')
-parser.add_argument("--columns", nargs="+")
+parser = register_filtering_parser(volumes, help='List EC2 EBS volumes')
 
 def snapshots(args):
     account_id = ARN(boto3.resource("iam").CurrentUser().arn).account_id
     page_output(filter_and_tabulate(boto3.resource("ec2").snapshots.filter(OwnerIds=[account_id]), args))
 
-parser = register_listing_parser(snapshots, help='List EC2 EBS snapshots')
-parser.add_argument("--columns", nargs="+")
+parser = register_filtering_parser(snapshots, help='List EC2 EBS snapshots')
 
 def buckets(args):
     page_output(filter_and_tabulate(boto3.resource("s3").buckets, args))
 
-parser = register_listing_parser(buckets, help='List S3 buckets')
-parser.add_argument("--columns", nargs="+")
+parser = register_filtering_parser(buckets, help='List S3 buckets')
 
 def console(args):
     ec2 = boto3.resource("ec2")
@@ -137,15 +135,13 @@ parser.add_argument("zones", nargs='*')
 def images(args):
     page_output(filter_and_tabulate(boto3.resource("ec2").images.filter(Owners=["self"]), args))
 
-parser = register_listing_parser(images, help='List EC2 AMIs')
-parser.add_argument("--columns", nargs="+")
+parser = register_filtering_parser(images, help='List EC2 AMIs')
 parser.add_argument("--sort-by")
 
 def security_groups(args):
     page_output(filter_and_tabulate(boto3.resource("ec2").security_groups, args))
 
-parser = register_listing_parser(security_groups, help='List EC2 security groups')
-parser.add_argument("--columns", nargs="+")
+parser = register_filtering_parser(security_groups, help='List EC2 security groups')
 
 def logs(args):
     logs = boto3.client("logs")
@@ -205,8 +201,7 @@ def clusters(args):
     cluster_arns = sum([p["clusterArns"] for p in ecs.get_paginator('list_clusters').paginate()], [])
     page_output(tabulate(ecs.describe_clusters(clusters=cluster_arns)["clusters"], args))
 
-parser = register_parser(clusters, help='List ECS clusters')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(clusters, help='List ECS clusters')
 
 def tasks(args):
     ecs = boto3.client('ecs')
@@ -220,9 +215,8 @@ def tasks(args):
                 table.append(task)
     page_output(tabulate(table, args))
 
-parser = register_parser(tasks, help='List ECS tasks')
+parser = register_listing_parser(tasks, help='List ECS tasks')
 parser.add_argument("--desired-status", choices={'RUNNING', 'PENDING', 'STOPPED'}, default='RUNNING')
-parser.add_argument("--columns", nargs="+")
 
 def taskdefs(args):
     ecs = boto3.client('ecs')
@@ -231,40 +225,34 @@ def taskdefs(args):
         table.append(ecs.describe_task_definition(taskDefinition=taskdef_arn)["taskDefinition"])
     page_output(tabulate(table, args))
 
-parser = register_parser(taskdefs, help='List ECS task definitions')
-parser.add_argument("--columns", nargs="+", default=["family", "revision", "containerDefinitions"])
+parser = register_listing_parser(taskdefs, help='List ECS task definitions', column_defaults=["family", "revision", "containerDefinitions"])
 
 def sirs(args):
     page_output(tabulate(boto3.client('ec2').describe_spot_instance_requests()['SpotInstanceRequests'], args))
 
-parser = register_parser(sirs, help='List EC2 spot instance requests')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(sirs, help='List EC2 spot instance requests')
 
 def sfrs(args):
     page_output(tabulate(boto3.client('ec2').describe_spot_fleet_requests()['SpotFleetRequestConfigs'], args))
 
-parser = register_parser(sfrs, help='List EC2 spot fleet requests')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(sfrs, help='List EC2 spot fleet requests')
 parser.add_argument("--trim-col-names", nargs="+", default=["SpotFleetRequestConfig.", "SpotFleetRequest"])
 parser.add_argument("--sort-by")
 
 def key_pairs(args):
     page_output(tabulate(boto3.resource("ec2").key_pairs.all(), args))
 
-parser = register_parser(key_pairs, help='List EC2 SSH key pairs')
-parser.add_argument("--columns", nargs="+", default=["name", "key_fingerprint"])
+parser = register_listing_parser(key_pairs, help='List EC2 SSH key pairs', column_defaults=["name", "key_fingerprint"])
 
 def subnets(args):
     page_output(filter_and_tabulate(boto3.resource("ec2").subnets, args))
 
-parser = register_listing_parser(subnets, help='List EC2 VPCs and subnets')
-parser.add_argument("--columns", nargs="+")
+parser = register_filtering_parser(subnets, help='List EC2 VPCs and subnets')
 
 def tables(args):
     page_output(tabulate(boto3.resource("dynamodb").tables.all(), args))
 
-parser = register_parser(tables, help='List DynamoDB tables')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(tables, help='List DynamoDB tables')
 
 def subscriptions(args):
     table = []
@@ -273,8 +261,7 @@ def subscriptions(args):
             table.append(subscription)
     page_output(tabulate(table, args))
 
-parser = register_parser(subscriptions, help='List SNS subscriptions')
-parser.add_argument("--columns", nargs="+", default=['SubscriptionArn', 'Protocol', 'Endpoint'])
+parser = register_listing_parser(subscriptions, help='List SNS subscriptions', column_defaults=['SubscriptionArn', 'Protocol', 'Endpoint'])
 
 def filesystems(args):
     efs = boto3.client("efs")
@@ -287,8 +274,7 @@ def filesystems(args):
     args.columns += args.mount_target_columns
     page_output(tabulate(table, args, cell_transforms={"SizeInBytes": lambda x: x.get("Value") if x else None}))
 
-parser = register_parser(filesystems, help='List EFS filesystems')
-parser.add_argument("--columns", nargs="+")
+parser = register_listing_parser(filesystems, help='List EFS filesystems')
 parser.add_argument("--mount-target-columns", nargs="+")
 
 def limits(args):
