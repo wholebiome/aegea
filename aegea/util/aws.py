@@ -129,7 +129,8 @@ class DNSZone:
             if len(private_zones) == 1:
                 self.zone = zone
             else:
-                raise AegeaException("Found {} private DNS zones; unable to determine zone to use".format(len(private_zones)))
+                msg = "Found {} private DNS zones; unable to determine zone to use"
+                raise AegeaException(msg.format(len(private_zones)))
         else:
             raise AegeaException("Unable to determine DNS zone to use")
         self.zone_id = os.path.basename(self.zone["Id"])
@@ -155,7 +156,8 @@ class DNSZone:
                     value = rrs["ResourceRecords"]
                     break
             else:
-                msg = "Could not find {t} record {n} in Route53 zone {z}".format(t=record_type, n=name, z=self.zone["Name"])
+                msg = "Could not find {t} record {n} in Route53 zone {z}"
+                msg = msg.format(t=record_type, n=name, z=self.zone["Name"])
                 if missing_ok:
                     warn(msg)
                     return
@@ -271,7 +273,8 @@ def get_pricing_data(offer, max_cache_age_days=30):
     from .. import config
     offer_filename = os.path.join(os.path.dirname(config._config_files[1]), offer + "_pricing_cache.json.gz")
     try:
-        if datetime.fromtimestamp(os.path.getmtime(offer_filename)) < datetime.now() - timedelta(days=max_cache_age_days):
+        cache_date = datetime.fromtimestamp(os.path.getmtime(offer_filename))
+        if cache_date < datetime.now() - timedelta(days=max_cache_age_days):
             raise Exception("Cache is too old, discard")
         with gzip.open(offer_filename) as fh:
             pricing_data = json.loads(fh.read().decode("utf-8"))
@@ -306,7 +309,8 @@ def get_ondemand_price_usd(region, instance_type, **kwargs):
 
 class SpotFleetBuilder(VerboseRepr):
     # TODO: vivify from toolspec; vivify from SFR ID; update with incremental cores/memory requirements
-    def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0, spot_price=None, duration_hours=None, dry_run=False):
+    def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0,
+                 spot_price=None, duration_hours=None, client_token=None, dry_run=False):
         if spot_price is None:
             spot_price = 1
         if "SecurityGroupIds" in launch_spec:
@@ -326,6 +330,8 @@ class SpotFleetBuilder(VerboseRepr):
         self.spot_fleet_request_config = dict(SpotPrice=str(spot_price),
                                               TargetCapacity=cores,
                                               IamFleetRole=self.iam_fleet_role.arn)
+        if client_token:
+            self.spot_fleet_request_config.update(ClientToken=client_token)
         if duration_hours:
             deadline = datetime.utcnow().replace(microsecond=0) + timedelta(hours=duration_hours)
             self.spot_fleet_request_config.update(ValidUntil=deadline,
@@ -359,5 +365,7 @@ class SpotFleetBuilder(VerboseRepr):
         if client is None:
             client = boto3.client("ec2")
         logger.debug(self.spot_fleet_request_config)
-        res = client.request_spot_fleet(DryRun=self.dry_run, SpotFleetRequestConfig=self.spot_fleet_request_config, **kwargs)
+        res = client.request_spot_fleet(DryRun=self.dry_run,
+                                        SpotFleetRequestConfig=self.spot_fleet_request_config,
+                                        **kwargs)
         return res["SpotFleetRequestId"]

@@ -44,7 +44,8 @@ def build_image(args):
         args.ami = args.base_ami or locate_ubuntu_ami(region=ec2.meta.client.meta.region_name)
         args.hostname = "{}-{}".format(__name__.replace(".", "-").replace("_", "-"), int(time.time()))
         args.wait_for_ssh = True
-        for field in "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb".split():
+        fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb"
+        for field in fields.split():
             setattr(args, field, None)
         instance = launch(args,
                           user_data_commands=get_bootstrap_commands(),

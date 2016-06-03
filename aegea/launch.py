@@ -23,7 +23,8 @@ from .util import wait_for_port, validate_hostname
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder)
-from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line, get_ssh_key_filename
+from .util.crypto import (new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line,
+                          get_ssh_key_filename)
 from .util.ssh import AegeaSSHClient
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
@@ -50,7 +51,8 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     ensure_ssh_key(args.ssh_key_name, verify_pem_file=args.verify_ssh_key_pem_file)
     try:
         i = resolve_instance_id(args.hostname)
-        raise Exception("The hostname {} is being used by {} (state: {})".format(args.hostname, i, ec2.Instance(i).state["Name"]))
+        msg = "The hostname {} is being used by {} (state: {})"
+        raise Exception(msg.format(args.hostname, i, ec2.Instance(i).state["Name"]))
     except AegeaException:
         validate_hostname(args.hostname)
         assert not args.hostname.startswith("i-")
@@ -99,20 +101,25 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                 sfr_id = spot_fleet_builder(ec2.meta.client)
                 instances = []
                 while not instances:
-                    instances = ec2.meta.client.describe_spot_fleet_instances(SpotFleetRequestId=sfr_id)["ActiveInstances"]
-                # FIXME: there may be multiple instances, and spot fleet provides no indication of whether the SFR is fulfilled
+                    res = ec2.meta.client.describe_spot_fleet_instances(SpotFleetRequestId=sfr_id)
+                    instances = res["ActiveInstances"]
+                # FIXME: there may be multiple instances, and spot fleet provides no indication of whether the SFR is
+                # fulfilled
                 instance = ec2.Instance(instances[0]["InstanceId"])
             else:
                 if args.spot_price is None:
                     args.spot_price = get_spot_bid_price(ec2, args.instance_type)
                 logger.info("Bidding {} for a {} spot instance".format(args.spot_price, args.instance_type))
-                res = ec2.meta.client.request_spot_instances(SpotPrice=str(args.spot_price),
-                                                             ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
-                                                             LaunchSpecification=launch_spec,
-                                                             DryRun=args.dry_run)
+                res = ec2.meta.client.request_spot_instances(
+                    SpotPrice=str(args.spot_price),
+                    ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
+                    LaunchSpecification=launch_spec,
+                    DryRun=args.dry_run
+                )
                 sir_id = res["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
                 ec2.meta.client.get_waiter('spot_instance_request_fulfilled').wait(SpotInstanceRequestIds=[sir_id])
-                instance = ec2.Instance(ec2.meta.client.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])["SpotInstanceRequests"][0]["InstanceId"])
+                res = ec2.meta.client.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])
+                instance = ec2.Instance(res["SpotInstanceRequests"][0]["InstanceId"])
         else:
             instances = ec2.create_instances(MinCount=1, MaxCount=1, DryRun=args.dry_run, **launch_spec)
             instance = instances[0]
@@ -123,7 +130,8 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     instance.wait_until_running()
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
     tags = dict([tag.split("=", 1) for tag in args.tags])
-    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name, SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:], **tags)
+    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name,
+             SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:], **tags)
     if args.use_dns:
         dns_zone.update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
@@ -132,6 +140,14 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     add_ssh_host_key_to_known_hosts(hostkey_line([instance.public_dns_name], ssh_host_key))
     if args.wait_for_ssh:
         wait_for_port(instance.public_dns_name, 22)
+    if args.essential_services:
+        logs = boto3.client("logs")
+        filter_args = dict(logGroupName="syslog", logStreamNames=[instance.private_dns_name], filterPattern="service",
+                           startTime=int((time.time()-900)*1000))
+        for page in logs.get_paginator('filter_log_events').paginate(**filter_args):
+            for event in page["events"]:
+                # print(event["timestamp"], event["message"])
+                raise NotImplementedError()
     # FIXME: this doesn't work. Figure out a way to vivify current user's account
     #try:
     #    ssh_client = AegeaSSHClient()
@@ -155,14 +171,16 @@ parser.add_argument('--duration-hours', type=float, help='Terminate the spot ins
 parser.add_argument('--cores', type=int)
 parser.add_argument('--min-mem-per-core-gb', type=float)
 parser.add_argument('--instance-type', '-t', default="t2.micro")
-parser.add_argument('--spot-price', type=float, help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
+parser.add_argument('--spot-price', type=float,
+                    help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
 parser.add_argument('--no-dns', dest='use_dns', action='store_false',
-                    help="Skip registering instance name in private DNS. Use if you don't use private DNS, or don't want the launching principal to have Route53 write access.")
+                    help="Skip registering instance name in private DNS. Use if you don't use private DNS, or don't want the launching principal to have Route53 write access.")  # noqa
 parser.add_argument('--subnet')
 parser.add_argument('--availability-zone', '-z')
 parser.add_argument('--security-groups', nargs="+")
 parser.add_argument('--tags', nargs="+", default=[])
 parser.add_argument('--wait-for-ssh', action='store_true')
+parser.add_argument('--essential-services', nargs="+")
 parser.add_argument('--iam-role', default=__name__)
 parser.add_argument('--iam-policies', nargs="+", default=["IAMReadOnlyAccess", "AmazonElasticFileSystemFullAccess"],
                     help='Ensure the default or specified IAM role has the listed IAM managed policies attached')

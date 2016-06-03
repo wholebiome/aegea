@@ -61,5 +61,5 @@ def rm(args):
 parser = register_parser(rm, help='Remove or deprovision resources', description=__doc__)
 parser.add_argument('names', nargs='+')
 parser.add_argument('-f', '--force', action="store_true")
-parser.add_argument('--key-pair', action="store_true",
-                    help='Assume input names are EC2 SSH key pair names (required when deleting key pairs, since they have no ID or ARN)')
+parser.add_argument('--key-pair', action="store_true", help="""
+Assume input names are EC2 SSH key pair names (required when deleting key pairs, since they have no ID or ARN)""")

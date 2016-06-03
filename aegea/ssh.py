@@ -12,7 +12,8 @@ def ssh(args):
     tags = {tag["Key"]: tag["Value"] for tag in instance.tags or []}
     ssh_host_key = tags.get("SSHHostPublicKeyPart1", "") + tags.get("SSHHostPublicKeyPart2", "")
     if ssh_host_key:
-        # FIXME: this results in duplicates. Use paramiko to detect if the key is already listed and not insert it then (or only insert if different)
+        # FIXME: this results in duplicates.
+        # Use paramiko to detect if the key is already listed and not insert it then (or only insert if different)
         add_ssh_host_key_to_known_hosts(instance.public_dns_name + " " + ssh_host_key + "\n")
     ssh_args = ['ssh', prefix + at + instance.public_dns_name] + args.ssh_args
     os.execvp("ssh", ssh_args)

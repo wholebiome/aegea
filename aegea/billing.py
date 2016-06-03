@@ -40,7 +40,7 @@ def billing(args):
         billing_object_body = billing_object.get()["Body"]
     except ClientError as e:
         console_url = "https://console.aws.amazon.com/billing/home#/preferences"
-        msg = "Can't get detailed billing report {} from bucket {} in account {}: {}. Go to {} to set up detailed billing."
+        msg = "Can't get detailed billing report {} from bucket {} in account {}: {}. Go to {} to set up detailed billing."  # noqa
         sys.exit(msg.format(report, args.detailed_billing_reports_bucket, account_id, e, console_url))
     zbuf = BytesIO(billing_object_body.read())
     with zipfile.ZipFile(zbuf) as zfile:
@@ -53,6 +53,7 @@ parser.add_argument("--columns", nargs="+")
 #parser.add_argument("--sort-by")
 parser.add_argument("--year", type=int, help="Year to get billing reports for. Defaults to current year")
 parser.add_argument("--month", type=int, help="Month (numeral) to get billing reports for. Defaults to current month")
-parser.add_argument("--detailed-billing-reports-bucket", help="Name of S3 bucket to retrieve detailed billing reports from")
+parser.add_argument("--detailed-billing-reports-bucket",
+                    help="Name of S3 bucket to retrieve detailed billing reports from")
 parser.add_argument("--min-cost", type=float, help="Omit billing line items below this cost")
 parser.add_argument("--days", type=float, help="Only look at line items from this many past days")

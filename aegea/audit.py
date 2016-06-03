@@ -60,7 +60,7 @@ class Auditor(unittest.TestCase):
                         raise Exception("Root account last used less than a day ago ({})".format(field))
 
     def audit_1_2(self):
-        """1.2 Ensure multi-factor authentication (MFA) is enabled for all IAM users that have a console password (Scored)"""
+        """1.2 Ensure multi-factor authentication (MFA) is enabled for all IAM users that have a console password (Scored)"""  # noqa
         for row in self.credential_report:
             if row["user"] == "<root_account>" or json.loads(row["password_enabled"]):
                 if not json.loads(row["mfa_active"]):
@@ -73,7 +73,8 @@ class Auditor(unittest.TestCase):
                 if json.loads(row["access_key_{}_active".format(access_key)]):
                     last_used = row["access_key_{}_last_used_date".format(access_key)]
                     if last_used != "N/A" and self.parse_date(last_used) < datetime.now(tzutc()) - timedelta(days=90):
-                        raise Exception("Active access key {} in account {} last used over 90 days ago".format(access_key, row["user"]))
+                        msg = "Active access key {} in account {} last used over 90 days ago"
+                        raise Exception(msg.format(access_key, row["user"]))
 
     def audit_1_4(self):
         """1.4 Ensure access keys are rotated every 90 days or less (Scored)"""
@@ -82,7 +83,8 @@ class Auditor(unittest.TestCase):
                 if json.loads(row["access_key_{}_active".format(access_key)]):
                     last_rotated = row["access_key_{}_last_rotated".format(access_key)]
                     if self.parse_date(last_rotated) < datetime.now(tzutc()) - timedelta(days=90):
-                        raise Exception("Active access key {} in account {} last rotated over 90 days ago".format(access_key, row["user"]))
+                        msg = "Active access key {} in account {} last rotated over 90 days ago"
+                        raise Exception(msg.format(access_key, row["user"]))
 
     def audit_1_5(self):
         """1.5 Ensure IAM password policy requires at least one uppercase letter (Scored)"""
@@ -168,13 +170,15 @@ class Auditor(unittest.TestCase):
         for trail in self.trails:
             self.assertIn("CloudWatchLogsLogGroupArn", trail)
             trail_status = boto3.client("cloudtrail").get_trail_status(Name=trail["TrailARN"])
-            self.assertGreater(trail_status["LatestCloudWatchLogsDeliveryTime"], datetime.now(tzutc()) - timedelta(days=1))
+            self.assertGreater(trail_status["LatestCloudWatchLogsDeliveryTime"],
+                               datetime.now(tzutc()) - timedelta(days=1))
 
     def audit_2_5(self):
         """2.5 Ensure AWS Config is enabled in all regions (Scored)"""
         for region in boto3.Session().get_available_regions("config"):
             aws_config = boto3.session.Session(region_name=region).client("config")
-            self.assertGreater(len(aws_config.describe_configuration_recorder_status()["ConfigurationRecordersStatus"]), 0)
+            res = aws_config.describe_configuration_recorder_status()
+            self.assertGreater(len(res["ConfigurationRecordersStatus"]), 0)
 
     def audit_2_6(self):
         """2.6 Ensure S3 bucket access logging is enabled on the CloudTrail S3 bucket (Scored)"""
@@ -235,59 +239,73 @@ class Auditor(unittest.TestCase):
 
     def audit_3_1(self):
         """3.1 Ensure a log metric filter and alarm exist for unauthorized API calls (Scored)"""
-        self.assert_alarm("UnauthorizedAPICalls", '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }')
+        self.assert_alarm("UnauthorizedAPICalls",
+                          '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }')
 
     def audit_3_2(self):
         """3.2 Ensure a log metric filter and alarm exist for Management Console sign-in without MFA (Scored)"""
-        self.assert_alarm("ConsoleUseWithoutMFA", '{ $.userIdentity.sessionContext.attributes.mfaAuthenticated != "true" }')
+        self.assert_alarm("ConsoleUseWithoutMFA",
+                          '{ $.userIdentity.sessionContext.attributes.mfaAuthenticated != "true" }')
 
     def audit_3_3(self):
         """3.3 Ensure a log metric filter and alarm exist for usage of "root" account (Scored)"""
-        self.assert_alarm("RootAccountUsed", '{ $.userIdentity.type = \"Root\" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != \"AwsServiceEvent\" }')
+        self.assert_alarm("RootAccountUsed",
+                          '{ $.userIdentity.type = \"Root\" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != \"AwsServiceEvent\" }')  # noqa
 
     def audit_3_4(self):
         """3.4 Ensure a log metric filter and alarm exist for IAM policy changes (Scored)"""
-        self.assert_alarm("IAMPolicyChanged", '{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}')
+        self.assert_alarm("IAMPolicyChanged",
+                          '{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}')  # noqa
 
     def audit_3_5(self):
         """3.5 Ensure a log metric filter and alarm exist for CloudTrail configuration changes (Scored)"""
-        self.assert_alarm("CloudTrailConfigChanged", '{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }')
+        self.assert_alarm("CloudTrailConfigChanged",
+                          '{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }')  # noqa
 
     def audit_3_6(self):
         """3.6 Ensure a log metric filter and alarm exist for AWS Management Console authentication failures (Scored)"""
-        self.assert_alarm("ConsoleLoginFailed", '{ ($.eventName = ConsoleLogin) && ($.errorMessage = \"Failed authentication\") }')
+        self.assert_alarm("ConsoleLoginFailed",
+                          '{ ($.eventName = ConsoleLogin) && ($.errorMessage = \"Failed authentication\") }')
 
     def audit_3_7(self):
-        """3.7 Ensure a log metric filter and alarm exist for disabling or scheduled deletion of customer created CMKs (Scored)"""
-        self.assert_alarm("KMSCMKDisabled", '{($.eventSource = kms.amazonaws.com) && (($.eventName=DisableKey)||($.eventName=ScheduleKeyDeletion))}')
+        """3.7 Ensure a log metric filter and alarm exist for disabling or scheduled deletion of customer created CMKs (Scored)"""  # noqa
+        self.assert_alarm("KMSCMKDisabled",
+                          '{($.eventSource = kms.amazonaws.com) && (($.eventName=DisableKey)||($.eventName=ScheduleKeyDeletion))}')  # noqa
 
     def audit_3_8(self):
         """3.8 Ensure a log metric filter and alarm exist for S3 bucket policy changes (Scored)"""
-        self.assert_alarm("S3BucketPolicyChanged", '{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }')
+        self.assert_alarm("S3BucketPolicyChanged",
+                          '{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }')  # noqa
 
     def audit_3_9(self):
         """3.9 Ensure a log metric filter and alarm exist for AWS Config configuration changes (Scored)"""
-        self.assert_alarm("AWSConfigServiceChanged", '{($.eventSource = config.amazonaws.com) && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel)||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder))}')
+        self.assert_alarm("AWSConfigServiceChanged",
+                          '{($.eventSource = config.amazonaws.com) && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel)||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder))}')  # noqa
 
     def audit_3_10(self):
         """3.10 Ensure a log metric filter and alarm exist for security group changes (Scored)"""
-        self.assert_alarm("EC2SecurityGroupChanged", '{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup)}')
+        self.assert_alarm("EC2SecurityGroupChanged",
+                          '{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup)}')  # noqa
 
     def audit_3_11(self):
-        """3.11 Ensure a log metric filter and alarm exist for changes to Network Access Control Lists (NACL) (Scored)"""
-        self.assert_alarm("EC2NACLChanged", '{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }')
+        """3.11 Ensure a log metric filter and alarm exist for changes to Network Access Control Lists (NACL) (Scored)"""  # noqa
+        self.assert_alarm("EC2NACLChanged",
+                          '{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }')  # noqa
 
     def audit_3_12(self):
         """3.12 Ensure a log metric filter and alarm exist for changes to network gateways (Scored)"""
-        self.assert_alarm("EC2NetworkGatewayChanged", '{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }')
+        self.assert_alarm("EC2NetworkGatewayChanged",
+                          '{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }')  # noqa
 
     def audit_3_13(self):
         """3.13 Ensure a log metric filter and alarm exist for route table changes (Scored)"""
-        self.assert_alarm("EC2RouteTableChanged", '{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }')
+        self.assert_alarm("EC2RouteTableChanged",
+                          '{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }')  # noqa
 
     def audit_3_14(self):
         """3.14 Ensure a log metric filter and alarm exist for VPC changes (Scored)"""
-        self.assert_alarm("EC2VPCChanged", '{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }')
+        self.assert_alarm("EC2VPCChanged",
+                          '{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }')  # noqa
 
     def audit_3_15(self):
         """3.15 Ensure security contact information is registered (Scored)"""

@@ -24,7 +24,8 @@ def ensure_ssh_key(name, verify_pem_file=True):
     for key_pair in ec2.key_pairs.all():
         if key_pair.name == name:
             if verify_pem_file and not os.path.exists(get_ssh_key_path(name)):
-                msg = "Key {} found in EC2, but not in ~/.ssh. Delete the key in EC2, copy it to {}, or specify another key."
+                msg = "Key {} found in EC2, but not in ~/.ssh."
+                msg += " Delete the key in EC2, copy it to {}, or specify another key."
                 raise KeyError(msg.format(name, get_ssh_key_path(name)))
             break
     else:

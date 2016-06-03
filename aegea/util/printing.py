@@ -72,7 +72,7 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
         col_widths = [0] * (len(column_specs) + 1)
     elif column_names is not None:
         col_widths = [0] * len(column_names)
-    my_column_names = []
+    my_col_names = []
     if column_specs is not None:
         column_names = ['Row']
         column_names.extend([col['name'] for col in column_specs])
@@ -82,7 +82,7 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
             my_col = str(column_names[i])
             if len(my_col) > max_col_width:
                 my_col = my_col[:max_col_width-1] + '…'
-            my_column_names.append(my_col)
+            my_col_names.append(my_col)
             col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_col)))
     my_table = []
     for row in table:
@@ -113,8 +113,8 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
             return BOLD() + WHITE() + column_names[i] + ENDC()
 
     formatted_table = [border('┌') + border('┬').join(border('─')*i for i in col_widths) + border('┐')]
-    if len(my_column_names) > 0:
-        padded_column_names = [col_head(i) + ' '*(col_widths[i]-len(my_column_names[i])) for i in range(len(my_column_names))]
+    if len(my_col_names) > 0:
+        padded_column_names = [col_head(i) + ' '*(col_widths[i]-len(my_col_names[i])) for i in range(len(my_col_names))]
         formatted_table.append(border('│') + border('│').join(padded_column_names) + border('│'))
         formatted_table.append(border('├') + border('┼').join(border('─')*i for i in col_widths) + border('┤'))
 
@@ -152,7 +152,8 @@ def page_output(content, pager=None, file=None):
             raise Exception()
         # FIXME
         raise Exception()
-        pager_process = subprocess.Popen(pager or os.environ.get('PAGER', 'less -RS'), shell=True, stdin=subprocess.PIPE, stdout=file)
+        pager_process = subprocess.Popen(pager or os.environ.get('PAGER', 'less -RS'), shell=True,
+                                         stdin=subprocess.PIPE, stdout=file)
         pager_process.stdin.write(content.encode("utf-8"))
         pager_process.stdin.close()
         pager_process.wait()
@@ -218,4 +219,6 @@ def tabulate(collection, args, cell_transforms=None):
                 args.sort_by = args.sort_by[:-len(":reverse")]
             table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)], reverse=reverse)
         args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
-        return format_table(table, column_names=getattr(args, "display_column_names", args.columns), max_col_width=args.max_col_width)
+        return format_table(table,
+                            column_names=getattr(args, "display_column_names", args.columns),
+                            max_col_width=args.max_col_width)

@@ -18,7 +18,8 @@ def register_listing_parser(function, **kwargs):
 
 def register_filtering_parser(function, **kwargs):
     parser = register_listing_parser(function, **kwargs)
-    parser.add_argument("-f", "--filter", nargs="+", default=[], help="Filter(s) to apply to output, e.g. --filter state=available")
+    parser.add_argument("-f", "--filter", nargs="+", default=[],
+                        help="Filter(s) to apply to output, e.g. --filter state=available")
     parser.add_argument("-t", "--tag", nargs="+", default=[], help="Tag(s) to filter output by, e.g. --tag Owner=bezos")
     return parser
 
@@ -53,7 +54,8 @@ def ls(args):
         return instance
     instances = [add_name(i) for i in filter_collection(ec2.instances, args)]
     args.columns = ["name"] + args.columns
-    page_output(tabulate(instances, args, cell_transforms={"state": lambda x: x["Name"], "iam_instance_profile": lambda x: x.get("Arn", "").split("/")[-1] if x else None}))
+    cell_transforms = {"state": lambda x: x["Name"], "iam_instance_profile": lambda x: x.get("Arn", "").split("/")[-1] if x else None}  # noqa
+    page_output(tabulate(instances, args, cell_transforms=cell_transforms))
 
 parser = register_filtering_parser(ls, help='List EC2 instances')
 parser.add_argument("--sort-by")
@@ -63,7 +65,7 @@ def users(args):
     current_user = iam.CurrentUser()
     if "user_id" not in args.columns:
         args.columns.append("user_id")
-    table = [[">>>" if i.user_id == current_user.user_id else ""] + [get_cell(i, f) for f in args.columns] for i in iam.users.all()]
+    table = [[">>>" if i.user_id == current_user.user_id else ""] + [get_cell(i, f) for f in args.columns] for i in iam.users.all()]  # noqa
     page_output(format_table(table, column_names=["cur"] + args.columns, max_col_width=args.max_col_width))
 
 parser = register_listing_parser(users, help='List IAM users')
@@ -89,7 +91,8 @@ def volumes(args):
     table = [[get_cell(i, f) for f in args.columns] for i in filter_collection(ec2.volumes, args)]
     if "attachments" in args.columns:
         for row in table:
-            row[args.columns.index("attachments")] = ", ".join(a["InstanceId"] for a in row[args.columns.index("attachments")])
+            att_col_idx = args.columns.index("attachments")
+            row[att_col_idx] = ", ".join(a["InstanceId"] for a in row[att_col_idx])
     page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
 
 parser = register_filtering_parser(volumes, help='List EC2 EBS volumes')
@@ -126,8 +129,12 @@ def zones(args):
             for page2 in route53.get_paginator('list_resource_record_sets').paginate(HostedZoneId=zone["Id"]):
                 for rrs in page2["ResourceRecordSets"]:
                     for record in rrs.get("ResourceRecords", []):
-                        table.append([rrs.get(f) for f in rrs_cols] + [record.get(f) for f in record_cols] + [get_field(zone, "Config.PrivateZone")])
-    page_output(format_table(table, column_names=rrs_cols + record_cols + ["Private"], max_col_width=args.max_col_width))
+                        row = [rrs.get(f) for f in rrs_cols]
+                        row += [record.get(f) for f in record_cols]
+                        row += [get_field(zone, "Config.PrivateZone")]
+                        table.append(row)
+    column_names = rrs_cols + record_cols + ["Private"]
+    page_output(format_table(table, column_names=column_names, max_col_width=args.max_col_width))
 
 parser = register_parser(zones, help='List Route53 DNS zones')
 parser.add_argument("zones", nargs='*')
@@ -157,9 +164,10 @@ def logs(args):
             if args.log_group and group["logGroupName"] != args.log_group:
                 continue
             n = 0
-            for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"], orderBy="LastEventTime", descending=True):
+            for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"], orderBy="LastEventTime", descending=True):  # noqa
                 for stream in page2["logStreams"]:
-                    stream["lastIngestionTime"] = datetime.utcnow().replace(microsecond=0) - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)//1000)
+                    now = datetime.utcnow().replace(microsecond=0)
+                    stream["lastIngestionTime"] = now - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)//1000)  # noqa
                     table.append(dict(group, **stream))
                     n += 1
                     if n >= args.max_streams_per_group:
@@ -190,7 +198,7 @@ def grep(args):
             print(event["timestamp"], event["message"])
 
 parser = register_parser(grep, help='Filter and print events in a CloudWatch Logs stream or group of streams')
-parser.add_argument("pattern", help="CloudWatch filter pattern to use. See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html")
+parser.add_argument("pattern", help="""CloudWatch filter pattern to use. See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")  # noqa
 parser.add_argument("log_group", help="CloudWatch log group")
 parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
 parser.add_argument("--start-time", type=parse_time_input)
@@ -225,7 +233,8 @@ def taskdefs(args):
         table.append(ecs.describe_task_definition(taskDefinition=taskdef_arn)["taskDefinition"])
     page_output(tabulate(table, args))
 
-parser = register_listing_parser(taskdefs, help='List ECS task definitions', column_defaults=["family", "revision", "containerDefinitions"])
+parser = register_listing_parser(taskdefs, help='List ECS task definitions',
+                                 column_defaults=["family", "revision", "containerDefinitions"])
 
 def sirs(args):
     page_output(tabulate(boto3.client('ec2').describe_spot_instance_requests()['SpotInstanceRequests'], args))
@@ -261,7 +270,8 @@ def subscriptions(args):
             table.append(subscription)
     page_output(tabulate(table, args))
 
-parser = register_listing_parser(subscriptions, help='List SNS subscriptions', column_defaults=['SubscriptionArn', 'Protocol', 'Endpoint'])
+parser = register_listing_parser(subscriptions, help='List SNS subscriptions',
+                                 column_defaults=['SubscriptionArn', 'Protocol', 'Endpoint'])
 
 def filesystems(args):
     efs = boto3.client("efs")

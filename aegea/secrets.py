@@ -90,17 +90,22 @@ def secrets(args):
                 break
         else:
             policy = iam.create_policy(PolicyName=policy_name,
-                                       PolicyDocument=json.dumps(build_iam_policy(ARN(principal.arn).resource, bucket.name)))
+                                       PolicyDocument=json.dumps(build_iam_policy(ARN(principal.arn).resource,
+                                                                                  bucket.name)))
         principal.attach_policy(PolicyArn=policy.arn)
     for user_name in args.iam_users:
         # Users are subject to the /user/${aws:userid} parametric bucket policy, so don't get policies attached to them
         principals.append(iam.User(user_name))
     if len(principals) == 0 and args.action != "ls":
-        raise AegeaException('Please supply one or more principals with "--instance-profiles" or "--iam-{roles,users,groups}".')
+        msg = 'Please supply one or more principals with "--instance-profiles" or "--iam-{roles,users,groups}".'
+        raise AegeaException(msg)
     if len(args.secrets) == 0 and args.action != "ls":
-        raise AegeaException('Please supply one or more secrets and pass their value(s) via environment variable or on stdin.')
+        msg = 'Please supply one or more secrets and pass their value(s) via environment variable or on stdin.'
+        raise AegeaException(msg)
     if args.action == "ls":
-        page_output(tabulate(bucket.objects.all(), args, cell_transforms={"owner": lambda x: x.get("DisplayName") if x else None}))
+        page_output(tabulate(bucket.objects.all(),
+                             args,
+                             cell_transforms={"owner": lambda x: x.get("DisplayName") if x else None}))
     elif args.action == "put":
         for principal in principals:
             for secret_name in args.secrets:
@@ -114,22 +119,27 @@ def secrets(args):
                     secret_value = os.environ[secret_name]
                 else:
                     secret_value = sys.stdin.read()
-                bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name)).put(Body=secret_value.encode(), ServerSideEncryption='AES256')
+                secret_object = bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name))
+                secret_object.put(Body=secret_value.encode(), ServerSideEncryption='AES256')
     elif args.action == "delete":
         for principal in principals:
             for secret_name in args.secrets:
                 bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name)).delete()
 
-parser = register_parser(secrets, help='Manage credentials (secrets)', description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+parser = register_parser(secrets,
+                         help='Manage credentials (secrets)',
+                         description=__doc__,
+                         formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('action', choices=["ls", "put", "delete"])
-parser.add_argument('secrets', nargs='*',
-                    help=fill('List the secret names. For put, pass the secret value on stdin (and name only one secret), or pass multiple secret values via environment variables with the same name as the secret.'))
+parser.add_argument('secrets', nargs='*', help=fill("""
+List the secret names. For put, pass the secret value on stdin (and name only one secret), or pass multiple secret
+values via environment variables with the same name as the secret."""))
 parser.add_argument('--instance-profiles', nargs='+', default=[])
 parser.add_argument('--iam-roles', nargs='+', default=[])
 parser.add_argument('--iam-groups', nargs='+', default=[])
-parser.add_argument('--iam-users', nargs='+', default=[],
-                    help=fill("Name(s) of IAM instance profiles, roles, groups, or users who will be granted access to the secret"))
-parser.add_argument('--generate-ssh-key', action='store_true',
-                    help=fill("Generate a new SSH key pair and write the private key as the secret value; write the public key to stdout"))
+parser.add_argument('--iam-users', nargs='+', default=[], help=fill("""
+Name(s) of IAM instance profiles, roles, groups, or users who will be granted access to the secret"""))
+parser.add_argument('--generate-ssh-key', action='store_true', help=fill("""
+Generate a new SSH key pair and write the private key as the secret value; write the public key to stdout"""))
 parser.add_argument("--columns", nargs="+",
                     default=["bucket_name", "key", "owner", "size", "last_modified", "storage_class"])

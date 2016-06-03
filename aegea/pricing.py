@@ -19,7 +19,8 @@ def pricing(args):
         window_start = datetime.utcnow() - timedelta(hours=1)
         spot_prices, hours = {}, set()
         paginator = boto3.client("ec2").get_paginator('describe_spot_price_history')
-        for page in paginator.paginate(StartTime=window_start, Filters=[dict(Name="product-description", Values=["Linux/UNIX"])]):
+        for page in paginator.paginate(StartTime=window_start,
+                                       Filters=[dict(Name="product-description", Values=["Linux/UNIX"])]):
             for line in page["SpotPriceHistory"]:
                 hour = line["Timestamp"].replace(minute=0, second=0)
                 hours.add(hour)
@@ -30,7 +31,9 @@ def pricing(args):
             prices = [spot_prices[instance_type].get(h) for h in sorted(hours)]
             prices = ["%.4f (max=%.4f, n=%d)" % (median(p), max(p), len(p)) if p else p for p in prices]
             table.append([instance_type] + prices)
-        page_output(format_table(table, column_names=["InstanceType"] + [format_datetime(h) for h in sorted(hours)], max_col_width=args.max_col_width))
+        page_output(format_table(table,
+                                 column_names=["InstanceType"] + [format_datetime(h) for h in sorted(hours)],
+                                 max_col_width=args.max_col_width))
     elif args.offer:
         if args.region is None:
             args.region = boto3.client("ec2").meta.region_name
@@ -55,8 +58,10 @@ def pricing(args):
         print("Choose from:", ", ".join(["spot"] + list(requests.get(offer_index).json()["offers"])))
 
 parser = register_parser(pricing, help='List AWS prices')
-parser.add_argument("offer", nargs="?", help="AWS product offer to list prices for. Run without this argument to see the list of available products.")
+parser.add_argument("offer", nargs="?", help="""
+AWS product offer to list prices for. Run without this argument to see the list of available products.""")
 parser.add_argument("--region")
 parser.add_argument("--columns", nargs="+", default=["attributes.location", "unit", "pricePerUnit.USD", "description"])
-parser.add_argument("--columns-ec2", nargs="+", default=["attributes.instanceType", "attributes.vcpu", "attributes.memory", "attributes.storage"])
+parser.add_argument("--columns-ec2", nargs="+",
+                    default=["attributes.instanceType", "attributes.vcpu", "attributes.memory", "attributes.storage"])
 parser.add_argument("--sort-by")

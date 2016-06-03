@@ -1,7 +1,8 @@
 """
 Amazon Web Services Operator Interface
 
-For general help, run ``aegea help`` or visit https://github.com/kislyuk/aegea/wiki. For help with individual commands, run ``aegea <command> --help``.
+For general help, run ``aegea help`` or visit https://github.com/kislyuk/aegea/wiki.
+For help with individual commands, run ``aegea <command> --help``.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
