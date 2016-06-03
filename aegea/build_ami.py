@@ -47,10 +47,10 @@ def build_image(args):
         fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb"
         for field in fields.split():
             setattr(args, field, None)
-        instance = launch(args,
-                          user_data_commands=get_bootstrap_commands(),
-                          user_data_packages=get_bootstrap_packages(),
-                          user_data_files=get_bootstrap_files())
+        instance = ec2.Instance(launch(args,
+                                       user_data_commands=get_bootstrap_commands(),
+                                       user_data_packages=get_bootstrap_packages(),
+                                       user_data_files=get_bootstrap_files())["instance_id"])
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)

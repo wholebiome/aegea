@@ -93,6 +93,7 @@ ls:
     - image_id
     - tags
     - iam_instance_profile
+    - client_token
 
 users:
   columns:
@@ -216,6 +217,7 @@ sfrs:
     - CreateTime
     - SpotFleetRequestConfig.ValidFrom
     - SpotFleetRequestConfig.ValidUntil
+    - SpotFleetRequestConfig.ClientToken
   sort_by: CreateTime
 
 subnets:

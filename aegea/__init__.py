@@ -7,7 +7,7 @@ For help with individual commands, run ``aegea <command> --help``.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, logging, shutil
+import os, sys, argparse, logging, shutil, json
 from textwrap import fill
 from tweak import Config
 
@@ -44,7 +44,9 @@ def main(args=None):
                  getattr(parsed_args, "columns", None))
     if has_attrs and parsed_args.sort_by not in parsed_args.columns:
         parsed_args.columns.append(parsed_args.sort_by)
-    parsed_args.entry_point(parsed_args)
+    result = parsed_args.entry_point(parsed_args)
+    if result is not None:
+        print(json.dumps(result))
 
 def register_parser(function, **kwargs):
     if config is None:

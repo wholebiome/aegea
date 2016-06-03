@@ -86,11 +86,20 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         launch_spec["SubnetId"] = subnet.id
     if args.availability_zone:
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
+    if args.client_token is None:
+        from getpass import getuser
+        from socket import gethostname
+        args.client_token = "{}.{}.{}:{}@{}".format(iam.CurrentUser().user.name,
+                                                    __name__,
+                                                    int(time.time()),
+                                                    getuser(),
+                                                    gethostname().split(".")[0])
+        args.client_token = args.client_token[:64]
     try:
         if args.spot:
             launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"]).decode()
             if args.duration_hours or args.cores or args.min_mem_per_core_gb:
-                spot_fleet_args = dict(launch_spec=launch_spec)
+                spot_fleet_args = dict(launch_spec=launch_spec, client_token=args.client_token)
                 for arg in "cores", "min_mem_per_core_gb", "spot_price", "duration_hours", "dry_run":
                     if getattr(args, arg, None):
                         spot_fleet_args[arg] = getattr(args, arg)
@@ -114,6 +123,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                     SpotPrice=str(args.spot_price),
                     ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
                     LaunchSpecification=launch_spec,
+                    ClientToken=args.client_token,
                     DryRun=args.dry_run
                 )
                 sir_id = res["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
@@ -121,7 +131,8 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                 res = ec2.meta.client.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])
                 instance = ec2.Instance(res["SpotInstanceRequests"][0]["InstanceId"])
         else:
-            instances = ec2.create_instances(MinCount=1, MaxCount=1, DryRun=args.dry_run, **launch_spec)
+            instances = ec2.create_instances(MinCount=1, MaxCount=1, ClientToken=args.client_token, DryRun=args.dry_run,
+                                             **launch_spec)
             instance = instances[0]
     except ClientError as e:
         expect_error_codes(e, "DryRunOperation")
@@ -157,7 +168,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     #except Exception as e:
     #    print(e)
     logger.info("Launched %s in %s", instance, subnet)
-    return instance
+    return dict(instance_id=instance.id)
 
 parser = register_parser(launch, help='Launch a new EC2 instance', description=__doc__)
 parser.add_argument('hostname')
@@ -175,6 +186,7 @@ parser.add_argument('--spot-price', type=float,
                     help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
 parser.add_argument('--no-dns', dest='use_dns', action='store_false',
                     help="Skip registering instance name in private DNS. Use if you don't use private DNS, or don't want the launching principal to have Route53 write access.")  # noqa
+parser.add_argument('--client-token', help="Token used to identify your instance, SIR or SFR")
 parser.add_argument('--subnet')
 parser.add_argument('--availability-zone', '-z')
 parser.add_argument('--security-groups', nargs="+")

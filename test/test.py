@@ -72,7 +72,7 @@ class TestAegea(unittest.TestCase):
                   shell=True, expect=unauthorized_ok)
         self.call("aegea launch unittest --dry-run --duration-hours 1 --no-verify-ssh-key-pem-file",
                   shell=True, expect=unauthorized_ok)
-        self.call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file",
+        self.call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file --client-token t",
                   shell=True, expect=unauthorized_ok)
         self.call("aegea build_image i --dry-run --no-verify-ssh-key-pem-file",
                   shell=True, expect=unauthorized_ok)
@@ -99,7 +99,7 @@ class TestAegea(unittest.TestCase):
         self.assertFalse(set(spec["InstanceType"] for spec in builder.launch_specs()))
         builder = SpotFleetBuilder(launch_spec={}, cores=4, gpus_per_instance=1)
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()), {"g2.2xlarge"})
-        builder = SpotFleetBuilder(launch_spec={}, cores=16, gpus_per_instance=4)
+        builder = SpotFleetBuilder(launch_spec={}, cores=16, gpus_per_instance=4, client_token="t")
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()), {"g2.8xlarge"})
 
 if __name__ == '__main__':
