@@ -256,6 +256,18 @@ filesystems:
     - NetworkInterfaceId
     - tags
 
+alarms:
+  columns:
+    - alarm_name
+    - alarm_description
+    - metric_name
+    - comparison_operator
+    - threshold
+    - statistic
+    - state_value
+    - state_updated_timestamp
+    - alarm_actions
+
 billing:
   detailed_billing_reports_bucket: "detailed-billing-reports-{account_id}"
   columns:
@@ -270,7 +282,7 @@ launch:
   commands: []
   packages: []
 
-log_level: "INFO"
+log_level: "WARNING"
 
 audit:
   email: "akislyuk@exabio.com"
