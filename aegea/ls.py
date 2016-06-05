@@ -263,11 +263,6 @@ def tables(args):
 
 parser = register_listing_parser(tables, help='List DynamoDB tables')
 
-def alarms(args):
-    page_output(tabulate(boto3.resource("cloudwatch").alarms.all(), args))
-
-parser = register_listing_parser(alarms, help='List CloudWatch alarms')
-
 def subscriptions(args):
     table = []
     for page in boto3.client("sns").get_paginator('list_subscriptions').paginate():
