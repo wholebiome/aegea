@@ -25,7 +25,6 @@ from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder)
 from .util.crypto import (new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line,
                           get_ssh_key_filename)
-from .util.ssh import AegeaSSHClient
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
 
@@ -160,6 +159,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                 # print(event["timestamp"], event["message"])
                 raise NotImplementedError()
     # FIXME: this doesn't work. Figure out a way to vivify current user's account
+    #from .util.ssh import AegeaSSHClient
     #try:
     #    ssh_client = AegeaSSHClient()
     #    ssh_client.load_system_host_keys()

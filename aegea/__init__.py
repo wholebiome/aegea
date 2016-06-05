@@ -13,7 +13,7 @@ from tweak import Config
 
 try:
     import pkg_resources
-    __version__ = pkg_resources.require(__name__)[0].version
+    __version__ = pkg_resources.get_distribution(__name__).version
 except Exception:
     __version__ = "0.0.0"
 
