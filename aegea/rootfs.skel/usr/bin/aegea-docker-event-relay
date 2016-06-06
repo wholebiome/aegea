@@ -18,24 +18,34 @@ def get_metadata(path):
 logging.basicConfig(level=logging.ERROR)
 parser = argparse.ArgumentParser()
 parser.add_argument("--get-ecs-agent-metadata", action="store_true")
+parser.add_argument("--sns-topic-name", default="container_events")
+parser.add_argument("--startup-sns-topic-name", default="capacity_events")
 args = parser.parse_args()
 
 az = get_metadata("placement/availability-zone")
 sns = boto3.Session(region_name=az[:-1]).resource('sns')
-sns_topic_name = os.environ.get("GAMAYUN_SNS_TOPIC", "container_events")
 account_id = ARN(json.loads(get_metadata("iam/info"))["InstanceProfileArn"]).account_id
-sns_topic_arn = ARN(service="sns", region=sns.meta.client.meta.region_name, account_id=account_id, resource=sns_topic_name)
+sns_topic_arn = ARN(service="sns", region=sns.meta.client.meta.region_name, account_id=account_id,
+                    resource=args.sns_topic_name)
+startup_sns_topic_arn = ARN(service="sns", region=sns.meta.client.meta.region_name, account_id=account_id,
+                            resource=args.startup_sns_topic_name)
 sns_topic = sns.Topic(str(sns_topic_arn))
+startup_sns_topic = sns.Topic(str(startup_sns_topic_arn))
 
 fields = "date event_type event resource_id event_data".split()
 docker_events = subprocess.Popen(['docker', 'events', '--filter', 'type=container'], stdout=subprocess.PIPE)
 logging.info("Listening to docker events")
 for event in docker_events.stdout:
     message = dict(zip(fields, event.decode().strip().split(maxsplit=len(fields)-1)))
-    message["event_data"] = {i.partition("=")[0]: i.partition("=")[2] for i in message["event_data"].strip("()").split(", ")}
+    event_data = message["event_data"].strip("()").split(", ")
+    message["event_data"] = {i.partition("=")[0]: i.partition("=")[2] for i in event_data}
     try:
-        if args.get_ecs_agent_metadata:
-            message.update(requests.get("http://localhost:51678/v1/tasks", params=dict(dockerid=message["resource_id"])).json())
-        sns_topic.publish(Message=json.dumps(message))
+        if message["event_data"]["name"] == "ecs-agent" and message["event"] == "start":
+            startup_sns_topic.publish(Message=json.dumps(message))
+        else:
+            if args.get_ecs_agent_metadata:
+                message.update(requests.get("http://localhost:51678/v1/tasks",
+                                            params=dict(dockerid=message["resource_id"])).json())
+            sns_topic.publish(Message=json.dumps(message))
     except Exception as e:
         logging.error(e)
