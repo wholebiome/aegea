@@ -9,7 +9,9 @@ def write():
     from . import aws
     constants = {"instance_types": {}}
     instance_attrs = ["vcpu", "memory", "storage", "gpu", "clockSpeed", "networkPerformance"]
-    spot_instance_families = {"m3", "m4", "c3", "c4", "d2", "i2", "g2", "r3"}
+    # FIXME: ephemeral-less instance families compat
+    # spot_instance_families = {"m3", "m4", "c3", "c4", "d2", "i2", "g2", "r3"}
+    spot_instance_families = {"m3", "c3", "d2", "i2", "g2", "r3"}
     for product in aws.get_ec2_products():
         if not any(product["attributes"]["instanceType"].startswith(fam + ".") for fam in spot_instance_families):
             continue
