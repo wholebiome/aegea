@@ -201,8 +201,9 @@ parser = register_parser(grep, help='Filter and print events in a CloudWatch Log
 parser.add_argument("pattern", help="""CloudWatch filter pattern to use. See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")  # noqa
 parser.add_argument("log_group", help="CloudWatch log group")
 parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
-parser.add_argument("--start-time", type=parse_time_input)
-parser.add_argument("--end-time", type=parse_time_input)
+parser.add_argument("--start-time", type=parse_time_input, default=parse_time_input("-7d"),
+                    help=parse_time_input.__doc__, metavar="-7d")
+parser.add_argument("--end-time", type=parse_time_input, help=parse_time_input.__doc__)
 
 def clusters(args):
     ecs = boto3.client('ecs')

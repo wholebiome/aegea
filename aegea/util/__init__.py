@@ -49,6 +49,11 @@ def natural_sort(i):
     return sorted(i, key=lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)])
 
 def parse_time_input(t):
+    """
+    Integer inputs are interpreted as seconds since the epoch. Suffixes (s, m, h, d, w) are supported. Negative inputs
+    (e.g. -5m) are interpreted as relative to the current date. Other inputs (e.g. 2020-01-01, 15:20) are parsed using
+    the dateutil parser.
+    """
     if not isinstance(t, (str, bytes)):
         raise ValueError("Expected a string, but got {}".format(type(t)))
     if t.isdigit():
