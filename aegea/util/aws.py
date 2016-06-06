@@ -310,7 +310,7 @@ def get_ondemand_price_usd(region, instance_type, **kwargs):
 class SpotFleetBuilder(VerboseRepr):
     # TODO: vivify from toolspec; vivify from SFR ID; update with incremental cores/memory requirements
     def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0,
-                 spot_price=None, duration_hours=None, client_token=None, dry_run=False):
+                 min_ephemeral_storage_gb=0, spot_price=None, duration_hours=None, client_token=None, dry_run=False):
         if spot_price is None:
             spot_price = 1
         if "SecurityGroupIds" in launch_spec:
@@ -319,6 +319,7 @@ class SpotFleetBuilder(VerboseRepr):
         self.launch_spec = launch_spec
         self.cores = cores
         self.min_cores_per_instance = min_cores_per_instance
+        self.min_ephemeral_storage_gb = min_ephemeral_storage_gb
         if min_cores_per_instance > cores:
             raise AegeaException("SpotFleetBuilder: min_cores_per_instance cannot exceed cores")
         self.min_mem_per_core_gb = min_mem_per_core_gb
@@ -338,12 +339,20 @@ class SpotFleetBuilder(VerboseRepr):
                                                   TerminateInstancesWithExpiration=True)
 
     def instance_types(self, max_overprovision=3, restrict_to_families=None):
+        def compute_ephemeral_storage_gb(instance_data):
+            if instance_data["storage"] == "EBS only":
+                return 0
+            count, size = [int(x) for x in instance_data["storage"].rstrip("SSD").rstrip("HDD").split("x")]
+            return count * size
+
         max_cores = self.cores * max_overprovision
         max_mem_per_core = self.min_mem_per_core_gb * max_overprovision
         max_gpus = self.gpus_per_instance * max_overprovision
         for instance_type, instance_data in constants.get("instance_types").items():
             cores, gpus = int(instance_data["vcpu"]), int(instance_data["gpu"] or 0)
             mem_per_core = float(instance_data["memory"].rstrip(" GiB")) / cores
+            if compute_ephemeral_storage_gb(instance_data) < self.min_ephemeral_storage_gb:
+                continue
             if cores < self.min_cores_per_instance or cores > max_cores:
                 continue
             if mem_per_core < self.min_mem_per_core_gb or mem_per_core > max_mem_per_core:

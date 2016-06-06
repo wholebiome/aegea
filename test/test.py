@@ -101,6 +101,9 @@ class TestAegea(unittest.TestCase):
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()), {"g2.2xlarge"})
         builder = SpotFleetBuilder(launch_spec={}, cores=16, gpus_per_instance=4, client_token="t")
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()), {"g2.8xlarge"})
+        builder = SpotFleetBuilder(launch_spec={}, min_ephemeral_storage_gb=1)
+        self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()),
+                         {'m3.large', 'c3.large', 'm3.medium'})
 
 if __name__ == '__main__':
     unittest.main()
