@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 try:
     # Git version extraction logic designed to be compatible with both semver and PEP 440
-    version = subprocess.check_output(["git", "describe", "--tags", "--match", "v*.*.*"])
+    version = subprocess.check_output(["git", "describe", "--tags", "--match", "v*.*.*"]).decode()
     version = version.strip("v\n").replace("-", "+", 1).replace("-", ".")
 except:
     version = "0.0.0"
