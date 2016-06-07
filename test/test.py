@@ -7,7 +7,7 @@ import os, sys, unittest, collections, itertools, copy, re, subprocess, importli
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import aegea
-from aegea.util.aws import resolve_ami, SpotFleetBuilder
+from aegea.util.aws import resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ubuntu_ami
 from aegea.util.exceptions import AegeaException
 
 for importer, modname, is_pkg in pkgutil.iter_modules(aegea.__path__):
@@ -104,6 +104,18 @@ class TestAegea(unittest.TestCase):
         builder = SpotFleetBuilder(launch_spec={}, min_ephemeral_storage_gb=1)
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()),
                          {'m3.large', 'c3.large', 'm3.medium'})
+
+    def test_iam_policy_builder(self):
+        policy = IAMPolicyBuilder(principal="arn:aws:iam::account-id:user/foo", action="s3:GetObject")
+        policy.add_action("s3:PutObject")
+        policy.add_resource("arn:aws:s3:::examplebucket")
+        policy.add_statement(effect="Deny")
+        expected = '{"Version": "2012-10-17", "Statement": [{"Action": ["s3:GetObject", "s3:PutObject"], "Resource": ["arn:aws:s3:::examplebucket"], "Effect": "Allow", "Principal": "arn:aws:iam::account-id:user/foo"}, {"Action": [], "Effect": "Deny"}]}'
+        self.assertEqual(str(policy), expected)
+
+    def test_locate_ubuntu_ami(self):
+        self.assertTrue(locate_ubuntu_ami().startswith("ami-"))
+        self.assertTrue(locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily", region="us-west-2").startswith("ami-"))
 
 if __name__ == '__main__':
     unittest.main()

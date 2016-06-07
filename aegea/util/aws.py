@@ -28,7 +28,12 @@ def get_assume_role_policy_doc(*principals):
             p.add_statement(principal={"Service": principal + ".amazonaws.com"}, action="sts:AssumeRole")
     return json.dumps(p.policy)
 
-def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", region="us-east-1", root_store="ssd", virt="hvm"):
+def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="releases", stream="released",
+                      region="us-east-1", root_store="ssd", virt="hvm"):
+    """
+    Example: locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily",
+                               region="us-west-2")
+    """
     partition = "aws"
     if region.startswith("cn-"):
         partition = "aws-cn"
@@ -36,8 +41,8 @@ def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", region="us-
         partition = "aws-govcloud"
     if partition not in {"aws", "aws-cn", "aws-govcloud"}:
         raise AegeaException("Unrecognized partition {}".format(partition))
-    manifest_url = "https://cloud-images.ubuntu.com/releases/streams/v1/com.ubuntu.cloud:released:{partition}.json"
-    manifest_url = manifest_url.format(partition=partition)
+    manifest_url = "https://cloud-images.ubuntu.com/{channel}/streams/v1/com.ubuntu.cloud:{stream}:{partition}.json"
+    manifest_url = manifest_url.format(partition=partition, channel=channel, stream=stream)
     manifest = requests.get(manifest_url).json()
     if product not in manifest["products"]:
         raise AegeaException("Ubuntu version {} not found in Ubuntu cloud image manifest".format(product))
@@ -195,6 +200,9 @@ class IAMPolicyBuilder:
     def add_resource(self, resource):
         self.policy["Statement"][-1].setdefault("Resource", [])
         self.policy["Statement"][-1]["Resource"].append(resource)
+
+    def __str__(self):
+        return json.dumps(self.policy)
 
 def ensure_iam_role(iam_role_name, policies=frozenset(), trust=frozenset()):
     iam = boto3.resource("iam")
