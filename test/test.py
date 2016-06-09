@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import aegea
 from aegea.util.aws import resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ubuntu_ami
 from aegea.util.exceptions import AegeaException
+from aegea.util.compat import USING_PYTHON2
 
 for importer, modname, is_pkg in pkgutil.iter_modules(aegea.__path__):
     importlib.import_module((aegea.__package__ or "aegea") + "." + modname)
@@ -56,7 +57,7 @@ class TestAegea(unittest.TestCase):
             elif subcommand in ("start", "stop", "reboot", "terminate"):
                 args += [instance_id, "--dry-run"]
             elif subcommand == "grep":
-                args += ["error", "syslog", "--start-time=-2h", "--end-time=-5m"]
+                args += ["--help"] if USING_PYTHON2 else ["error", "syslog", "--start-time=-2h", "--end-time=-5m"]
             elif subcommand in ("launch", "build_image"):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]
             elif subcommand == "rm":
