@@ -56,7 +56,7 @@ class TestAegea(unittest.TestCase):
             elif subcommand in ("start", "stop", "reboot", "terminate"):
                 args += [instance_id, "--dry-run"]
             elif subcommand == "grep":
-                args += ["error", "syslog", "--start-time", "-2h", "--end-time", "-5m"]
+                args += ["error", "syslog", "--start-time=-2h", "--end-time=-5m"]
             elif subcommand in ("launch", "build_image"):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]
             elif subcommand == "rm":
