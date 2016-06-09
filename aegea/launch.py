@@ -10,6 +10,8 @@ The --spot and --spot-price options trigger the use of the
 RequestSpotInstances API. The --duration-hours, --cores, and
 --min-mem-per-core-gb options trigger the use of the RequestSpotFleet
 API.
+
+The return value (stdout) is a JSON object with one key, ``instance_id``.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals

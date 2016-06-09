@@ -42,7 +42,7 @@ class TestAegea(unittest.TestCase):
         return self.SubprocessResult(out, err, return_code)
 
     def test_basic_aegea_commands(self):
-        #subprocess.check_call(["aegea"])
+        self.call(["aegea"], expect=[dict(return_codes=[1])])
         self.call(["aegea", "--help"])
         self.call(["aegea", "pricing"])
         self.call(["aegea", "ssh", "nonexistent_instance"],
