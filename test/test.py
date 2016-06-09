@@ -14,39 +14,49 @@ for importer, modname, is_pkg in pkgutil.iter_modules(aegea.__path__):
     importlib.import_module((aegea.__package__ or "aegea") + "." + modname)
 
 class TestAegea(unittest.TestCase):
+    SubprocessResult = collections.namedtuple("SubprocessResult", "stdout stderr returncode")
     def setUp(self):
         pass
 
     def call(self, *args, **kwargs):
         cmd = kwargs.get("args", args[0])
         print('Running "{}"'.format(cmd), file=sys.stderr)
-        expect = kwargs.pop("expect", [dict(exit_codes=[os.EX_OK], stdout=None, stderr=None)])
+        expect = kwargs.pop("expect", [dict(return_codes=[os.EX_OK], stdout=None, stderr=None)])
         process = subprocess.Popen(stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, *args, **kwargs)
         out, err = process.communicate()
-        exit_code = process.poll()
+        return_code = process.poll()
         out = out.decode(sys.stdin.encoding)
         err = err.decode(sys.stdin.encoding)
-        def match(exit_code, out, err, expected):
-            exit_ok = exit_code in expected["exit_codes"]
+        def match(return_code, out, err, expected):
+            exit_ok = return_code in expected["return_codes"]
             stdout_ok = re.search(expected.get("stdout") or "", out)
             stderr_ok = re.search(expected.get("stderr") or "", err)
             return exit_ok and stdout_ok and stderr_ok
-        if not any(match(exit_code, out, err, exp) for exp in expect):
+        if not any(match(return_code, out, err, exp) for exp in expect):
             print(err)
-            e = subprocess.CalledProcessError(exit_code, cmd, output=out)
+            e = subprocess.CalledProcessError(return_code, cmd, output=out)
             e.stdout, e.stderr = out, err
             raise e
-        return out, err
+        return self.SubprocessResult(out, err, return_code)
 
     def test_basic_aegea_commands(self):
         #subprocess.check_call(["aegea"])
         self.call(["aegea", "--help"])
         self.call(["aegea", "pricing"])
+        self.call(["aegea", "ssh", "nonexistent_instance"],
+                  expect=[dict(return_codes=[1], stderr="AegeaException: Could not resolve")])
+        instance_id = json.loads(self.call(["aegea", "ls", "--json"]).stdout)[0]["id"]
         for subcommand in aegea.parser._actions[-1].choices:
             args = []
-            if subcommand in ("start", "stop", "reboot", "terminate", "console", "ssh", "grep", "put_alarm"):
+            if subcommand in ("ssh", "put_alarm"):
                 args += ["--help"]
+            elif subcommand == "console":
+                args += [instance_id]
+            elif subcommand in ("start", "stop", "reboot", "terminate"):
+                args += [instance_id, "--dry-run"]
+            elif subcommand == "grep":
+                args += ["error", "syslog", "--start-time", "-2h", "--end-time", "-5m"]
             elif subcommand in ("launch", "build_image"):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]
             elif subcommand == "rm":
@@ -61,11 +71,12 @@ class TestAegea(unittest.TestCase):
                     args += ["--detailed-billing-reports-bucket", os.environ["AWS_DETAILED_BILLING_REPORTS_BUCKET"]]
             elif subcommand == "ls":
                 args += ["--filter", "state=running"]
-            unauthorized_ok = [dict(exit_codes=[os.EX_OK]), dict(exit_codes=[1], stderr="(UnauthorizedOperation|AccessDenied)")]
+            unauthorized_ok = [dict(return_codes=[os.EX_OK]),
+                               dict(return_codes=[1], stderr="(UnauthorizedOperation|AccessDenied|DryRunOperation)")]
             self.call(["aegea", subcommand] + args, expect=unauthorized_ok)
 
     def test_dry_run_commands(self):
-        unauthorized_ok = [dict(exit_codes=[os.EX_OK]), dict(exit_codes=[1], stderr="UnauthorizedOperation")]
+        unauthorized_ok = [dict(return_codes=[os.EX_OK]), dict(return_codes=[1], stderr="UnauthorizedOperation")]
         self.call("aegea launch unittest --dry-run --no-verify-ssh-key-pem-file",
                   shell=True, expect=unauthorized_ok)
         self.call("aegea launch unittest --dry-run --spot --no-verify-ssh-key-pem-file",
@@ -110,12 +121,19 @@ class TestAegea(unittest.TestCase):
         policy.add_action("s3:PutObject")
         policy.add_resource("arn:aws:s3:::examplebucket")
         policy.add_statement(effect="Deny")
-        expected = {"Version": "2012-10-17", "Statement": [{"Action": ["s3:GetObject", "s3:PutObject"], "Resource": ["arn:aws:s3:::examplebucket"], "Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::account-id:user/foo"}}, {"Action": [], "Effect": "Deny"}]}
+        expected = {"Version": "2012-10-17",
+                    "Statement": [{"Action": ["s3:GetObject", "s3:PutObject"],
+                                   "Resource": ["arn:aws:s3:::examplebucket"],
+                                   "Effect": "Allow",
+                                   "Principal": {"AWS": "arn:aws:iam::account-id:user/foo"}},
+                                  {"Action": [], "Effect": "Deny"}]}
         self.assertEqual(json.loads(str(policy)), expected)
 
     def test_locate_ubuntu_ami(self):
         self.assertTrue(locate_ubuntu_ami().startswith("ami-"))
-        self.assertTrue(locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily", region="us-west-2").startswith("ami-"))
+        ami = locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily",
+                                region="us-west-2")
+        self.assertTrue(ami.startswith("ami-"))
 
 if __name__ == '__main__':
     unittest.main()

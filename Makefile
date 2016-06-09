@@ -15,7 +15,10 @@ lint: lint_deps
 	./setup.py flake8
 #	flake8 scripts/*
 
-test: lint
+test_deps:
+	pip install coverage
+
+test: test_deps lint
 	coverage run setup.py test
 
 init_docs:
@@ -32,4 +35,4 @@ clean:
 	-rm -rf build dist
 	-rm -rf *.egg-info
 
-.PHONY: lint test docs install clean
+.PHONY: wheel lint lint_deps test test_deps docs install clean

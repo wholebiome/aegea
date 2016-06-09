@@ -20,24 +20,26 @@ def resolve_instance_ids(input_names):
 
 def start(args):
     ec2, ids, names = resolve_instance_ids(args.names)
-    ec2.meta.client.start_instances(InstanceIds=ids)
+    ec2.meta.client.start_instances(InstanceIds=ids, DryRun=args.dry_run)
 
 def stop(args):
     ec2, ids, names = resolve_instance_ids(args.names)
-    ec2.meta.client.stop_instances(InstanceIds=ids)
+    ec2.meta.client.stop_instances(InstanceIds=ids, DryRun=args.dry_run)
 
 def reboot(args):
     ec2, ids, names = resolve_instance_ids(args.names)
-    ec2.meta.client.reboot_instances(InstanceIds=ids)
+    ec2.meta.client.reboot_instances(InstanceIds=ids, DryRun=args.dry_run)
 
 def terminate(args):
     dns_zone = DNSZone(config.dns.get("private_zone"))
     ec2, ids, names = resolve_instance_ids(args.names)
-    ec2.meta.client.terminate_instances(InstanceIds=ids)
+    ec2.meta.client.terminate_instances(InstanceIds=ids, DryRun=args.dry_run)
     for name in names:
         # FIXME: when terminating by id, look up and delete DNS name
-        dns_zone.delete(name)
+        if not args.dry_run:
+            dns_zone.delete(name)
 
 for action in (start, stop, reboot, terminate):
     parser = register_parser(action, help='{} EC2 instances'.format(action.__name__.capitalize()))
+    parser.add_argument('--dry-run', '--dryrun', action='store_true')
     parser.add_argument("names", nargs="+")
