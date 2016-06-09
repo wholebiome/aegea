@@ -37,4 +37,6 @@ enumerated in the following order (i.e., in order of increasing priority):
 **Array merge operators**: When loading a chain of configuration sources, Aegea uses recursive dictionary merging to combine the sources. Additionally, when the original config value is a list, Aegea supports array manipulation operators, which let you extend and modify arrays defined in underlying configurations. See https://github.com/kislyuk/tweak#array-merge-operators for a list of these operators.
 
 .. image:: https://circleci.com/gh/kislyuk/aegea.svg?style=svg&circle-token=70d22b84025fad5d484ac5f3df1fc0a183c0f516
-           :target: https://circleci.com/gh/kislyuk/aegea
+   :target: https://circleci.com/gh/kislyuk/aegea
+.. image:: https://codecov.io/gh/kislyuk/aegea/branch/master/graph/badge.svg?token=a9suCNpECz
+   :target: https://codecov.io/gh/kislyuk/aegea
