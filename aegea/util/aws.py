@@ -187,6 +187,8 @@ class IAMPolicyBuilder:
     def add_statement(self, principal=None, action=None, effect="Allow", resource=None):
         statement = dict(Action=[], Effect=effect)
         if principal:
+            if not isinstance(principal, dict):
+                principal = dict(AWS=principal)
             statement["Principal"] = principal
         self.policy["Statement"].append(statement)
         if action:

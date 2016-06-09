@@ -3,7 +3,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, unittest, collections, itertools, copy, re, subprocess, importlib, pkgutil
+import os, sys, unittest, collections, itertools, copy, re, subprocess, importlib, pkgutil, json
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import aegea
@@ -110,8 +110,8 @@ class TestAegea(unittest.TestCase):
         policy.add_action("s3:PutObject")
         policy.add_resource("arn:aws:s3:::examplebucket")
         policy.add_statement(effect="Deny")
-        expected = '{"Version": "2012-10-17", "Statement": [{"Action": ["s3:GetObject", "s3:PutObject"], "Resource": ["arn:aws:s3:::examplebucket"], "Effect": "Allow", "Principal": "arn:aws:iam::account-id:user/foo"}, {"Action": [], "Effect": "Deny"}]}'
-        self.assertEqual(str(policy), expected)
+        expected = {"Version": "2012-10-17", "Statement": [{"Action": ["s3:GetObject", "s3:PutObject"], "Resource": ["arn:aws:s3:::examplebucket"], "Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::account-id:user/foo"}}, {"Action": [], "Effect": "Deny"}]}
+        self.assertEqual(json.loads(str(policy)), expected)
 
     def test_locate_ubuntu_ami(self):
         self.assertTrue(locate_ubuntu_ami().startswith("ami-"))
