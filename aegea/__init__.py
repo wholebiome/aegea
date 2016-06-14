@@ -37,6 +37,7 @@ def initialize():
     )
     parser.add_argument("--version", action="version", version='%(prog)s {version}'.format(version=__version__))
     subparsers = parser.add_subparsers(title='commands')
+    subparsers.add_parser("help").set_defaults(entry_point=lambda args: parser.print_help())
 
 def main(args=None):
     parsed_args = parser.parse_args(args=args)
