@@ -25,10 +25,10 @@ def initialize():
     global config, parser, subparsers
     from .util.printing import BOLD, RED, ENDC
     config = Config(__name__, use_yaml=True, save_on_exit=False)
-    if not os.path.exists(config._config_files[1]):
+    if not os.path.exists(config.config_files[1]):
         config.save()
-        shutil.copy(os.path.join(os.path.dirname(__file__), "default_config.yml"), config._config_files[1])
-        logger.info("Wrote new config file %s with default values", config._config_files[1])
+        shutil.copy(os.path.join(os.path.dirname(__file__), "default_config.yml"), config.config_files[1])
+        logger.info("Wrote new config file %s with default values", config.config_files[1])
         config = Config(__name__, use_yaml=True, save_on_exit=False)
 
     parser = argparse.ArgumentParser(

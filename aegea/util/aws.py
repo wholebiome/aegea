@@ -281,7 +281,7 @@ for partition_data in botocore.loaders.create_loader().load_data('endpoints')["p
 
 def get_pricing_data(offer, max_cache_age_days=30):
     from .. import config
-    offer_filename = os.path.join(os.path.dirname(config._config_files[1]), offer + "_pricing_cache.json.gz")
+    offer_filename = os.path.join(os.path.dirname(config.config_files[1]), offer + "_pricing_cache.json.gz")
     try:
         cache_date = datetime.fromtimestamp(os.path.getmtime(offer_filename))
         if cache_date < datetime.now() - timedelta(days=max_cache_age_days):
