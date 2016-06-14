@@ -13,15 +13,24 @@ from .launch import launch
 
 def get_bootstrap_files():
     manifest = []
+    aegea_conf = os.getenv("AEGEA_CONFIG_FILE")
+
     for rootfs_skel_dir in config.build_ami.rootfs_skel_dirs:
-        if rootfs_skel_dir == "auto":
-            rootfs_skel_dir = os.path.join(os.path.dirname(__file__), "rootfs.skel")
-        if not os.path.exists(rootfs_skel_dir):
-            raise Exception("rootfs_skel directory {} not found".format(rootfs_skel_dir))
-        for root, dirs, files in os.walk(rootfs_skel_dir):
+        if aegea_conf:
+            fn = os.path.join(os.path.dirname(aegea_conf), "rootfs.skel")
+        elif os.path.exists(rootfs_skel_dir):
+            fn = os.path.abspath(os.path.normpath(rootfs_skel_dir))
+        elif rootfs_skel_dir == "auto":
+            fn = os.path.join(os.path.dirname(__file__), "rootfs.skel")
+        else:
+            raise Exception("rootfs_skel directory {} not found".format(fn))
+        logger.debug("Trying rootfs.skel: %s" % fn)
+        if not os.path.exists(fn):
+            raise Exception("rootfs_skel directory {} not found".format(fn))
+        for root, dirs, files in os.walk(fn):
             for file_ in files:
                 with open(os.path.join(root, file_)) as fh:
-                    manifest.append(dict(path=os.path.join("/", os.path.relpath(root, rootfs_skel_dir), file_),
+                    manifest.append(dict(path=os.path.join("/", os.path.relpath(root, fn), file_),
                                          content=fh.read(),
                                          permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:]))
     return manifest
