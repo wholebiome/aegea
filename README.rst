@@ -7,7 +7,8 @@ functionality of the `AWS CLI <https://aws.amazon.com/cli/>`_.
 
 Installation
 ~~~~~~~~~~~~
-Run ``pip install .`` in this directory to install Aegea. Before you do this, you will also need to install some system library dependencies:
+Run ``pip install .`` in this directory to install Aegea. Before you do this, you will also need to install some system
+library dependencies:
 
 +--------------+---------+-----------------------------------------------------------------------------------------+
 | OS           | Python  | Command                                                                                 |
@@ -20,7 +21,8 @@ Run ``pip install .`` in this directory to install Aegea. Before you do this, yo
 +--------------+---------+-----------------------------------------------------------------------------------------+
 | Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel                                    |
 +--------------+---------+-----------------------------------------------------------------------------------------+
-| OS X/Homebrew|         | Install Xcode or Xcode Command Line Tools                                               |
+| OS X         |         | Install Xcode or Xcode Command Line Tools. Install Homebrew. Run                        |
+|              |         | ``brew install openssl && brew link --force openssl``.                                  |
 +--------------+---------+-----------------------------------------------------------------------------------------+
 
 Configuration management
