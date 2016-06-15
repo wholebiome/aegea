@@ -61,5 +61,5 @@ def register_parser(function, **kwargs):
     parser.set_defaults(entry_point=function)
     parser.set_defaults(**config.get(function.__name__, {}))
     if parser.description is None:
-        parser.description = kwargs.get("help")
+        parser.description = kwargs.get("help", function.__doc__)
     return parser

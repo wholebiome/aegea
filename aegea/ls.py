@@ -104,9 +104,12 @@ def snapshots(args):
 parser = register_filtering_parser(snapshots, help='List EC2 EBS snapshots')
 
 def buckets(args):
+    """
+    List S3 buckets. See also "aws s3 ls". Use "aws s3 ls NAME" to list bucket contents.
+    """
     page_output(filter_and_tabulate(boto3.resource("s3").buckets, args))
 
-parser = register_filtering_parser(buckets, help='List S3 buckets')
+parser = register_filtering_parser(buckets)
 
 def console(args):
     ec2 = boto3.resource("ec2")
