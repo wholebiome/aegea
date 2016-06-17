@@ -172,8 +172,6 @@ def logs(args):
             n += 1
             if n >= args.max_streams_per_group:
                 break
-        if n >= args.max_streams_per_group:
-            break
     page_output(tabulate(table, args))
 
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
