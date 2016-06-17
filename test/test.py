@@ -49,6 +49,8 @@ class TestAegea(unittest.TestCase):
                   expect=[dict(return_codes=[1], stderr="AegeaException: Could not resolve")])
         instance_id = json.loads(self.call(["aegea", "ls", "--json"]).stdout)[0]["id"]
         for subcommand in aegea.parser._actions[-1].choices:
+            expect = [dict(return_codes=[os.EX_OK]),
+                      dict(return_codes=[1], stderr="(UnauthorizedOperation|AccessDenied|DryRunOperation)")]
             args = []
             if subcommand in ("ssh", "put_alarm"):
                 args += ["--help"]
@@ -58,6 +60,7 @@ class TestAegea(unittest.TestCase):
                 args += [instance_id, "--dry-run"]
             elif subcommand == "grep":
                 args += ["--help"] if USING_PYTHON2 else ["error", "syslog", "--start-time=-2h", "--end-time=-5m"]
+                expect.append(dict(return_codes=[os.EX_DATAERR]))
             elif subcommand in ("launch", "build_image"):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]
             elif subcommand == "rm":
@@ -72,9 +75,7 @@ class TestAegea(unittest.TestCase):
                     args += ["--detailed-billing-reports-bucket", os.environ["AWS_DETAILED_BILLING_REPORTS_BUCKET"]]
             elif subcommand == "ls":
                 args += ["--filter", "state=running"]
-            unauthorized_ok = [dict(return_codes=[os.EX_OK]),
-                               dict(return_codes=[1], stderr="(UnauthorizedOperation|AccessDenied|DryRunOperation)")]
-            self.call(["aegea", subcommand] + args, expect=unauthorized_ok)
+            self.call(["aegea", subcommand] + args, expect=expect)
 
     def test_dry_run_commands(self):
         unauthorized_ok = [dict(return_codes=[os.EX_OK]), dict(return_codes=[1], stderr="UnauthorizedOperation")]
