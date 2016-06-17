@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError
 from botocore.utils import parse_to_aware_datetime
 
 from .. import logger
-from . import constants, VerboseRepr
+from . import constants, VerboseRepr, paginate
 from .exceptions import AegeaException
 from .crypto import get_public_key_from_pair
 from .compat import StringIO
@@ -127,10 +127,9 @@ class DNSZone:
             assert self.zone["Name"] == zone_name + "."
         elif use_unique_private_zone:
             private_zones = []
-            for page in self.route53.get_paginator('list_hosted_zones').paginate():
-                for zone in page["HostedZones"]:
-                    if zone.get("Config", {}).get("PrivateZone") is True:
-                        private_zones.append(zone)
+            for zone in paginate(self.route53.get_paginator('list_hosted_zones')):
+                if zone.get("Config", {}).get("PrivateZone") is True:
+                    private_zones.append(zone)
             if len(private_zones) == 1:
                 self.zone = zone
             else:

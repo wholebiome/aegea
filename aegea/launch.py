@@ -21,7 +21,7 @@ import boto3
 
 from . import register_parser, logger, config
 
-from .util import wait_for_port, validate_hostname
+from .util import wait_for_port, validate_hostname, paginate
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder)
@@ -156,10 +156,9 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         logs = boto3.client("logs")
         filter_args = dict(logGroupName="syslog", logStreamNames=[instance.private_dns_name], filterPattern="service",
                            startTime=int((time.time()-900)*1000))
-        for page in logs.get_paginator('filter_log_events').paginate(**filter_args):
-            for event in page["events"]:
-                # print(event["timestamp"], event["message"])
-                raise NotImplementedError()
+        for event in paginate(logs.get_paginator('filter_log_events'), **filter_args):
+            # print(event["timestamp"], event["message"])
+            raise NotImplementedError()
     # FIXME: this doesn't work. Figure out a way to vivify current user's account
     #from .util.ssh import AegeaSSHClient
     #try:

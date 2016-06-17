@@ -125,17 +125,15 @@ def zones(args):
     rrs_cols = ["Name", "Type", "TTL"]
     record_cols = ["Value"]
     route53 = boto3.client("route53")
-    for page in route53.get_paginator('list_hosted_zones').paginate():
-        for zone in page["HostedZones"]:
-            if args.zones and zone["Name"] not in args.zones + [z + "." for z in args.zones]:
-                continue
-            for page2 in route53.get_paginator('list_resource_record_sets').paginate(HostedZoneId=zone["Id"]):
-                for rrs in page2["ResourceRecordSets"]:
-                    for record in rrs.get("ResourceRecords", []):
-                        row = [rrs.get(f) for f in rrs_cols]
-                        row += [record.get(f) for f in record_cols]
-                        row += [get_field(zone, "Config.PrivateZone")]
-                        table.append(row)
+    for zone in paginate(route53.get_paginator('list_hosted_zones')):
+        if args.zones and zone["Name"] not in args.zones + [z + "." for z in args.zones]:
+            continue
+        for rrs in paginate(route53.get_paginator('list_resource_record_sets'), HostedZoneId=zone["Id"]):
+            for record in rrs.get("ResourceRecords", []):
+                row = [rrs.get(f) for f in rrs_cols]
+                row += [record.get(f) for f in record_cols]
+                row += [get_field(zone, "Config.PrivateZone")]
+                table.append(row)
     column_names = rrs_cols + record_cols + ["Private"]
     page_output(format_table(table, column_names=column_names, max_col_width=args.max_col_width))
 
@@ -162,21 +160,20 @@ def logs(args):
     group_cols = ["logGroupName"]
     stream_cols = ["logStreamName", "lastIngestionTime", "storedBytes"]
     args.columns = group_cols + stream_cols
-    for page in logs.get_paginator('describe_log_groups').paginate():
-        for group in page["logGroups"]:
-            if args.log_group and group["logGroupName"] != args.log_group:
-                continue
-            n = 0
-            for page2 in logs.get_paginator('describe_log_streams').paginate(logGroupName=group["logGroupName"], orderBy="LastEventTime", descending=True):  # noqa
-                for stream in page2["logStreams"]:
-                    now = datetime.utcnow().replace(microsecond=0)
-                    stream["lastIngestionTime"] = now - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)//1000)  # noqa
-                    table.append(dict(group, **stream))
-                    n += 1
-                    if n >= args.max_streams_per_group:
-                        break
-                if n >= args.max_streams_per_group:
-                    break
+    for group in paginate(logs.get_paginator('describe_log_groups')):
+        if args.log_group and group["logGroupName"] != args.log_group:
+            continue
+        n = 0
+        for stream in paginate(logs.get_paginator('describe_log_streams'),
+                               logGroupName=group["logGroupName"], orderBy="LastEventTime", descending=True):
+            now = datetime.utcnow().replace(microsecond=0)
+            stream["lastIngestionTime"] = now - datetime.utcfromtimestamp(stream.get("lastIngestionTime", 0)//1000)
+            table.append(dict(group, **stream))
+            n += 1
+            if n >= args.max_streams_per_group:
+                break
+        if n >= args.max_streams_per_group:
+            break
     page_output(tabulate(table, args))
 
 parser = register_parser(logs, help='List CloudWatch Logs groups and streams')
@@ -196,9 +193,8 @@ def grep(args):
         filter_args.update(startTime=int(args.start_time.timestamp() * 1000))
     if args.end_time:
         filter_args.update(endTime=int(args.end_time.timestamp() * 1000))
-    for page in logs.get_paginator('filter_log_events').paginate(**filter_args):
-        for event in page["events"]:
-            print(event["timestamp"], event["message"])
+    for event in paginate(logs.get_paginator('filter_log_events'), **filter_args):
+        print(event["timestamp"], event["message"])
 
 parser = register_parser(grep, help='Filter and print events in a CloudWatch Logs stream or group of streams')
 parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-sensitive. See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")  # noqa
@@ -268,11 +264,7 @@ def tables(args):
 parser = register_listing_parser(tables, help='List DynamoDB tables')
 
 def subscriptions(args):
-    table = []
-    for page in boto3.client("sns").get_paginator('list_subscriptions').paginate():
-        for subscription in page["Subscriptions"]:
-            table.append(subscription)
-    page_output(tabulate(table, args))
+    page_output(tabulate(paginate(boto3.client("sns").get_paginator('list_subscriptions')), args))
 
 parser = register_listing_parser(subscriptions, help='List SNS subscriptions',
                                  column_defaults=['SubscriptionArn', 'Protocol', 'Endpoint'])
