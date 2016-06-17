@@ -66,3 +66,9 @@ def parse_time_input(t):
         if len(diffs) != 1:
             raise ValueError('Could not parse "{}" as a timestamp or time delta'.format(t))
         return datetime.utcnow().replace(microsecond=0) + relativedelta(**diffs)
+
+def paginate(boto3_paginator, *args, **kwargs):
+    for page in boto3_paginator.paginate(*args, **kwargs):
+        for result_key in boto3_paginator.result_keys:
+            for value in page.get(result_key.parsed.get("value"), []):
+                yield value

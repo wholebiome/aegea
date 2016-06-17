@@ -6,7 +6,7 @@ from datetime import datetime
 import boto3
 
 from . import register_parser
-from .util import parse_time_input
+from .util import parse_time_input, paginate
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
 from .util.aws import ARN, resolve_instance_id
 
@@ -292,8 +292,26 @@ parser = register_listing_parser(filesystems, help='List EFS filesystems')
 parser.add_argument("--mount-target-columns", nargs="+")
 
 def limits(args):
+    """
+    Describe limits in effect on your AWS account. See also https://console.aws.amazon.com/ec2/v2/home#Limits:
+    """
     # https://aws.amazon.com/about-aws/whats-new/2014/06/19/amazon-ec2-service-limits-report-now-available/
+    # Console-only APIs: getInstanceLimits, getAccountLimits, getAutoscalingLimits, getHostLimits
     # http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Client.describe_limits
-    print("Not implemented yet")
+    ec2 = boto3.resource("ec2")
+    attrs = ["max-instances", "vpc-max-security-groups-per-interface", "vpc-max-elastic-ips"]
+    table = ec2.meta.client.describe_account_attributes(AttributeNames=attrs)["AccountAttributes"]
+    page_output(tabulate(table, args))
 
-parser = register_parser(limits, help='Describe limits in effect on your AWS account')
+parser = register_parser(limits)
+
+def cmks(args):
+    kms = boto3.client("kms")
+    aliases = {alias.get("TargetKeyId"): alias for alias in paginate(kms.get_paginator('list_aliases'))}
+    table = []
+    for key in paginate(kms.get_paginator('list_keys')):
+        key.update(aliases.get(key["KeyId"], {}))
+        table.append(key)
+    page_output(tabulate(table, args))
+
+parser = register_parser(cmks)

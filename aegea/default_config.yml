@@ -278,6 +278,17 @@ billing:
     - UsageEndDate
     - Cost
 
+limits:
+  columns:
+    - AttributeName
+    - AttributeValues
+
+cmks:
+  columns:
+    - KeyArn
+    - KeyId
+    - AliasName
+
 launch:
   commands: []
   packages: []
