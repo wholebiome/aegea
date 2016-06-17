@@ -197,7 +197,8 @@ def grep(args):
         print(event["timestamp"], event["message"])
 
 parser = register_parser(grep, help='Filter and print events in a CloudWatch Logs stream or group of streams')
-parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-sensitive. See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")  # noqa
+parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-sensitive. See
+http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")
 parser.add_argument("log_group", help="CloudWatch log group")
 parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
 parser.add_argument("--start-time", type=parse_time_input, default=parse_time_input("-7d"),
@@ -306,4 +307,4 @@ def cmks(args):
         table.append(key)
     page_output(tabulate(table, args))
 
-parser = register_parser(cmks)
+parser = register_parser(cmks, help="List KMS Customer Master Keys")
