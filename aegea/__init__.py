@@ -46,7 +46,9 @@ def main(args=None):
     if has_attrs and parsed_args.sort_by not in parsed_args.columns:
         parsed_args.columns.append(parsed_args.sort_by)
     result = parsed_args.entry_point(parsed_args)
-    if result is not None:
+    if isinstance(result, SystemExit):
+        raise result
+    elif result is not None:
         print(json.dumps(result))
 
 def register_parser(function, **kwargs):

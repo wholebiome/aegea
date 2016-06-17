@@ -191,8 +191,13 @@ def grep(args):
         filter_args.update(startTime=int(args.start_time.timestamp() * 1000))
     if args.end_time:
         filter_args.update(endTime=int(args.end_time.timestamp() * 1000))
+    num_results = 0
     for event in paginate(logs.get_paginator('filter_log_events'), **filter_args):
+        if "timestamp" not in event or "message" not in event:
+            continue
         print(event["timestamp"], event["message"])
+        num_results += 1
+    return SystemExit(os.EX_OK if num_results > 0 else os.EX_DATAERR)
 
 parser = register_parser(grep, help='Filter and print events in a CloudWatch Logs stream or group of streams')
 parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-sensitive. See
