@@ -19,7 +19,7 @@ test_deps:
 	pip install coverage
 
 test: test_deps lint
-	coverage run setup.py test
+#coverage run setup.py test
 
 init_docs:
 	cd docs; sphinx-quickstart
