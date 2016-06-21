@@ -7,9 +7,10 @@ import os, sys, unittest, collections, itertools, copy, re, subprocess, importli
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import aegea
-from aegea.util.aws import resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ubuntu_ami
+from aegea.util.aws import (resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ubuntu_ami, get_ondemand_price_usd,
+                            ARN, DNSZone, get_user_data)
 from aegea.util.exceptions import AegeaException
-from aegea.util.compat import USING_PYTHON2
+from aegea.util.compat import USING_PYTHON2, str
 
 for importer, modname, is_pkg in pkgutil.iter_modules(aegea.__path__):
     importlib.import_module((aegea.__package__ or "aegea") + "." + modname)
@@ -130,6 +131,16 @@ class TestAegea(unittest.TestCase):
                                    "Principal": {"AWS": "arn:aws:iam::account-id:user/foo"}},
                                   {"Action": [], "Effect": "Deny"}]}
         self.assertEqual(json.loads(str(policy)), expected)
+
+    def test_aws_utils(self):
+        self.assertTrue(isinstance(get_ondemand_price_usd("us-east-1", "t2.micro"), str))
+        self.assertEquals(str(ARN()), "arn:aws::::")
+        self.assertEquals(str(ARN("arn:aws:foo:bar:xyz:zzt")), "arn:aws:foo:bar:xyz:zzt")
+        self.assertEquals(str(ARN("arn:aws:a:b:c:d", service="x", region="us-west-1", account_id="1", resource="2")),
+                          "arn:aws:x:us-west-1:1:2")
+        with self.assertRaises(AegeaException):
+            DNSZone(use_unique_private_zone=False)
+        get_user_data(commands=["ls"], packages=["foo"], files=["bar"])
 
     def test_locate_ubuntu_ami(self):
         self.assertTrue(locate_ubuntu_ami().startswith("ami-"))

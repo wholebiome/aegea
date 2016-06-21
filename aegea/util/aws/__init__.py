@@ -271,13 +271,14 @@ offers_api = "https://pricing.us-east-1.amazonaws.com/offers/v1.0"
 
 def region_name(region_id):
     region_names, region_ids = {}, {}
-    for partition_data in botocore.loaders.create_loader().load_data('endpoints')["partitions"]:
+    from botocore import loaders
+    for partition_data in loaders.create_loader().load_data('endpoints')["partitions"]:
         region_names.update({k: v["description"] for k, v in partition_data["regions"].items()})
         region_ids.update({v: k for k, v in region_names.items()})
     return region_names[region_id]
 
 def get_pricing_data(offer, max_cache_age_days=30):
-    from .. import config
+    from ... import config
     offer_filename = os.path.join(os.path.dirname(config.config_files[1]), offer + "_pricing_cache.json.gz")
     try:
         cache_date = datetime.fromtimestamp(os.path.getmtime(offer_filename))

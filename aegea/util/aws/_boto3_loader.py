@@ -17,7 +17,7 @@ class Loader:
         else:
             if attr not in self.cache[self.factory]:
                 if self.factory == "client" and attr in self.cache["resource"]:
-                    self.cache["client"][attr] = self.cache["resource"].meta.client
+                    self.cache["client"][attr] = self.cache["resource"][attr].meta.client
                 else:
                     import boto3
                     factory = getattr(boto3, self.factory)
