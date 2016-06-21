@@ -1,22 +1,21 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys
-import boto3
 
 from . import register_parser
 from .ls import register_listing_parser
 from .util.printing import page_output, tabulate
-from .util.aws import ARN, resolve_instance_id
+from .util.aws import ARN, resolve_instance_id, resources, clients
 
 def alarms(args):
-    page_output(tabulate(boto3.resource("cloudwatch").alarms.all(), args))
+    page_output(tabulate(resources.cloudwatch.alarms.all(), args))
 
 parser = register_listing_parser(alarms, help='List CloudWatch alarms')
 
 def put_alarm(args):
-    sns = boto3.resource("sns")
-    logs = boto3.client("logs")
-    cloudwatch = boto3.client("cloudwatch")
+    sns = resources.sns
+    logs = clients.logs
+    cloudwatch = clients.cloudwatch
     topic = sns.create_topic(Name=args.alarm_name)
     topic.subscribe(Protocol='email', Endpoint=args.email)
     logs.put_metric_filter(logGroupName=args.log_group_name,

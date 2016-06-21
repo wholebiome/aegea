@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, time, csv, json, unittest
-import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
 import dateutil.parser
@@ -9,7 +8,7 @@ from dateutil.tz import tzutc
 
 from . import register_parser, logger, config
 from .util import natural_sort
-from .util.aws import expect_error_codes, ARN
+from .util.aws import expect_error_codes, ARN, clients, resources
 from .util.printing import RED, GREEN, WHITE, page_output, format_table
 
 class Auditor(unittest.TestCase):
@@ -20,7 +19,7 @@ class Auditor(unittest.TestCase):
     @property
     def credential_report(self):
         if "credential_report" not in self.cache:
-            iam = boto3.client("iam")
+            iam = clients.iam
             iam.generate_credential_report()
             while True:
                 try:
@@ -33,19 +32,19 @@ class Auditor(unittest.TestCase):
     @property
     def account_password_policy(self):
         if "account_password_policy" not in self.cache:
-            self.cache["account_password_policy"] = boto3.resource("iam").AccountPasswordPolicy()
+            self.cache["account_password_policy"] = resources.iam.AccountPasswordPolicy()
         return self.cache["account_password_policy"]
 
     @property
     def trails(self):
         if "trails" not in self.cache:
-            self.cache["trails"] = boto3.client("cloudtrail").describe_trails()["trailList"]
+            self.cache["trails"] = clients.cloudtrail.describe_trails()["trailList"]
         return self.cache["trails"]
 
     @property
     def alarms(self):
         if "alarms" not in self.cache:
-            self.cache["alarms"] = list(boto3.resource("cloudwatch").alarms.all())
+            self.cache["alarms"] = list(resources.cloudwatch.alarms.all())
         return self.cache["alarms"]
 
     def parse_date(self, d):
@@ -132,7 +131,7 @@ class Auditor(unittest.TestCase):
 
     def audit_1_15(self):
         """1.15 Ensure IAM policies are attached only to groups or roles (Scored)"""
-        for policy in boto3.resource("iam").policies.all():
+        for policy in resources.iam.policies.all():
             self.assertEqual(len(list(policy.attached_users.all())), 0, "{} has users attached to it".format(policy))
 
     def audit_2_1(self):
@@ -148,6 +147,7 @@ class Auditor(unittest.TestCase):
     def audit_2_3(self):
         """2.3 Ensure the S3 bucket CloudTrail logs to is not publicly accessible (Scored)"""
         raise NotImplementedError()
+        import boto3
         s3 = boto3.session.Session(region_name="us-east-1").resource("s3")
         # s3 = boto3.resource("s3")
         # for trail in self.trails:
@@ -169,12 +169,13 @@ class Auditor(unittest.TestCase):
         """2.4 Ensure CloudTrail trails are integrated with CloudWatch Logs (Scored)"""
         for trail in self.trails:
             self.assertIn("CloudWatchLogsLogGroupArn", trail)
-            trail_status = boto3.client("cloudtrail").get_trail_status(Name=trail["TrailARN"])
+            trail_status = clients.cloudtrail.get_trail_status(Name=trail["TrailARN"])
             self.assertGreater(trail_status["LatestCloudWatchLogsDeliveryTime"],
                                datetime.now(tzutc()) - timedelta(days=1))
 
     def audit_2_5(self):
         """2.5 Ensure AWS Config is enabled in all regions (Scored)"""
+        import boto3
         for region in boto3.Session().get_available_regions("config"):
             aws_config = boto3.session.Session(region_name=region).client("config")
             res = aws_config.describe_configuration_recorder_status()
@@ -194,9 +195,9 @@ class Auditor(unittest.TestCase):
 
     def ensure_alarm(self, name, pattern, log_group_name):
         # See http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/CW_Support_For_AWS.html
-        sns = boto3.resource("sns")
-        logs = boto3.client("logs")
-        cloudwatch = boto3.client("cloudwatch")
+        sns = resources.sns
+        logs = clients.logs
+        cloudwatch = clients.cloudwatch
         topic = sns.create_topic(Name=name)
         topic.subscribe(Protocol='email', Endpoint=self.email)
         logs.put_metric_filter(logGroupName=log_group_name,
@@ -216,8 +217,8 @@ class Auditor(unittest.TestCase):
                                     AlarmActions=[topic.arn])
 
     def assert_alarm(self, name, pattern, remediate=False):
-        logs = boto3.client("logs")
-        sns = boto3.resource("sns")
+        logs = clients.logs
+        sns = resources.sns
         alarm_ok = False
         for trail in self.trails:
             log_group_name = ARN(trail["CloudWatchLogsLogGroupArn"]).resource.split(":")[1]

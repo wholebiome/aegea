@@ -7,19 +7,19 @@ try:
 except ImportError:
     from backports.statistics import median
 
-import boto3, requests
+import requests
 
 from . import register_parser
 from .util import paginate
 from .util.printing import format_table, page_output, tabulate, format_datetime
-from .util.aws import region_names, get_pricing_data, offers_api
+from .util.aws import region_name, get_pricing_data, offers_api, clients
 
 def pricing(args):
     table = []
     if args.offer == "spot":
         window_start = datetime.utcnow() - timedelta(hours=1)
         spot_prices, hours = {}, set()
-        paginator = boto3.client("ec2").get_paginator('describe_spot_price_history')
+        paginator = clients.ec2.get_paginator('describe_spot_price_history')
         filters = [dict(Name="product-description", Values=["Linux/UNIX"])]
         for line in paginate(paginator, StartTime=window_start, Filters=filters):
             hour = line["Timestamp"].replace(minute=0, second=0)
@@ -36,9 +36,9 @@ def pricing(args):
                                  max_col_width=args.max_col_width))
     elif args.offer:
         if args.region is None:
-            args.region = boto3.client("ec2").meta.region_name
+            args.region = clients.ec2.meta.region_name
         pricing_data = get_pricing_data(args.offer)
-        required_attributes = dict(location=region_names[args.region])
+        required_attributes = dict(location=region_name(args.region))
         if args.offer == "AmazonEC2":
             args.columns += args.columns_ec2
             args.sort_by = "attributes.instanceType"

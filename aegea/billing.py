@@ -10,12 +10,12 @@ import os, sys, json, zipfile, csv, io
 from io import BytesIO, TextIOWrapper
 from datetime import datetime, timedelta
 
-import boto3, requests, dateutil
+import requests, dateutil
 from botocore.exceptions import ClientError
 
 from . import register_parser
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
-from .util.aws import ARN
+from .util.aws import ARN, resources
 
 def filter_line_items(items, args):
     for item in items:
@@ -28,15 +28,13 @@ def filter_line_items(items, args):
         yield item
 
 def billing(args):
-    s3 = boto3.resource("s3")
-    iam = boto3.resource("iam")
-    account_id = ARN(iam.CurrentUser().user.arn).account_id
+    account_id = ARN(resources.iam.CurrentUser().user.arn).account_id
     args.detailed_billing_reports_bucket = args.detailed_billing_reports_bucket.format(account_id=account_id)
     now = datetime.utcnow()
     report = "{account_id}-aws-billing-detailed-line-items-with-resources-and-tags-{year}-{month}.csv.zip"
     report = report.format(account_id=account_id, year=args.year or now.year, month="%02d" % (args.month or now.month))
     try:
-        billing_object = s3.Bucket(args.detailed_billing_reports_bucket).Object(report)
+        billing_object = resources.s3.Bucket(args.detailed_billing_reports_bucket).Object(report)
         billing_object_body = billing_object.get()["Body"]
     except ClientError as e:
         console_url = "https://console.aws.amazon.com/billing/home#/preferences"

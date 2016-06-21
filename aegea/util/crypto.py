@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys
-import boto3
 
 from .. import logger
 
@@ -20,7 +19,7 @@ def get_ssh_key_path(name):
 
 def ensure_ssh_key(name, verify_pem_file=True):
     from paramiko import RSAKey
-    ec2 = boto3.resource("ec2")
+    from .aws.resources import ec2
     for key_pair in ec2.key_pairs.all():
         if key_pair.name == name:
             if verify_pem_file and not os.path.exists(get_ssh_key_path(name)):

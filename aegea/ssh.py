@@ -1,12 +1,11 @@
 import os, sys, argparse, subprocess
-import boto3
 
 from . import register_parser
 from .util.aws import resolve_instance_id
 from .util.crypto import add_ssh_host_key_to_known_hosts
 
 def ssh(args):
-    ec2 = boto3.resource("ec2")
+    from .aws.resources import ec2
     prefix, at, name = args.name.rpartition("@")
     instance = ec2.Instance(resolve_instance_id(name))
     tags = {tag["Key"]: tag["Value"] for tag in instance.tags or []}
