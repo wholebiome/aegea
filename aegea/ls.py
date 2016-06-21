@@ -5,7 +5,7 @@ from datetime import datetime
 
 from . import register_parser
 from .util import parse_time_input, paginate
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate
+from .util.printing import format_table, page_output, get_field, get_cell, tabulate, Timestamp
 from .util.aws import ARN, resolve_instance_id, resources, clients
 
 def register_listing_parser(function, **kwargs):
@@ -188,7 +188,7 @@ def grep(args):
     for event in paginate(clients.logs.get_paginator('filter_log_events'), **filter_args):
         if "timestamp" not in event or "message" not in event:
             continue
-        print(event["timestamp"], event["message"])
+        print(str(Timestamp(event["timestamp"])), event["message"])
         num_results += 1
     return SystemExit(os.EX_OK if num_results > 0 else os.EX_DATAERR)
 
