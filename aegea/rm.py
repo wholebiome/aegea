@@ -9,38 +9,37 @@ EC2 key pairs have no ARNs and no distingiushing ID prefix. To delete them by na
 """
 
 import os, sys, argparse, subprocess
-import boto3
 from . import register_parser, logger
-from .util.aws import expect_error_codes
+from .util.aws import expect_error_codes, resources, clients
 from botocore.exceptions import ClientError
 
 def rm(args):
     for name in args.names:
         try:
             if args.key_pair:
-                boto3.resource("ec2").KeyPair(name).delete(DryRun=not args.force)
+                resources.ec2.KeyPair(name).delete(DryRun=not args.force)
             elif name.startswith("sg-"):
-                boto3.resource("ec2").SecurityGroup(name).delete(DryRun=not args.force)
+                resources.ec2.SecurityGroup(name).delete(DryRun=not args.force)
             elif name.startswith("vol-"):
-                boto3.resource("ec2").Volume(name).delete(DryRun=not args.force)
+                resources.ec2.Volume(name).delete(DryRun=not args.force)
             elif name.startswith("snap-"):
-                boto3.resource("ec2").Snapshot(name).delete(DryRun=not args.force)
+                resources.ec2.Snapshot(name).delete(DryRun=not args.force)
             elif name.startswith("ami-"):
-                image = boto3.resource("ec2").Image(name)
+                image = resources.ec2.Image(name)
                 snapshot_id = image.block_device_mappings[0].get("Ebs", {}).get("SnapshotId")
                 image.deregister(DryRun=not args.force)
                 if snapshot_id:
-                    boto3.resource("ec2").Snapshot(snapshot_id).delete(DryRun=not args.force)
+                    resources.ec2.Snapshot(snapshot_id).delete(DryRun=not args.force)
             elif name.startswith("sir-"):
-                boto3.client("ec2").cancel_spot_instance_requests(SpotInstanceRequestIds=[name], DryRun=not args.force)
+                clients.ec2.cancel_spot_instance_requests(SpotInstanceRequestIds=[name], DryRun=not args.force)
             elif name.startswith("sfr-"):
-                boto3.client("ec2").cancel_spot_fleet_requests(SpotFleetRequestIds=[name],
-                                                               TerminateInstances=False,
-                                                               DryRun=not args.force)
+                clients.ec2.cancel_spot_fleet_requests(SpotFleetRequestIds=[name],
+                                                       TerminateInstances=False,
+                                                       DryRun=not args.force)
             elif name.startswith("AKIA") and len(name) == 20 and name.upper() == name:
-                boto3.client("iam").delete_access_key(AccessKeyId=name) if args.force else True
+                clients.iam.delete_access_key(AccessKeyId=name) if args.force else True
             elif name.startswith("AROA") and len(name) == 21 and name.upper() == name:
-                for role in boto3.resource("iam").roles.all():
+                for role in resources.iam.roles.all():
                     if role.role_id == name:
                         logger.info("Deleting %s", role)
                         for instance_profile in role.instance_profiles.all():

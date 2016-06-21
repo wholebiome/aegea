@@ -6,15 +6,16 @@ from collections import OrderedDict
 from warnings import warn
 from datetime import datetime, timedelta
 
-import boto3, botocore
+import botocore
 from botocore.exceptions import ClientError
 from botocore.utils import parse_to_aware_datetime
 
-from .. import logger
-from . import constants, VerboseRepr, paginate
-from .exceptions import AegeaException
-from .crypto import get_public_key_from_pair
-from .compat import StringIO
+from ... import logger
+from .. import constants, VerboseRepr, paginate
+from ..exceptions import AegeaException
+from ..crypto import get_public_key_from_pair
+from ..compat import StringIO
+from . import clients, resources
 
 def get_assume_role_policy_doc(*principals):
     # See http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html#Principal
@@ -73,16 +74,15 @@ def get_user_data(host_key=None, commands=None, packages=None, files=None):
     return buf.getvalue()
 
 def ensure_vpc():
-    ec2 = boto3.resource("ec2")
-    for vpc in ec2.vpcs.filter(Filters=[dict(Name="isDefault", Values=["true"])]):
+    for vpc in resources.ec2.vpcs.filter(Filters=[dict(Name="isDefault", Values=["true"])]):
         break
     else:
-        for vpc in ec2.vpcs.all():
+        for vpc in resources.ec2.vpcs.all():
             break
         else:
             logger.info("Creating VPC")
-            vpc = ec2.create_vpc() # CidrBlock=...
-            ec2.meta.client.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
+            vpc = resources.ec2.create_vpc() # CidrBlock=...
+            clients.ec2.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
             vpc.modify_attribute(EnableDnsSupport={"Value": True})
             vpc.modify_attribute(EnableDnsHostnames={"Value": True})
     return vpc
@@ -121,13 +121,12 @@ def ensure_security_group(name, vpc):
 
 class DNSZone:
     def __init__(self, zone_name=None, use_unique_private_zone=True):
-        self.route53 = boto3.client("route53")
         if zone_name:
-            self.zone = self.route53.list_hosted_zones_by_name(DNSName=zone_name)["HostedZones"][0]
+            self.zone = clients.route53.list_hosted_zones_by_name(DNSName=zone_name)["HostedZones"][0]
             assert self.zone["Name"] == zone_name + "."
         elif use_unique_private_zone:
             private_zones = []
-            for zone in paginate(self.route53.get_paginator('list_hosted_zones')):
+            for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):
                 if zone.get("Config", {}).get("PrivateZone") is True:
                     private_zones.append(zone)
             if len(private_zones) == 1:
@@ -147,14 +146,14 @@ class DNSZone:
                                                  Type=record_type,
                                                  TTL=ttl,
                                                  ResourceRecords=value))
-        self.route53.change_resource_record_sets(HostedZoneId=self.zone_id,
-                                                 ChangeBatch=dict(Changes=[dns_update]))
+        clients.route53.change_resource_record_sets(HostedZoneId=self.zone_id,
+                                                    ChangeBatch=dict(Changes=[dns_update]))
 
     def delete(self, name, value=None, record_type="CNAME", missing_ok=True):
         if value is None:
-            res = self.route53.list_resource_record_sets(HostedZoneId=self.zone_id,
-                                                         StartRecordName=name + "." + self.zone["Name"],
-                                                         StartRecordType=record_type)
+            res = clients.route53.list_resource_record_sets(HostedZoneId=self.zone_id,
+                                                            StartRecordName=name + "." + self.zone["Name"],
+                                                            StartRecordType=record_type)
             for rrs in res["ResourceRecordSets"]:
                 if rrs["Name"] == name + "." + self.zone["Name"] and rrs["Type"] == record_type:
                     value = rrs["ResourceRecords"]
@@ -206,12 +205,12 @@ class IAMPolicyBuilder:
         return json.dumps(self.policy)
 
 def ensure_iam_role(iam_role_name, policies=frozenset(), trust=frozenset()):
-    iam = boto3.resource("iam")
-    for role in iam.roles.all():
+    for role in resources.iam.roles.all():
         if role.name == iam_role_name:
             break
     else:
-        role = iam.create_role(RoleName=iam_role_name, AssumeRolePolicyDocument=get_assume_role_policy_doc(*trust))
+        role = resources.iam.create_role(RoleName=iam_role_name,
+                                         AssumeRolePolicyDocument=get_assume_role_policy_doc(*trust))
     attached_policies = [policy.arn for policy in role.attached_policies.all()]
     for policy in policies:
         policy_arn = "arn:aws:iam::aws:policy/{}".format(policy)
@@ -221,13 +220,12 @@ def ensure_iam_role(iam_role_name, policies=frozenset(), trust=frozenset()):
     return role
 
 def ensure_instance_profile(iam_role_name, policies=frozenset()):
-    iam = boto3.resource("iam")
-    for instance_profile in iam.instance_profiles.all():
+    for instance_profile in resources.iam.instance_profiles.all():
         if instance_profile.name == iam_role_name:
             break
     else:
-        instance_profile = iam.create_instance_profile(InstanceProfileName=iam_role_name)
-        iam.meta.client.get_waiter('instance_profile_exists').wait(InstanceProfileName=iam_role_name)
+        instance_profile = resources.iam.create_instance_profile(InstanceProfileName=iam_role_name)
+        clients.iam.get_waiter('instance_profile_exists').wait(InstanceProfileName=iam_role_name)
     role = ensure_iam_role(iam_role_name, policies=policies, trust=["ec2"])
     if not any(r.name == iam_role_name for r in instance_profile.roles):
         instance_profile.add_role(RoleName=role.name)
@@ -242,9 +240,8 @@ def add_tags(resource, **tags):
 def resolve_instance_id(name):
     if name.startswith("i-"):
         return name
-    ec2 = boto3.resource("ec2")
     try:
-        desc = ec2.meta.client.describe_instances(Filters=[dict(Name="tag:Name", Values=[name])])
+        desc = clients.ec2.describe_instances(Filters=[dict(Name="tag:Name", Values=[name])])
         return desc["Reservations"][0]["Instances"][0]["InstanceId"]
     except IndexError:
         raise AegeaException('Could not resolve "{}" to a known instance'.format(name))
@@ -261,22 +258,23 @@ def expect_error_codes(exception, *codes):
         raise
 
 def resolve_ami(ami=None):
-    ec2 = boto3.resource("ec2")
     if ami is None or not ami.startswith("ami-"):
         if ami is None:
             filters = dict(Owners=["self"], Filters=[dict(Name="state", Values=["available"])])
         else:
             filters = dict(Owners=["self"], Filters=[dict(Name="name", Values=[ami])])
-        amis = sorted(ec2.images.filter(**filters), key=lambda x: x.creation_date)
+        amis = sorted(resources.ec2.images.filter(**filters), key=lambda x: x.creation_date)
         ami = amis[-1].id
     return ami
 
 offers_api = "https://pricing.us-east-1.amazonaws.com/offers/v1.0"
 
-region_names, region_ids = {}, {}
-for partition_data in botocore.loaders.create_loader().load_data('endpoints')["partitions"]:
-    region_names.update({k: v["description"] for k, v in partition_data["regions"].items()})
-    region_ids.update({v: k for k, v in region_names.items()})
+def region_name(region_id):
+    region_names, region_ids = {}, {}
+    for partition_data in botocore.loaders.create_loader().load_data('endpoints')["partitions"]:
+        region_names.update({k: v["description"] for k, v in partition_data["regions"].items()})
+        region_ids.update({v: k for k, v in region_names.items()})
+    return region_names[region_id]
 
 def get_pricing_data(offer, max_cache_age_days=30):
     from .. import config
@@ -302,7 +300,7 @@ def get_ec2_products(region=None, instance_type=None, tenancy="Shared", operatin
     pricing_data = get_pricing_data("AmazonEC2")
     required_attributes = dict(tenancy=tenancy, operatingSystem=operating_system)
     if region:
-        required_attributes.update(location=region_names[region])
+        required_attributes.update(location=region_name(region))
     if instance_type:
         required_attributes.update(instanceType=instance_type)
     for product in pricing_data["products"].values():
@@ -378,12 +376,10 @@ class SpotFleetBuilder(VerboseRepr):
                        InstanceType=instance_type,
                        WeightedCapacity=weighted_capacity)
 
-    def __call__(self, client=None, **kwargs):
+    def __call__(self, **kwargs):
         self.spot_fleet_request_config["LaunchSpecifications"] = list(self.launch_specs())
-        if client is None:
-            client = boto3.client("ec2")
         logger.debug(self.spot_fleet_request_config)
-        res = client.request_spot_fleet(DryRun=self.dry_run,
-                                        SpotFleetRequestConfig=self.spot_fleet_request_config,
-                                        **kwargs)
+        res = clients.ec2.request_spot_fleet(DryRun=self.dry_run,
+                                             SpotFleetRequestConfig=self.spot_fleet_request_config,
+                                             **kwargs)
         return res["SpotFleetRequestId"]

@@ -17,21 +17,20 @@ The return value (stdout) is a JSON object with one key, ``instance_id``.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, time, datetime, base64, json
-import boto3
 
 from . import register_parser, logger, config
 
 from .util import wait_for_port, validate_hostname, paginate
 from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
-                       expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder)
+                       expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder, resources, clients)
 from .util.crypto import (new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line,
                           get_ssh_key_filename)
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
 
-def get_spot_bid_price(ec2, instance_type, ondemand_multiplier=1.2):
-    ondemand_price = get_ondemand_price_usd(ec2.meta.client.meta.region_name, instance_type)
+def get_spot_bid_price(instance_type, ondemand_multiplier=1.2):
+    ondemand_price = get_ondemand_price_usd(clients.ec2.meta.region_name, instance_type)
     return float(ondemand_price) * ondemand_multiplier
 
 def get_startup_commands(args):
@@ -44,8 +43,6 @@ def get_startup_commands(args):
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
     if args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
         args.spot = True
-    ec2 = boto3.resource("ec2")
-    iam = boto3.resource("iam")
     if args.use_dns:
         dns_zone = DNSZone(config.dns.get("private_zone"))
         config.dns.private_zone = dns_zone.zone["Name"]
@@ -53,14 +50,14 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     try:
         i = resolve_instance_id(args.hostname)
         msg = "The hostname {} is being used by {} (state: {})"
-        raise Exception(msg.format(args.hostname, i, ec2.Instance(i).state["Name"]))
+        raise Exception(msg.format(args.hostname, i, resources.ec2.Instance(i).state["Name"]))
     except AegeaException:
         validate_hostname(args.hostname)
         assert not args.hostname.startswith("i-")
     args.ami = resolve_ami(args.ami)
     if args.subnet:
-        subnet = ec2.Subnet(args.subnet)
-        vpc = ec2.Vpc(subnet.vpc_id)
+        subnet = resources.ec2.Subnet(args.subnet)
+        vpc = resources.ec2.Vpc(subnet.vpc_id)
     else:
         vpc = ensure_vpc()
         subnet = ensure_subnet(vpc)
@@ -90,7 +87,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     if args.client_token is None:
         from getpass import getuser
         from socket import gethostname
-        args.client_token = "{}.{}.{}:{}@{}".format(iam.CurrentUser().user.name,
+        args.client_token = "{}.{}.{}:{}@{}".format(resources.iam.CurrentUser().user.name,
                                                     __name__,
                                                     int(time.time()),
                                                     getuser(),
@@ -108,19 +105,19 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                     spot_fleet_args["min_cores_per_instance"] = spot_fleet_args["cores"]
                 spot_fleet_builder = SpotFleetBuilder(**spot_fleet_args)
                 logger.info("Launching {}".format(spot_fleet_builder))
-                sfr_id = spot_fleet_builder(ec2.meta.client)
+                sfr_id = spot_fleet_builder()
                 instances = []
                 while not instances:
-                    res = ec2.meta.client.describe_spot_fleet_instances(SpotFleetRequestId=sfr_id)
+                    res = clients.ec2.describe_spot_fleet_instances(SpotFleetRequestId=sfr_id)
                     instances = res["ActiveInstances"]
                 # FIXME: there may be multiple instances, and spot fleet provides no indication of whether the SFR is
                 # fulfilled
-                instance = ec2.Instance(instances[0]["InstanceId"])
+                instance = resources.ec2.Instance(instances[0]["InstanceId"])
             else:
                 if args.spot_price is None:
-                    args.spot_price = get_spot_bid_price(ec2, args.instance_type)
+                    args.spot_price = get_spot_bid_price(args.instance_type)
                 logger.info("Bidding {} for a {} spot instance".format(args.spot_price, args.instance_type))
-                res = ec2.meta.client.request_spot_instances(
+                res = clients.ec2.request_spot_instances(
                     SpotPrice=str(args.spot_price),
                     ValidUntil=datetime.datetime.utcnow()+datetime.timedelta(hours=1),
                     LaunchSpecification=launch_spec,
@@ -128,12 +125,12 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                     DryRun=args.dry_run
                 )
                 sir_id = res["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
-                ec2.meta.client.get_waiter('spot_instance_request_fulfilled').wait(SpotInstanceRequestIds=[sir_id])
-                res = ec2.meta.client.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])
-                instance = ec2.Instance(res["SpotInstanceRequests"][0]["InstanceId"])
+                clients.ec2.get_waiter('spot_instance_request_fulfilled').wait(SpotInstanceRequestIds=[sir_id])
+                res = clients.ec2.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])
+                instance = resources.ec2.Instance(res["SpotInstanceRequests"][0]["InstanceId"])
         else:
-            instances = ec2.create_instances(MinCount=1, MaxCount=1, ClientToken=args.client_token, DryRun=args.dry_run,
-                                             **launch_spec)
+            instances = resources.ec2.create_instances(MinCount=1, MaxCount=1, ClientToken=args.client_token,
+                                                       DryRun=args.dry_run, **launch_spec)
             instance = instances[0]
     except ClientError as e:
         expect_error_codes(e, "DryRunOperation")
@@ -142,21 +139,20 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     instance.wait_until_running()
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
     tags = dict([tag.split("=", 1) for tag in args.tags])
-    add_tags(instance, Name=args.hostname, Owner=iam.CurrentUser().user.name,
+    add_tags(instance, Name=args.hostname, Owner=resources.iam.CurrentUser().user.name,
              SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:], **tags)
     if args.use_dns:
         dns_zone.update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
-        instance = ec2.Instance(instance.id)
+        instance = resources.ec2.Instance(instance.id)
         time.sleep(1)
     add_ssh_host_key_to_known_hosts(hostkey_line([instance.public_dns_name], ssh_host_key))
     if args.wait_for_ssh:
         wait_for_port(instance.public_dns_name, 22)
     if args.essential_services:
-        logs = boto3.client("logs")
         filter_args = dict(logGroupName="syslog", logStreamNames=[instance.private_dns_name], filterPattern="service",
                            startTime=int((time.time()-900)*1000))
-        for event in paginate(logs.get_paginator('filter_log_events'), **filter_args):
+        for event in paginate(clients.logs.get_paginator('filter_log_events'), **filter_args):
             # print(event["timestamp"], event["message"])
             raise NotImplementedError()
     # FIXME: this doesn't work. Figure out a way to vivify current user's account

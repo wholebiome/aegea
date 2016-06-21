@@ -49,10 +49,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, argparse, subprocess, json, copy
 from textwrap import fill
-import boto3
 
 from . import register_parser
-from .util.aws import ARN, IAMPolicyBuilder
+from .util.aws import ARN, IAMPolicyBuilder, resources
 from .util.printing import format_table, page_output, tabulate
 from .util.exceptions import AegeaException
 from .util.crypto import new_ssh_key, hostkey_line
@@ -67,11 +66,10 @@ def build_iam_policy(principal, bucket):
     return IAMPolicyBuilder(action="s3:GetObject", resource=resource).policy
 
 def secrets(args):
-    iam = boto3.resource("iam")
-    s3 = boto3.resource("s3")
+    iam = resources.iam
     account_id = ARN(iam.CurrentUser().user.arn).account_id
     bucket_name = "credentials-{}".format(account_id)
-    bucket = s3.Bucket(bucket_name)
+    bucket = resources.s3.Bucket(bucket_name)
     bucket.create()
     policy = bucket.Policy()
     policy.put(Policy=json.dumps(build_s3_bucket_policy(account_id, bucket.name)))

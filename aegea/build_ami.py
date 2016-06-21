@@ -3,11 +3,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys, json, time
 from argparse import Namespace
 
-import boto3
-
 from . import register_parser, logger, config
 from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
-                       ensure_security_group, add_tags, get_bdm, resolve_instance_id)
+                       ensure_security_group, add_tags, get_bdm, resolve_instance_id, resources, clients)
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
 from .launch import launch
 
@@ -43,23 +41,21 @@ def get_bootstrap_packages():
 
 def build_image(args):
     from .util.ssh import AegeaSSHClient
-    ec2 = boto3.resource("ec2")
-    iam = boto3.resource("iam")
     ssh_key_filename = get_ssh_key_filename(args, base_name=__name__)
     if args.snapshot_existing_host:
-        instance = ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
+        instance = resources.ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
     else:
-        args.ami = args.base_ami or locate_ubuntu_ami(region=ec2.meta.client.meta.region_name)
+        args.ami = args.base_ami or locate_ubuntu_ami(region=clients.ec2.meta.region_name)
         args.hostname = "{}-{}".format(__name__.replace(".", "-").replace("_", "-"), int(time.time()))
         args.wait_for_ssh = True
         fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb client_token essential_services"  # noqa
         for field in fields.split():
             setattr(args, field, None)
-        instance = ec2.Instance(launch(args,
-                                       user_data_commands=get_bootstrap_commands(),
-                                       user_data_packages=get_bootstrap_packages(),
-                                       user_data_files=get_bootstrap_files())["instance_id"])
+        instance = resources.ec2.Instance(launch(args,
+                                                 user_data_commands=get_bootstrap_commands(),
+                                                 user_data_packages=get_bootstrap_packages(),
+                                                 user_data_files=get_bootstrap_files())["instance_id"])
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
@@ -76,13 +72,13 @@ def build_image(args):
     else:
         raise Exception("cloud-init encountered errors")
 
-    description = "Built by {} for {}".format(__name__, iam.CurrentUser().user.name)
+    description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     print(image.id)
     tags = dict([tag.split("=", 1) for tag in args.tags])
-    add_tags(image, Owner=iam.CurrentUser().user.name, Base=args.ami, **tags)
-    ec2.meta.client.get_waiter('image_available').wait(ImageIds=[image.id])
-    while ec2.Image(image.id).state != "available":
+    add_tags(image, Owner=resources.iam.CurrentUser().user.name, Base=args.ami, **tags)
+    clients.ec2.get_waiter('image_available').wait(ImageIds=[image.id])
+    while resources.ec2.Image(image.id).state != "available":
         sys.stderr.write(".")
         sys.stderr.flush()
         time.sleep(1)

@@ -3,12 +3,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys
 from datetime import datetime
 
-import boto3
-
 from . import register_parser
 from .util.printing import format_table, page_output
 
 def top(args):
+    import boto3
     table = []
     columns = ["Region", "Instances", "AMIs"]
     for region in boto3.Session().get_available_regions("ec2"):
