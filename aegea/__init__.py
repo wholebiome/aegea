@@ -19,10 +19,11 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-config, parser, subparsers = None, None, None
+config, parser = None, None
+_subparsers = {}
 
 def initialize():
-    global config, parser, subparsers
+    global config, parser
     from .util.printing import BOLD, RED, ENDC
     config = Config(__name__, use_yaml=True, save_on_exit=False)
     if not os.path.exists(config.config_files[1]):
@@ -36,8 +37,9 @@ def initialize():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument("--version", action="version", version='%(prog)s {version}'.format(version=__version__))
-    subparsers = parser.add_subparsers(title='commands')
-    subparsers.add_parser("help").set_defaults(entry_point=lambda args: parser.print_help())
+    def help(args):
+        parser.print_help()
+    register_parser(help)
 
 def main(args=None):
     parsed_args = parser.parse_args(args=args)
@@ -51,17 +53,23 @@ def main(args=None):
     elif result is not None:
         print(json.dumps(result))
 
-def register_parser(function, **kwargs):
+def register_parser(function, parent=None, **kwargs):
     if config is None:
         initialize()
-    parser = subparsers.add_parser(function.__name__, **kwargs)
-    parser.add_argument("--max-col-width", "-w", type=int, default=32)
-    parser.add_argument("--json", action="store_true", help="Output tabular data as a JSON-formatted list of objects")
-    parser.add_argument("--log-level", type=logger.setLevel,
-                        help=str([logging.getLevelName(i) for i in range(0, 60, 10)]),
-                        default=config.get("log_level"))
-    parser.set_defaults(entry_point=function)
-    parser.set_defaults(**config.get(function.__name__, {}))
-    if parser.description is None:
-        parser.description = kwargs.get("help", function.__doc__)
-    return parser
+    if parent is None:
+        parent = parser
+    if parent.prog not in _subparsers:
+        _subparsers[parent.prog] = parent.add_subparsers()
+    subparser = _subparsers[parent.prog].add_parser(function.__name__, **kwargs)
+    subparser.add_argument("--max-col-width", "-w", type=int, default=32)
+    subparser.add_argument("--json", action="store_true",
+                           help="Output tabular data as a JSON-formatted list of objects")
+    subparser.add_argument("--log-level", type=logger.setLevel,
+                           help=str([logging.getLevelName(i) for i in range(0, 60, 10)]),
+                           default=config.get("log_level"))
+    subparser.set_defaults(entry_point=function)
+    command = subparser.prog[len(parser.prog)+1:].replace(" ", "_")
+    subparser.set_defaults(**config.get(command, {}))
+    if subparser.description is None:
+        subparser.description = kwargs.get("help", function.__doc__)
+    return subparser

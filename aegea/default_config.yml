@@ -289,6 +289,47 @@ cmks:
     - KeyId
     - AliasName
 
+rds_ls:
+  columns:
+    - DBName
+    - Engine
+    - EngineVersion
+    - MultiAZ
+    - AvailabilityZone
+    - AllocatedStorage
+    - MasterUsername
+    - DBInstanceClass
+    - StorageType
+    - DBSecurityGroups
+    - Endpoint
+    - DBInstanceStatus
+    - CopyTagsToSnapshot
+    - DBInstanceIdentifier
+    - tags
+
+rds_snapshots:
+  columns:
+    - DBSnapshotIdentifier
+    - DBInstanceIdentifier
+    - SnapshotCreateTime
+    - SnapshotType
+    - Status
+    - PercentProgress
+    - Encrypted
+    - MasterUsername
+    - tags
+
+rds_create:
+  engine: postgres
+  storage: 20
+  storage_type: gp2
+  db_instance_class: db.t2.large
+
+rds_restore:
+  storage: 20
+  storage_type: gp2
+  db_instance_class: db.t2.large
+
 launch:
   commands: []
   packages: []

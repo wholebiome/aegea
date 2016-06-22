@@ -67,7 +67,7 @@ class TestAegea(unittest.TestCase):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]
             elif subcommand == "rm":
                 args += [resolve_ami()]
-            elif subcommand == "secrets":
+            elif subcommand in ("secrets", "rds"):
                 args += ["ls"]
             elif subcommand == "pricing":
                 args += ["AmazonEC2", "--json"]
@@ -154,7 +154,7 @@ class TestAegea(unittest.TestCase):
             Timestamp()
         self.assertEqual(str(Timestamp(12345)), "1970-01-01 00:00:12")
         self.assertEqual(str(Timestamp(1466533609099)), "2016-06-21 18:26:49")
-        for valid_input in "5s", "-5s", "5m", "-5m", "5h", "-5h", "5d", "-5d", "5w", "-5w":
+        for valid_input in "5s", "-5s", "5m", "-5m", "5h", "-5h", "5d", "-5d", "5w", "-5w", "2016-06-21 18:26:49":
             self.assertTrue(isinstance(Timestamp(valid_input), datetime.datetime))
         for invalid_input in None, "", {}, []:
             with self.assertRaises(Exception):
