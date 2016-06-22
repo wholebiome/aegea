@@ -289,6 +289,24 @@ cmks:
     - KeyId
     - AliasName
 
+rds:
+  columns:
+    - DBName
+    - Engine
+    - EngineVersion
+    - MultiAZ
+    - AvailabilityZone
+    - AllocatedStorage
+    - MasterUsername
+    - DBInstanceClass
+    - StorageType
+    - DBSecurityGroups
+    - Endpoint
+  engine: postgres
+  storage: 20
+  storage_type: gp2
+  db_instance_class: db.t2.large
+
 launch:
   commands: []
   packages: []
