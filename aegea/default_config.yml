@@ -302,6 +302,7 @@ rds:
     - StorageType
     - DBSecurityGroups
     - Endpoint
+    - DBInstanceStatus
   engine: postgres
   storage: 20
   storage_type: gp2
