@@ -222,11 +222,3 @@ def tabulate(collection, args, cell_transforms=None):
         return format_table(table,
                             column_names=getattr(args, "display_column_names", args.columns),
                             max_col_width=args.max_col_width)
-
-class Timestamp:
-    def __init__(self, ts):
-        ts = int(ts)
-        self.timestamp = datetime.fromtimestamp(ts//1000)
-
-    def __str__(self):
-        return str(self.timestamp)

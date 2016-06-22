@@ -4,8 +4,8 @@ import os, sys
 from datetime import datetime
 
 from . import register_parser
-from .util import parse_time_input, paginate
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate, Timestamp
+from .util import Timestamp, paginate
+from .util.printing import format_table, page_output, get_field, get_cell, tabulate
 from .util.aws import ARN, resolve_instance_id, resources, clients
 
 def register_listing_parser(function, **kwargs):
@@ -197,9 +197,9 @@ parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-se
 http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")
 parser.add_argument("log_group", help="CloudWatch log group")
 parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
-parser.add_argument("--start-time", type=parse_time_input, default=parse_time_input("-7d"),
-                    help=parse_time_input.__doc__, metavar="-7d")
-parser.add_argument("--end-time", type=parse_time_input, help=parse_time_input.__doc__)
+parser.add_argument("--start-time", type=Timestamp, default=Timestamp("-7d"),
+                    help=Timestamp.__doc__, metavar="-7d")
+parser.add_argument("--end-time", type=Timestamp, help=Timestamp.__doc__)
 
 def clusters(args):
     cluster_arns = sum([p["clusterArns"] for p in clients.ecs.get_paginator('list_clusters').paginate()], [])
