@@ -48,27 +48,29 @@ class VerboseRepr:
 def natural_sort(i):
     return sorted(i, key=lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)])
 
-def parse_time_input(t):
-    """
-    Integer inputs are interpreted as seconds since the epoch. Suffixes (s, m, h, d, w) are supported. Negative inputs
-    (e.g. -5m) are interpreted as relative to the current date. Other inputs (e.g. 2020-01-01, 15:20) are parsed using
-    the dateutil parser.
-    """
-    if not isinstance(t, (str, bytes)):
-        raise ValueError("Expected a string, but got {}".format(type(t)))
-    if t.isdigit():
-        return datetime.utcfromtimestamp(int(t)/1000)
-    try:
-        return dateutil_parse(t)
-    except (ValueError, OverflowError, AssertionError):
-        units = {"weeks", "days", "hours", "minutes", "seconds"}
-        diffs = {u: float(t[:-1]) for u in units if u.startswith(t[-1])}
-        if len(diffs) != 1:
-            raise ValueError('Could not parse "{}" as a timestamp or time delta'.format(t))
-        return datetime.utcnow().replace(microsecond=0) + relativedelta(**diffs)
-
 def paginate(boto3_paginator, *args, **kwargs):
     for page in boto3_paginator.paginate(*args, **kwargs):
         for result_key in boto3_paginator.result_keys:
             for value in page.get(result_key.parsed.get("value"), []):
                 yield value
+
+class Timestamp(datetime):
+    """
+    Integer inputs are interpreted as milliseconds since the epoch. Sub-second precision is discared. Suffixes (s, m, h,
+    d, w) are supported. Negative inputs (e.g. -5m) are interpreted as relative to the current date. Other inputs
+    (e.g. 2020-01-01, 15:20) are parsed using the dateutil parser.
+    """
+    def __new__(cls, t):
+        if isinstance(t, (str, bytes)) and t.isdigit():
+            t = int(t)
+        if isinstance(t, (str, bytes)):
+            try:
+                return dateutil_parse(t)
+            except (ValueError, OverflowError, AssertionError):
+                units = {"weeks", "days", "hours", "minutes", "seconds"}
+                diffs = {u: float(t[:-1]) for u in units if u.startswith(t[-1])}
+                if len(diffs) != 1:
+                    raise ValueError('Could not parse "{}" as a timestamp or time delta'.format(t))
+                return datetime.utcnow().replace(microsecond=0) + relativedelta(**diffs)
+        else:
+            return datetime.utcfromtimestamp(t//1000)

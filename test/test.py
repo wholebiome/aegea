@@ -3,10 +3,11 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, unittest, collections, itertools, copy, re, subprocess, importlib, pkgutil, json
+import os, sys, unittest, collections, itertools, copy, re, subprocess, importlib, pkgutil, json, datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import aegea
+from aegea.util import Timestamp
 from aegea.util.aws import (resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ubuntu_ami, get_ondemand_price_usd,
                             ARN, DNSZone, get_user_data)
 from aegea.util.exceptions import AegeaException
@@ -147,6 +148,17 @@ class TestAegea(unittest.TestCase):
         ami = locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily",
                                 region="us-west-2")
         self.assertTrue(ami.startswith("ami-"))
+
+    def test_date_utils(self):
+        with self.assertRaises(TypeError):
+            Timestamp()
+        self.assertEqual(str(Timestamp(12345)), "1970-01-01 00:00:12")
+        self.assertEqual(str(Timestamp(1466533609099)), "2016-06-21 18:26:49")
+        for valid_input in "5s", "-5s", "5m", "-5m", "5h", "-5h", "5d", "-5d", "5w", "-5w":
+            self.assertTrue(isinstance(Timestamp(valid_input), datetime.datetime))
+        for invalid_input in None, "", {}, []:
+            with self.assertRaises(Exception):
+                print(Timestamp(invalid_input))
 
 if __name__ == '__main__':
     unittest.main()
