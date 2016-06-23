@@ -38,7 +38,7 @@ def get_startup_commands(args):
         "hostnamectl set-hostname {}.{}".format(args.hostname, config.dns.private_zone),
         "service awslogs restart",
         "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource"
-    ] + args.commands
+    ] + args.commands + args.add_commands
 
 def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
     if args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
@@ -75,7 +75,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                        BlockDeviceMappings=get_bdm(),
                        UserData=get_user_data(host_key=ssh_host_key,
                                               commands=user_data_commands or get_startup_commands(args),
-                                              packages=user_data_packages or args.packages,
+                                              packages=user_data_packages or args.packages + args.add_packages,
                                               files=user_data_files))
     if args.iam_role:
         instance_profile = ensure_instance_profile(args.iam_role, policies=args.iam_policies)
@@ -169,8 +169,12 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
 
 parser = register_parser(launch, help='Launch a new EC2 instance', description=__doc__)
 parser.add_argument('hostname')
-parser.add_argument('--commands', nargs="+")
-parser.add_argument('--packages', nargs="+")
+parser.add_argument('--commands', nargs="+", help="Commands to run on host")
+parser.add_argument('--add-commands', nargs="+", default=[],
+                    help="Commands to run on host (add to those previously configured)")
+parser.add_argument('--packages', nargs="+", help="APT packages to install on host")
+parser.add_argument('--add-packages', nargs="+", default=[],
+                    help="APT packages to install on host (add to those previously configured)")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument('--no-verify-ssh-key-pem-file', dest='verify_ssh_key_pem_file', action='store_false')
 parser.add_argument('--ami')
