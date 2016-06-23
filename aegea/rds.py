@@ -18,13 +18,25 @@ def rds(args):
 rds_parser = register_parser(rds, help='Manage RDS resources', description=__doc__,
                              formatter_class=argparse.RawTextHelpFormatter)
 
+def add_tags(resource, prefix, key):
+    region = clients.rds.meta.region_name
+    account_id = ARN(resources.iam.CurrentUser().user.arn).account_id
+    resource_id = ":".join([prefix, resource[key]])
+    arn = ARN(region=region, account_id=account_id, service="rds", resource=resource_id)
+    resource["tags"] = clients.rds.list_tags_for_resource(ResourceName=str(arn))["TagList"]
+    return resource
+
 def ls(args):
-    page_output(tabulate(paginate(clients.rds.get_paginator('describe_db_instances')), args))
+    paginator = clients.rds.get_paginator('describe_db_instances')
+    table = [add_tags(i, "db", "DBInstanceIdentifier") for i in paginate(paginator)]
+    page_output(tabulate(table, args))
 
 ls_parser = register_parser(ls, parent=rds_parser)
 
 def snapshots(args):
-    page_output(tabulate(paginate(clients.rds.get_paginator('describe_db_snapshots')), args))
+    paginator = clients.rds.get_paginator('describe_db_snapshots')
+    table = [add_tags(i, "snapshot", "DBSnapshotIdentifier") for i in paginate(paginator)]
+    page_output(tabulate(table, args))
 
 snapshots_parser = register_parser(snapshots, parent=rds_parser)
 
@@ -42,7 +54,8 @@ def create(args):
                                    MasterUserPassword=args.master_user_password,
                                    VpcSecurityGroupIds=args.security_groups,
                                    DBInstanceClass=args.db_instance_class,
-                                   Tags=[dict(Key=k, Value=v) for k, v in tags.items()])
+                                   Tags=[dict(Key=k, Value=v) for k, v in tags.items()],
+                                   CopyTagsToSnapshot=True)
     clients.rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=args.name)
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId")}

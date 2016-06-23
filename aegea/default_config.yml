@@ -303,6 +303,9 @@ rds_ls:
     - DBSecurityGroups
     - Endpoint
     - DBInstanceStatus
+    - CopyTagsToSnapshot
+    - DBInstanceIdentifier
+    - tags
 
 rds_snapshots:
   columns:
@@ -314,6 +317,7 @@ rds_snapshots:
     - PercentProgress
     - Encrypted
     - MasterUsername
+    - tags
 
 rds_create:
   engine: postgres
