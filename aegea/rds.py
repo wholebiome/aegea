@@ -82,6 +82,22 @@ def snapshot(args):
 snapshot_parser = register_parser(snapshot, parent=rds_parser)
 
 def restore(args):
-    raise NotImplementedError()
+    tags = dict([tag.split("=", 1) for tag in args.tags])
+    clients.rds.restore_db_instance_from_db_snapshot(DBInstanceIdentifier=args.instance_name,
+                                                     DBSnapshotIdentifier=args.snapshot_name,
+                                                     StorageType=args.storage_type,
+                                                     AutoMinorVersionUpgrade=True,
+                                                     MultiAZ=False,
+                                                     DBInstanceClass=args.db_instance_class,
+                                                     Tags=[dict(Key=k, Value=v) for k, v in tags.items()],
+                                                     CopyTagsToSnapshot=True)
+    clients.rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=args.instance_name)
+    instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.instance_name)["DBInstances"][0]
+    return {k: instance[k] for k in ("Endpoint", "DbiResourceId")}
 
 restore_parser = register_parser(restore, parent=rds_parser)
+restore_parser.add_argument('snapshot_name')
+restore_parser.add_argument('instance_name')
+restore_parser.add_argument('--storage-type')
+restore_parser.add_argument('--db-instance-class')
+restore_parser.add_argument('--tags', nargs="+", default=[])

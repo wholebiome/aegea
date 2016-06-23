@@ -325,6 +325,11 @@ rds_create:
   storage_type: gp2
   db_instance_class: db.t2.large
 
+rds_restore:
+  storage: 20
+  storage_type: gp2
+  db_instance_class: db.t2.large
+
 launch:
   commands: []
   packages: []
