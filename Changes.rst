@@ -1,3 +1,7 @@
+Version 0.7.0 (2016-05-29)
+--------------------------
+- Introduce rds subcommand
+
 Version 0.6.0 (2016-05-29)
 --------------------------
 - Rollup: many changes
