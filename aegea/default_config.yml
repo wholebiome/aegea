@@ -289,7 +289,7 @@ cmks:
     - KeyId
     - AliasName
 
-rds:
+rds_ls:
   columns:
     - DBName
     - Engine
@@ -303,6 +303,19 @@ rds:
     - DBSecurityGroups
     - Endpoint
     - DBInstanceStatus
+
+rds_snapshots:
+  columns:
+    - DBSnapshotIdentifier
+    - DBInstanceIdentifier
+    - SnapshotCreateTime
+    - SnapshotType
+    - Status
+    - PercentProgress
+    - Encrypted
+    - MasterUsername
+
+rds_create:
   engine: postgres
   storage: 20
   storage_type: gp2

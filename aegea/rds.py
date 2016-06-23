@@ -23,6 +23,11 @@ def ls(args):
 
 ls_parser = register_parser(ls, parent=rds_parser)
 
+def snapshots(args):
+    page_output(tabulate(paginate(clients.rds.get_paginator('describe_db_snapshots')), args))
+
+snapshots_parser = register_parser(snapshots, parent=rds_parser)
+
 def create(args):
     tags = dict([tag.split("=", 1) for tag in args.tags])
     clients.rds.create_db_instance(DBInstanceIdentifier=args.name,
@@ -39,6 +44,8 @@ def create(args):
                                    DBInstanceClass=args.db_instance_class,
                                    Tags=[dict(Key=k, Value=v) for k, v in tags.items()])
     clients.rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=args.name)
+    instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.name)["DBInstances"][0]
+    return {k: instance[k] for k in ("Endpoint", "DbiResourceId")}
 
 create_parser = register_parser(create, parent=rds_parser)
 create_parser.add_argument('name')
@@ -57,11 +64,11 @@ def delete(args):
 delete_parser = register_parser(delete, parent=rds_parser)
 
 def snapshot(args):
-    print("s")
+    raise NotImplementedError()
 
 snapshot_parser = register_parser(snapshot, parent=rds_parser)
 
 def restore(args):
-    print("r")
+    raise NotImplementedError()
 
 restore_parser = register_parser(restore, parent=rds_parser)
