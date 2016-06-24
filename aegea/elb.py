@@ -19,7 +19,6 @@ elb_parser = register_parser(elb, help='Manage Elastic Load Balancers', descript
                              formatter_class=argparse.RawTextHelpFormatter)
 
 def ls(args):
-    #dualstack.akita-1629521448.us-west-2.elb.amazonaws.com.
     table, dns_aliases = [], {}
     for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):
         for rrs in paginate(clients.route53.get_paginator('list_resource_record_sets'), HostedZoneId=zone["Id"]):
