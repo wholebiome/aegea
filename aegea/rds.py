@@ -42,25 +42,29 @@ parser = register_parser(snapshots, parent=rds_parser)
 
 def create(args):
     tags = dict([tag.split("=", 1) for tag in args.tags])
-    res = clients.rds.create_db_instance(DBInstanceIdentifier=args.name,
-                                         AllocatedStorage=args.storage,
-                                         Engine=args.engine,
-                                         StorageType=args.storage_type,
-                                         StorageEncrypted=True,
-                                         AutoMinorVersionUpgrade=True,
-                                         MultiAZ=False,
-                                         MasterUsername=args.master_username or getpass.getuser(),
-                                         MasterUserPassword=args.master_user_password,
-                                         VpcSecurityGroupIds=args.security_groups,
-                                         DBInstanceClass=args.db_instance_class,
-                                         Tags=[dict(Key=k, Value=v) for k, v in tags.items()],
-                                         CopyTagsToSnapshot=True)
+    create_args = dict(DBInstanceIdentifier=args.name,
+                       AllocatedStorage=args.storage,
+                       Engine=args.engine,
+                       StorageType=args.storage_type,
+                       StorageEncrypted=True,
+                       AutoMinorVersionUpgrade=True,
+                       MultiAZ=False,
+                       MasterUsername=args.master_username or getpass.getuser(),
+                       MasterUserPassword=args.master_user_password,
+                       VpcSecurityGroupIds=args.security_groups,
+                       DBInstanceClass=args.db_instance_class,
+                       Tags=[dict(Key=k, Value=v) for k, v in tags.items()],
+                       CopyTagsToSnapshot=True)
+    if args.db_name:
+        create_args.update(DBName=args.db_name)
+    res = clients.rds.create_db_instance(**create_args)
     clients.rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=args.name)
     instance = res["DBInstance"]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId", "DBInstanceStatus")}
 
 parser = register_parser(create, parent=rds_parser)
 parser.add_argument('name')
+parser.add_argument('--db-name')
 parser.add_argument('--engine')
 parser.add_argument('--storage', type=int)
 parser.add_argument('--storage-type')
