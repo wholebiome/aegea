@@ -124,9 +124,9 @@ def zones(args):
         if args.zones and zone["Name"] not in args.zones + [z + "." for z in args.zones]:
             continue
         for rrs in paginate(clients.route53.get_paginator('list_resource_record_sets'), HostedZoneId=zone["Id"]):
-            for record in rrs.get("ResourceRecords", []):
+            for record in rrs.get("ResourceRecords", [rrs.get("AliasTarget", {})]):
                 row = [rrs.get(f) for f in rrs_cols]
-                row += [record.get(f) for f in record_cols]
+                row += [record.get(f, record.get("DNSName")) for f in record_cols]
                 row += [get_field(zone, "Config.PrivateZone")]
                 table.append(row)
     column_names = rrs_cols + record_cols + ["Private"]

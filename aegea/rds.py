@@ -31,14 +31,14 @@ def ls(args):
     table = [add_tags(i, "db", "DBInstanceIdentifier") for i in paginate(paginator)]
     page_output(tabulate(table, args))
 
-ls_parser = register_parser(ls, parent=rds_parser)
+parser = register_parser(ls, parent=rds_parser)
 
 def snapshots(args):
     paginator = clients.rds.get_paginator('describe_db_snapshots')
     table = [add_tags(i, "snapshot", "DBSnapshotIdentifier") for i in paginate(paginator)]
     page_output(tabulate(table, args))
 
-snapshots_parser = register_parser(snapshots, parent=rds_parser)
+parser = register_parser(snapshots, parent=rds_parser)
 
 def create(args):
     tags = dict([tag.split("=", 1) for tag in args.tags])
@@ -60,26 +60,27 @@ def create(args):
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId")}
 
-create_parser = register_parser(create, parent=rds_parser)
-create_parser.add_argument('name')
-create_parser.add_argument('--engine')
-create_parser.add_argument('--storage', type=int)
-create_parser.add_argument('--storage-type')
-create_parser.add_argument('--master-username')
-create_parser.add_argument('--master-user-password', '--password', required=True)
-create_parser.add_argument('--db-instance-class')
-create_parser.add_argument('--tags', nargs="+", default=[])
-create_parser.add_argument('--security-groups', nargs="+", default=[])
+parser = register_parser(create, parent=rds_parser)
+parser.add_argument('name')
+parser.add_argument('--engine')
+parser.add_argument('--storage', type=int)
+parser.add_argument('--storage-type')
+parser.add_argument('--master-username')
+parser.add_argument('--master-user-password', '--password', required=True)
+parser.add_argument('--db-instance-class')
+parser.add_argument('--tags', nargs="+", default=[])
+parser.add_argument('--security-groups', nargs="+", default=[])
 
 def delete(args):
     clients.rds.delete_db_instance(DBInstanceIdentifier=args.name, SkipFinalSnapshot=True)
 
-delete_parser = register_parser(delete, parent=rds_parser)
+parser = register_parser(delete, parent=rds_parser)
+parser.add_argument('name')
 
 def snapshot(args):
     raise NotImplementedError()
 
-snapshot_parser = register_parser(snapshot, parent=rds_parser)
+parser = register_parser(snapshot, parent=rds_parser)
 
 def restore(args):
     tags = dict([tag.split("=", 1) for tag in args.tags])
@@ -95,9 +96,9 @@ def restore(args):
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.instance_name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId")}
 
-restore_parser = register_parser(restore, parent=rds_parser)
-restore_parser.add_argument('snapshot_name')
-restore_parser.add_argument('instance_name')
-restore_parser.add_argument('--storage-type')
-restore_parser.add_argument('--db-instance-class')
-restore_parser.add_argument('--tags', nargs="+", default=[])
+parser = register_parser(restore, parent=rds_parser)
+parser.add_argument('snapshot_name')
+parser.add_argument('instance_name')
+parser.add_argument('--storage-type')
+parser.add_argument('--db-instance-class')
+parser.add_argument('--tags', nargs="+", default=[])
