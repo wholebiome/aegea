@@ -35,30 +35,31 @@ def ls(args):
 parser = register_parser(ls, parent=elb_parser)
 
 def register(args):
-    instances = [dict(InstanceId=resolve_instance_id(i)) for i in args.instances]
-    clients.elb.register_instances_with_load_balancer(LoadBalancerName=args.elb_name, Instances=instances)
+    instances = [dict(InstanceId=i) for i in args.instances]
+    res = clients.elb.register_instances_with_load_balancer(LoadBalancerName=args.elb_name, Instances=instances)
+    return dict(registered=args.instances, current=[i["InstanceId"] for i in res["Instances"]])
 
 parser = register_parser(register, parent=elb_parser, help="Add EC2 instances to an ELB")
 parser.add_argument("elb_name")
-parser.add_argument("instances", nargs="+")
+parser.add_argument("instances", nargs="+", type=resolve_instance_id)
 
 def deregister(args):
-    instances = [dict(InstanceId=resolve_instance_id(i)) for i in args.instances]
-    clients.elb.deregister_instances_from_load_balancer(LoadBalancerName=args.elb_name, Instances=instances)
+    instances = [dict(InstanceId=i) for i in args.instances]
+    res = clients.elb.deregister_instances_from_load_balancer(LoadBalancerName=args.elb_name, Instances=instances)
+    return dict(deregistered=args.instances, current=[i["InstanceId"] for i in res["Instances"]])
 
 parser = register_parser(deregister, parent=elb_parser, help="Remove EC2 instances from an ELB")
 parser.add_argument("elb_name")
-parser.add_argument("instances", nargs="+")
+parser.add_argument("instances", nargs="+", type=resolve_instance_id)
 
 def replace(args):
-    register(args)
-    elb_desc = clients.elb.describe_load_balancers(LoadBalancerNames=[args.elb_name])["LoadBalancerDescriptions"][0]
-    old_instances = set(i["InstanceId"] for i in elb_desc["Instances"])
-    new_instances = set(resolve_instance_id(i) for i in args.instances)
-    args.instances = old_instances - new_instances
-    if args.instances:
-        deregister(args)
+    result = register(args)
+    old_instances = set(result["current"]) - set(result["registered"])
+    if old_instances:
+        args.instances = list(old_instances)
+        result.update(deregister(args))
+    return result
 
 parser = register_parser(replace, parent=elb_parser, help="Replace all EC2 instances in an ELB with the ones given")
 parser.add_argument("elb_name")
-parser.add_argument("instances", nargs="+")
+parser.add_argument("instances", nargs="+", type=resolve_instance_id)
