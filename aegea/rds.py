@@ -57,9 +57,9 @@ def create(args):
                        CopyTagsToSnapshot=True)
     if args.db_name:
         create_args.update(DBName=args.db_name)
-    res = clients.rds.create_db_instance(**create_args)
+    clients.rds.create_db_instance(**create_args)
     clients.rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=args.name)
-    instance = res["DBInstance"]
+    instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId", "DBInstanceStatus")}
 
 parser = register_parser(create, parent=rds_parser)
