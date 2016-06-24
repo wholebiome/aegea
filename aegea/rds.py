@@ -44,7 +44,6 @@ def create(args):
     tags = dict([tag.split("=", 1) for tag in args.tags])
     res = clients.rds.create_db_instance(DBInstanceIdentifier=args.name,
                                          AllocatedStorage=args.storage,
-                                         DBName=args.name,
                                          Engine=args.engine,
                                          StorageType=args.storage_type,
                                          StorageEncrypted=True,
