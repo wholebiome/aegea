@@ -119,6 +119,10 @@ def secrets(args):
                     secret_value = sys.stdin.read()
                 secret_object = bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name))
                 secret_object.put(Body=secret_value.encode(), ServerSideEncryption='AES256')
+    elif args.action == "get":
+        assert len(principals) == 1 and len(args.secrets) == 1
+        secret_object = bucket.Object(os.path.join(ARN(principals[0].arn).resource, args.secrets[0]))
+        sys.stdout.write(secret_object.get()["Body"].read().decode("utf-8"))
     elif args.action == "delete":
         for principal in principals:
             for secret_name in args.secrets:
@@ -128,7 +132,7 @@ parser = register_parser(secrets,
                          help='Manage credentials (secrets)',
                          description=__doc__,
                          formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument('action', choices=["ls", "put", "delete"])
+parser.add_argument('action', choices=["ls", "put", "delete", "get"])
 parser.add_argument('secrets', nargs='*', help=fill("""
 List the secret names. For put, pass the secret value on stdin (and name only one secret), or pass multiple secret
 values via environment variables with the same name as the secret."""))
