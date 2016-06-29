@@ -7,9 +7,11 @@ For help with individual commands, run ``aegea <command> --help``.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, logging, shutil, json
+import os, sys, argparse, logging, shutil, json, datetime, traceback
 from textwrap import fill
 from tweak import Config
+from botocore.exceptions import NoRegionError
+from io import open
 
 try:
     import pkg_resources
@@ -47,7 +49,26 @@ def main(args=None):
                  getattr(parsed_args, "columns", None))
     if has_attrs and parsed_args.sort_by not in parsed_args.columns:
         parsed_args.columns.append(parsed_args.sort_by)
-    result = parsed_args.entry_point(parsed_args)
+    try:
+        result = parsed_args.entry_point(parsed_args)
+    except Exception as e:
+        if isinstance(e, NoRegionError):
+            msg = "The AWS CLI is not configured."
+            msg += " See http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html"
+            exit(msg)
+        elif logging.getLogger().level < logging.ERROR:
+            raise
+        else:
+            err_msg = traceback.format_exc()
+            try:
+                err_log_filename = os.path.join(os.path.dirname(config.config_files[1]), "error.log")
+                with open(err_log_filename, "ab") as fh:
+                    print(datetime.datetime.now().isoformat(), file=fh)
+                    print(err_msg, file=fh)
+                exit("{}: {}. See {} for error details.".format(e.__class__.__name__, e, err_log_filename))
+            except Exception:
+                print(err_msg, file=sys.stderr)
+                exit(os.EX_SOFTWARE)
     if isinstance(result, SystemExit):
         raise result
     elif result is not None:
