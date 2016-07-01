@@ -52,15 +52,16 @@ topic_name = "github-{}-{}-events".format(gh_owner_name, gh_repo_name)
 topic = get_topic(topic_name)
 queue_name = "{}-{}".format(topic_name, args.qn)
 queue = sqs.create_queue(QueueName=queue_name)
-queue_arn = ARN(topic.arn, service="sqs", resource=queue_name)
+
 policy = dict(Version="2012-10-17",
-              Statement=[dict(Effect="Allow", Principal="*", Action="sqs:SendMessage", Resource=str(queue_arn),
+              Statement=[dict(Effect="Allow", Principal="*", Action="sqs:SendMessage",
+                              Resource=queue.attributes["QueueArn"],
                               Condition=dict(ArnEquals={"aws:SourceArn": topic.arn}))])
 # In multi-node deployments, use DelaySeconds to stagger builds
 queue.set_attributes(Attributes=dict(Policy=json.dumps(policy),
                                      MessageRetentionPeriod="3600",
                                      VisibilityTimeout="9000"))
-topic.subscribe(Protocol="sqs", Endpoint=str(queue_arn))
+topic.subscribe(Protocol="sqs", Endpoint=queue.attributes["QueueArn"])
 
 while True:
     messages = queue.receive_messages(WaitTimeSeconds=20)

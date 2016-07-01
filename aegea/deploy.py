@@ -63,10 +63,14 @@ parser.add_argument('repo')
 parser.add_argument('branch')
 
 def status(args):
-    for queue in resources.sqs.queues.filter(QueueNamePrefix="github"):
-        print(queue)
-#    paginator = clients.rds.get_paginator('describe_db_snapshots')
-#    table = [add_tags(i, "snapshot", "DBSnapshotIdentifier") for i in paginate(paginator)]
-#    page_output(tabulate(table, args))
+    table = []
+    queues = list(resources.sqs.queues.filter(QueueNamePrefix="github"))
+    for topic in resources.sns.topics.all():
+        if ARN(topic.arn).resource.startswith("github"):
+            for queue in queues:
+                if ARN(queue.attributes["QueueArn"]).resource.startswith(ARN(topic.arn).resource):
+                    table.append(dict(Topic=topic, Queue=queue))
+    args.columns = ["Topic", "Queue"]
+    page_output(tabulate(table, args))
 
 parser = register_parser(status, parent=deploy_parser)
