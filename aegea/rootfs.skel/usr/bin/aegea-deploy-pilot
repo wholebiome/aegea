@@ -67,8 +67,8 @@ while True:
     for message in messages:
         event = json.loads(json.loads(message.body)["Message"])
         if event["ref"] == "refs/heads/" + args.branch:
-            deploy_dir = os.path.join(os.path.dirname(args.deploy_location),
-                                      gh_repo_name + datetime.now().strftime("-%Y-%m-%d-%H-%M-%S"))
+            deploy_dir = "{}-{}-{}".format(gh_repo_name, args.branch, datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+            deploy_dir = os.path.join(os.path.dirname(args.deploy_location), deploy_dir)
             # TODO: sanity check: is event timestamp within X of now?
             logging.info("Deploying %s to %s", event["ref"], deploy_dir)
             git_clone_args = ["git", "clone", "--recurse-submodules", "--branch", args.branch]
