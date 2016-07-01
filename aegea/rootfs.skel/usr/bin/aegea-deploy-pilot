@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+import os, sys, subprocess, json, logging, argparse, shutil
+import boto3, requests
+from datetime import datetime
+
+class ARN:
+    fields = "arn partition service region account_id resource".split()
+    def __init__(self, arn="arn:aws::::", **kwargs):
+        self.__dict__.update(dict(zip(self.fields, arn.split(":", 5)), **kwargs))
+
+    def __str__(self):
+        return ":".join(getattr(self, field) for field in self.fields)
+
+def get_metadata(path):
+    return requests.get("http://169.254.169.254/latest/meta-data/{}".format(path)).content.decode()
+
+logging.basicConfig(level=logging.INFO)
+parser = argparse.ArgumentParser()
+parser.add_argument("repo")
+parser.add_argument("branch")
+parser.add_argument("qn")
+parser.add_argument("--deploy-location", default="/opt")
+args = parser.parse_args()
+
+az = get_metadata("placement/availability-zone")
+session = boto3.Session(region_name=az[:-1])
+sqs, sns = session.resource('sqs'), session.resource('sns')
+account_id = ARN(json.loads(get_metadata("iam/info"))["InstanceProfileArn"]).account_id
+
+def get_topic(name):
+    sns_topic_arn = ARN(service="sns", region=sns.meta.client.meta.region_name, account_id=account_id, resource=name)
+    return sns.Topic(str(sns_topic_arn))
+
+def clean_old_builds(build_root, prefix, min_old_builds=2):
+    build_dirs = [os.path.join(build_root, d) for d in os.listdir(build_root) if d.startswith(prefix)]
+    build_dirs = [d for d in build_dirs if os.path.isdir(d) and not os.path.islink(d)]
+    build_dirs = sorted(build_dirs, key=lambda d: os.stat(d).st_mtime)
+    for d in build_dirs[:-min_old_builds]:
+        logging.warn("Deleting old build %s", d)
+        shutil.rmtree(d, ignore_errors=True)
+
+gh_owner_name, gh_repo_name = args.repo.split("/")[-2:]
+github_url = "git@github.com:{}/{}".format(gh_owner_name, gh_repo_name)
+args.deploy_location = os.path.abspath(os.path.join(args.deploy_location, gh_owner_name, gh_repo_name))
+
+if not os.path.exists(os.path.dirname(args.deploy_location)):
+    os.makedirs(os.path.dirname(args.deploy_location))
+
+topic_name = "github-{}-{}-events".format(gh_owner_name, gh_repo_name)
+topic = get_topic(topic_name)
+queue_name = "{}-{}".format(topic_name, args.qn)
+queue = sqs.create_queue(QueueName=queue_name)
+queue_arn = ARN(topic.arn, service="sqs", resource=queue_name)
+policy = dict(Version="2012-10-17",
+              Statement=[dict(Effect="Allow", Principal="*", Action="sqs:SendMessage", Resource=str(queue_arn),
+                              Condition=dict(ArnEquals={"aws:SourceArn": topic.arn}))])
+# In multi-node deployments, use DelaySeconds to stagger builds
+queue.set_attributes(Attributes=dict(Policy=json.dumps(policy),
+                                     MessageRetentionPeriod="3600",
+                                     VisibilityTimeout="9000"))
+topic.subscribe(Protocol="sqs", Endpoint=str(queue_arn))
+
+while True:
+    messages = queue.receive_messages(WaitTimeSeconds=20)
+    for message in messages:
+        event = json.loads(json.loads(message.body)["Message"])
+        if event["ref"] == "refs/heads/" + args.branch:
+            deploy_dir = os.path.join(os.path.dirname(args.deploy_location),
+                                      gh_repo_name + datetime.now().strftime("-%Y-%m-%d-%H-%M-%S"))
+            # TODO: sanity check: is event timestamp within X of now?
+            logging.info("Deploying %s to %s", event["ref"], deploy_dir)
+            git_clone_args = ["git", "clone", "--recurse-submodules", "--branch", args.branch]
+            if os.path.lexists(args.deploy_location):
+                subprocess.check_call(git_clone_args + [args.deploy_location, deploy_dir])
+                subprocess.check_call(["git", "remote", "set-url", "origin", github_url], cwd=deploy_dir)
+                subprocess.check_call(["git", "pull", "origin", args.branch], cwd=deploy_dir)
+            else:
+                subprocess.check_call(git_clone_args + ["--depth=1", github_url, deploy_dir])
+            subprocess.check_call(["make", "-C", deploy_dir])
+            os.symlink(deploy_dir, args.deploy_location + "_staged")
+            try:
+                os.unlink(args.deploy_location)
+            except Exception:
+                pass
+            os.rename(args.deploy_location + "_staged", args.deploy_location)
+            subprocess.check_call(["make", "-C", deploy_dir, "reload"])
+            clean_old_builds(os.path.dirname(args.deploy_location), prefix=gh_repo_name + "-")
+        message.delete()

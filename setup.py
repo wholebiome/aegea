@@ -29,6 +29,7 @@ setup(
         'keymaker >= 0.1.7',
         'pyyaml >= 3.11',
         'python-dateutil >= 2.1',
+        'github3.py'
     ],
     extras_require={
         ':python_version == "2.7"': [
