@@ -49,6 +49,7 @@ if not os.path.exists(os.path.dirname(args.deploy_location)):
     os.makedirs(os.path.dirname(args.deploy_location))
 if not args.deploy_key_name:
     args.deploy_key_name = "deploy.{}.{}".format(gh_repo_name, args.branch)
+    print("DK", args.deploy_key_name)
 
 topic_name = "github-{}-{}-events".format(gh_owner_name, gh_repo_name)
 topic = get_topic(topic_name)
@@ -66,7 +67,7 @@ queue.set_attributes(Attributes=dict(Policy=json.dumps(policy),
 topic.subscribe(Protocol="sqs", Endpoint=queue.attributes["QueueArn"])
 
 def run_git_auth(*cmd, **kwargs):
-    shellcode = "eval $(ssh-agent -s) && aegea-get-secret {} | ssh-add /dev/stdin && git "
+    shellcode = "set -o pipefail && eval $(ssh-agent -s) && aegea-get-secret {} | ssh-add /dev/stdin && git "
     shellcode.format(args.deploy_key_name)
     return subprocess.check_call(shellcode + " ".join(cmd), shell=True, **kwargs)
 
