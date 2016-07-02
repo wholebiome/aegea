@@ -37,7 +37,7 @@ def configure(args):
     gh_owner_name, gh_repo_name = args.repo.split("/")[-2:]
     repo = gh.repository(gh_owner_name, gh_repo_name)
 
-    iam_user_name = "{}-github-event-relay".format(__name__)
+    iam_user_name = __name__ + "-github-event-relay"
     try:
         user = resources.iam.User(iam_user_name)
         user.load()
