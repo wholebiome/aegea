@@ -52,7 +52,8 @@ class TestAegea(unittest.TestCase):
         instance_id = json.loads(self.call(["aegea", "ls", "--json"]).stdout)[0]["id"]
         for subcommand in aegea.parser._actions[-1].choices:
             expect = [dict(return_codes=[os.EX_OK]),
-                      dict(return_codes=[1], stderr="(UnauthorizedOperation|AccessDenied|DryRunOperation)")]
+                      dict(return_codes=[1, os.EX_SOFTWARE],
+                           stderr="(UnauthorizedOperation|AccessDenied|DryRunOperation)")]
             args = []
             if subcommand in ("ssh", "put_alarm"):
                 args += ["--help"]
@@ -80,7 +81,8 @@ class TestAegea(unittest.TestCase):
             self.call(["aegea", subcommand] + args, expect=expect)
 
     def test_dry_run_commands(self):
-        unauthorized_ok = [dict(return_codes=[os.EX_OK]), dict(return_codes=[1], stderr="UnauthorizedOperation")]
+        unauthorized_ok = [dict(return_codes=[os.EX_OK]),
+                           dict(return_codes=[1, os.EX_SOFTWARE], stderr="UnauthorizedOperation")]
         self.call("aegea launch unittest --dry-run --no-verify-ssh-key-pem-file",
                   shell=True, expect=unauthorized_ok)
         self.call("aegea launch unittest --dry-run --spot --no-verify-ssh-key-pem-file",
