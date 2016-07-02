@@ -2,7 +2,7 @@
 Manage deployments from a GitHub repository.
 
 Aegea deploy is a deployment manager daemon. It uses an SNS-SQS bus
-to notify instances about updates to a branch of a GitHub repo. When
+to notify instances about updates to a GitHub repo. When
 an update is detected, the deploy daemon pulls a new copy of the repo,
 builds it, swaps it with the existing copy, and restarts your service.
 """
@@ -60,7 +60,6 @@ def configure(args):
 
 parser = register_parser(configure, parent=deploy_parser)
 parser.add_argument('repo')
-parser.add_argument('branch')
 
 def status(args):
     table = []

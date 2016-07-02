@@ -20,11 +20,11 @@ logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser()
 parser.add_argument("repo")
 parser.add_argument("branch")
-parser.add_argument("qn")
 parser.add_argument("--deploy-location", default="/opt")
 args = parser.parse_args()
 
 az = get_metadata("placement/availability-zone")
+instance_id = get_metadata("instance-id")
 session = boto3.Session(region_name=az[:-1])
 sqs, sns = session.resource('sqs'), session.resource('sns')
 account_id = ARN(json.loads(get_metadata("iam/info"))["InstanceProfileArn"]).account_id
@@ -50,7 +50,7 @@ if not os.path.exists(os.path.dirname(args.deploy_location)):
 
 topic_name = "github-{}-{}-events".format(gh_owner_name, gh_repo_name)
 topic = get_topic(topic_name)
-queue_name = "{}-{}".format(topic_name, args.qn)
+queue_name = "{}-{}".format(topic_name, instance_id)
 queue = sqs.create_queue(QueueName=queue_name)
 
 policy = dict(Version="2012-10-17",
@@ -63,6 +63,10 @@ queue.set_attributes(Attributes=dict(Policy=json.dumps(policy),
                                      VisibilityTimeout="9000"))
 topic.subscribe(Protocol="sqs", Endpoint=queue.attributes["QueueArn"])
 
+def run_git_auth(*cmd, **kwargs):
+    shellcode = "eval $(ssh-agent -s) && aegea-get-secret deploy.bitbucket.my-private-repo | ssh-add /dev/stdin && git "
+    return subprocess.check_call(shellcode + " ".join(cmd), shell=True, **kwargs)
+
 while True:
     messages = queue.receive_messages(WaitTimeSeconds=20)
     for message in messages:
@@ -72,13 +76,12 @@ while True:
             deploy_dir = os.path.join(os.path.dirname(args.deploy_location), deploy_dir)
             # TODO: sanity check: is event timestamp within X of now?
             logging.info("Deploying %s to %s", event["ref"], deploy_dir)
-            git_clone_args = ["git", "clone", "--recurse-submodules", "--branch", args.branch]
             if os.path.lexists(args.deploy_location):
-                subprocess.check_call(git_clone_args + [args.deploy_location, deploy_dir])
+                subprocess.check_call(["git", "clone", "--recurse-submodules", "--branch", args.branch, args.deploy_location, deploy_dir])
                 subprocess.check_call(["git", "remote", "set-url", "origin", github_url], cwd=deploy_dir)
-                subprocess.check_call(["git", "pull", "origin", args.branch], cwd=deploy_dir)
+                run_git_auth("pull", "origin", args.branch, cwd=deploy_dir)
             else:
-                subprocess.check_call(git_clone_args + ["--depth=1", github_url, deploy_dir])
+                run_git_auth("clone", "--recurse-submodules", "--branch", args.branch, "--depth=1", github_url, deploy_dir)
             subprocess.check_call(["make", "-C", deploy_dir])
             os.symlink(deploy_dir, args.deploy_location + "_staged")
             try:
