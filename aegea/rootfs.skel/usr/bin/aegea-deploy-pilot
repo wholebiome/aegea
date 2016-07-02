@@ -67,34 +67,37 @@ queue.set_attributes(Attributes=dict(Policy=json.dumps(policy),
 topic.subscribe(Protocol="sqs", Endpoint=queue.attributes["QueueArn"])
 
 def run_git_auth(*cmd, **kwargs):
-    shellcode = "set -o pipefail && eval $(ssh-agent -s) && aegea-get-secret {} | ssh-add /dev/stdin && git "
-    shellcode.format(args.deploy_key_name)
-    return subprocess.check_call(shellcode + " ".join(cmd), shell=True, **kwargs)
+    shellcode = "set -eo pipefail; eval $(ssh-agent -s); aegea-get-secret {} | ssh-add /dev/stdin; git "
+    shellcode = shellcode.format(args.deploy_key_name)
+    return subprocess.check_call(shellcode + " ".join(cmd), shell=True, executable="/bin/bash", **kwargs)
+
+def deploy(branch):
+    deploy_dir = "{}-{}-{}".format(gh_repo_name, branch, datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+    deploy_dir = os.path.join(os.path.dirname(args.deploy_location), deploy_dir)
+    # TODO: sanity check: is event timestamp within X of now?
+    logging.info("Deploying %s to %s", branch, deploy_dir)
+    if os.path.lexists(args.deploy_location):
+        subprocess.check_call(["git", "clone", "--recurse-submodules", "--branch", branch,
+                               args.deploy_location, deploy_dir])
+        subprocess.check_call(["git", "remote", "set-url", "origin", github_url], cwd=deploy_dir)
+        run_git_auth("pull", "origin", branch, cwd=deploy_dir)
+    else:
+        run_git_auth("clone", "--recurse-submodules", "--branch", branch, "--depth=1",
+                     github_url, deploy_dir)
+    subprocess.check_call(["make", "-C", deploy_dir])
+    os.symlink(deploy_dir, args.deploy_location + "_staged")
+    try:
+        os.unlink(args.deploy_location)
+    except Exception:
+        pass
+    os.rename(args.deploy_location + "_staged", args.deploy_location)
+    subprocess.check_call(["make", "-C", deploy_dir, "reload"])
 
 while True:
     messages = queue.receive_messages(WaitTimeSeconds=20)
     for message in messages:
         event = json.loads(json.loads(message.body)["Message"])
         if event["ref"] == "refs/heads/" + args.branch:
-            deploy_dir = "{}-{}-{}".format(gh_repo_name, args.branch, datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-            deploy_dir = os.path.join(os.path.dirname(args.deploy_location), deploy_dir)
-            # TODO: sanity check: is event timestamp within X of now?
-            logging.info("Deploying %s to %s", event["ref"], deploy_dir)
-            if os.path.lexists(args.deploy_location):
-                subprocess.check_call(["git", "clone", "--recurse-submodules", "--branch", args.branch,
-                                       args.deploy_location, deploy_dir])
-                subprocess.check_call(["git", "remote", "set-url", "origin", github_url], cwd=deploy_dir)
-                run_git_auth("pull", "origin", args.branch, cwd=deploy_dir)
-            else:
-                run_git_auth("clone", "--recurse-submodules", "--branch", args.branch, "--depth=1",
-                             github_url, deploy_dir)
-            subprocess.check_call(["make", "-C", deploy_dir])
-            os.symlink(deploy_dir, args.deploy_location + "_staged")
-            try:
-                os.unlink(args.deploy_location)
-            except Exception:
-                pass
-            os.rename(args.deploy_location + "_staged", args.deploy_location)
-            subprocess.check_call(["make", "-C", deploy_dir, "reload"])
+            deploy(args.branch)
             clean_old_builds(os.path.dirname(args.deploy_location), prefix=gh_repo_name + "-")
         message.delete()
