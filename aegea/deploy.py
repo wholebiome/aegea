@@ -15,7 +15,6 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 
 from . import register_parser, logger
-from .util import Timestamp, paginate
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, BOLD
 from .util.aws import ARN, resources, clients, IAMPolicyBuilder
 
