@@ -18,7 +18,7 @@ symlink like so:
     cd /etc/systemd/system/multi-user.target.wants
     ln -s /lib/systemd/system/aegea-deploy@.service aegea-deploy@<owner>-<repo>-<branch>.service
 
-Replace owner, repo, and branch with your GitHub user or org name,
+Replace <owner>, <repo>, and <branch> with your GitHub user or org name,
 repo name, and branch to deploy from.
 
 Any updates to the branch will trigger a rebuild of the repo. By
