@@ -12,7 +12,7 @@ SNS queue for notifications about the repo, an IAM user dedicated to
 writing messages to this queue, and a GitHub post-commit hook to send
 messages to the queue using the user's IAM credentials.
 
-To set up an instance to track deployments, create a systemd service
+To set up instances to track deployments, create a systemd service
 symlink like so:
 
     cd /etc/systemd/system/multi-user.target.wants
