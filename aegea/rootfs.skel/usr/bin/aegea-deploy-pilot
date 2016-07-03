@@ -18,8 +18,8 @@ def get_metadata(path):
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser()
-parser.add_argument("repo")
-parser.add_argument("branch")
+parser.add_argument("--repo")
+parser.add_argument("--branch")
 parser.add_argument("--deploy-location", default="/opt")
 parser.add_argument("--deploy-key-name")
 args = parser.parse_args()
@@ -42,7 +42,14 @@ def clean_old_builds(build_root, prefix, min_old_builds=2):
         logging.warn("Deleting old build %s", d)
         shutil.rmtree(d, ignore_errors=True)
 
-gh_owner_name, gh_repo_name = args.repo.split("/")[-2:]
+if args.repo is None or args.branch is None:
+    if "SYSTEMD_INSTANCE_NAME" in os.environ:
+        gh_owner_name, gh_repo_name, args.branch = os.environ["SYSTEMD_INSTANCE_NAME"].split("-")[-3:]
+    else:
+        exit("Arguments --repo and --branch are required")
+else:
+    gh_owner_name, gh_repo_name = args.repo.split("/")[-2:]
+
 github_url = "git@github.com:{}/{}".format(gh_owner_name, gh_repo_name)
 args.deploy_location = os.path.abspath(os.path.join(args.deploy_location, gh_owner_name, gh_repo_name))
 if not os.path.exists(os.path.dirname(args.deploy_location)):
