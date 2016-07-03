@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+Deployment manager daemon for aegea deploy.
+
+For more information, see ``aegea deploy --help``.
+"""
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import os, sys, subprocess, json, logging, argparse, shutil
@@ -17,7 +22,7 @@ def get_metadata(path):
     return requests.get("http://169.254.169.254/latest/meta-data/{}".format(path)).content.decode()
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--repo")
 parser.add_argument("--branch")
 parser.add_argument("--deploy-location", default="/opt")
@@ -56,7 +61,6 @@ if not os.path.exists(os.path.dirname(args.deploy_location)):
     os.makedirs(os.path.dirname(args.deploy_location))
 if not args.deploy_key_name:
     args.deploy_key_name = "deploy.{}.{}".format(gh_repo_name, args.branch)
-    print("DK", args.deploy_key_name)
 
 topic_name = "github-{}-{}-events".format(gh_owner_name, gh_repo_name)
 topic = get_topic(topic_name)
