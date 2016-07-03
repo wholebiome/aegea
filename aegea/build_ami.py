@@ -86,7 +86,7 @@ def build_image(args):
 
 parser = register_parser(build_image, help='Build an EC2 AMI')
 parser.add_argument("name", default="test")
-parser.add_argument("--snapshot-existing-host", type=str)
+parser.add_argument("--snapshot-existing-host", type=str, metavar="HOST")
 parser.add_argument("--wait-for-ami", action="store_true")
 parser.add_argument("--ssh-key-name")
 parser.add_argument('--no-verify-ssh-key-pem-file', dest='verify_ssh_key_pem_file', action='store_false')
