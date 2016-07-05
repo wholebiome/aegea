@@ -101,11 +101,12 @@ def status(args):
                 if ARN(queue.attributes["QueueArn"]).resource.startswith(ARN(topic.arn).resource):
                     row = dict(Topic=topic, Queue=queue)
                     try:
-                        row.update(get_status_for_queue(queue))
-                    except ClientError:
+                        github, owner, repo, events, instance = os.path.basename(queue.url).split("-", 4)
+                        row.update(get_status_for_queue(queue), Owner=owner, Repo=repo, Instance=instance)
+                    except Exception:
                         pass
                     table.append(row)
-    args.columns = ["Topic", "Queue", "Status", "Commit", "Updated"]
+    args.columns = ["Owner", "Repo", "Instance", "Status", "Commit", "Updated", "Topic", "Queue"]
     page_output(tabulate(table, args))
 
 parser = register_parser(status, parent=deploy_parser)
