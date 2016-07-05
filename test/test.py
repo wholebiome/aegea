@@ -46,6 +46,7 @@ class TestAegea(unittest.TestCase):
     def test_basic_aegea_commands(self):
         self.call(["aegea"], expect=[dict(return_codes=[1])])
         self.call(["aegea", "--help"])
+        self.call(["aegea", "--version"])
         self.call(["aegea", "pricing"])
         self.call(["aegea", "ssh", "nonexistent_instance"],
                   expect=[dict(return_codes=[1, os.EX_SOFTWARE], stderr="AegeaException: Could not resolve")])
