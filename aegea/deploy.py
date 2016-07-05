@@ -21,7 +21,7 @@ symlink like so:
 Replace <owner>, <repo>, and <branch> with your GitHub user or org name,
 repo name, and branch to deploy from.
 
-Any updates to the branch will trigger a rebuild of the repo. By
+Any updates to the branch will trigger a rebuild. By
 default, the build location is /opt/<owner>/<repo>. Each update is
 pulled and built in a separate timestamped subdirectory by running
 ``make`` in the repo root, and symlinked upon success. Once the update
@@ -31,7 +31,7 @@ root to reload any services the app needs to run.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, getpass
+import os, sys, json, argparse
 from datetime import datetime
 
 from botocore.exceptions import ClientError
@@ -77,10 +77,20 @@ def configure(args):
                                        aws_key=key.id,
                                        aws_secret=key.secret))
     logger.info("Created SNS topic %s and GitHub hook for repo %s", topic, repo)
+    status_bucket = resources.s3.create_bucket(Bucket="deploy-status-" + ARN(topic.arn).account_id)
+    logger.info("Created %s", status_bucket)
     return dict(topic_arn=topic.arn)
 
 parser = register_parser(configure, parent=deploy_parser)
 parser.add_argument('repo')
+
+def get_status_for_queue(queue):
+    bucket_name = "deploy-status-{}".format(ARN(queue.attributes["QueueArn"]).account_id)
+    bucket = resources.s3.Bucket(bucket_name)
+    status_object = bucket.Object(os.path.join(os.path.basename(queue.url), "status"))
+    status = json.loads(status_object.get()["Body"].read().decode("utf-8"))
+    status.update(Updated=status_object.last_modified)
+    return status
 
 def status(args):
     table = []
@@ -89,8 +99,13 @@ def status(args):
         if ARN(topic.arn).resource.startswith("github"):
             for queue in queues:
                 if ARN(queue.attributes["QueueArn"]).resource.startswith(ARN(topic.arn).resource):
-                    table.append(dict(Topic=topic, Queue=queue))
-    args.columns = ["Topic", "Queue"]
+                    row = dict(Topic=topic, Queue=queue)
+                    try:
+                        row.update(get_status_for_queue(queue))
+                    except ClientError:
+                        pass
+                    table.append(row)
+    args.columns = ["Topic", "Queue", "Status", "Commit", "Updated"]
     page_output(tabulate(table, args))
 
 parser = register_parser(status, parent=deploy_parser)

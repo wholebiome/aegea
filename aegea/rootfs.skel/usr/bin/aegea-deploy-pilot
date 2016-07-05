@@ -32,7 +32,7 @@ args = parser.parse_args()
 az = get_metadata("placement/availability-zone")
 instance_id = get_metadata("instance-id")
 session = boto3.Session(region_name=az[:-1])
-sqs, sns = session.resource('sqs'), session.resource('sns')
+sqs, sns, s3 = session.resource('sqs'), session.resource('sns'), session.resource('s3')
 account_id = ARN(json.loads(get_metadata("iam/info"))["InstanceProfileArn"]).account_id
 
 def get_topic(name):
@@ -78,7 +78,7 @@ queue.set_attributes(Attributes=dict(Policy=json.dumps(policy),
 topic.subscribe(Protocol="sqs", Endpoint=queue.attributes["QueueArn"])
 
 def run_git_auth(*cmd, **kwargs):
-    shellcode = "set -eo pipefail; eval $(ssh-agent -s); aegea-get-secret {} | ssh-add /dev/stdin; git "
+    shellcode = "set -eo pipefail; trap 'ssh-agent -k' EXIT; eval $(ssh-agent -s); aegea-get-secret {} | ssh-add /dev/stdin; git "
     shellcode = shellcode.format(args.deploy_key_name)
     return subprocess.check_call(shellcode + " ".join(cmd), shell=True, executable="/bin/bash", **kwargs)
 
@@ -104,11 +104,26 @@ def deploy(branch):
     os.rename(args.deploy_location + "_staged", args.deploy_location)
     subprocess.check_call(["make", "-C", deploy_dir, "reload"])
 
+def update_status(**updates):
+    return s3.Bucket("deploy-status-" + account_id).put_object(Key=os.path.join(os.path.basename(queue.url), "status"),
+                                                               Body=json.dumps(updates).encode("utf-8"))
+
+def get_deploy_desc():
+    try:
+        return subprocess.check_output(["git", "describe", "--always"], cwd=args.deploy_location).decode().strip()
+    except Exception:
+        return "Unknown"
+
 while True:
     messages = queue.receive_messages(WaitTimeSeconds=20)
     for message in messages:
         event = json.loads(json.loads(message.body)["Message"])
         if event["ref"] == "refs/heads/" + args.branch:
-            deploy(args.branch)
-            clean_old_builds(os.path.dirname(args.deploy_location), prefix=gh_repo_name + "-")
-        message.delete()
+            try:
+                deploy(args.branch)
+                clean_old_builds(os.path.dirname(args.deploy_location), prefix=gh_repo_name + "-")
+                update_status(Status="OK", Commit=get_deploy_desc())
+            except Exception as e:
+                update_status(Status="Failed", Commit=get_deploy_desc())
+                raise
+            message.delete()
