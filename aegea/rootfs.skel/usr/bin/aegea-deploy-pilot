@@ -108,6 +108,12 @@ def update_status(**updates):
     return s3.Bucket("deploy-status-" + account_id).put_object(Key=os.path.join(os.path.basename(queue.url), "status"),
                                                                Body=json.dumps(updates).encode("utf-8"))
 
+def get_deploy_desc():
+    try:
+        return subprocess.check_output(["git", "describe", "--always"], cwd=args.deploy_location).decode().strip()
+    except Exception:
+        return "Unknown"
+
 while True:
     messages = queue.receive_messages(WaitTimeSeconds=20)
     for message in messages:
@@ -116,8 +122,8 @@ while True:
             try:
                 deploy(args.branch)
                 clean_old_builds(os.path.dirname(args.deploy_location), prefix=gh_repo_name + "-")
-                update_status(Status="OK")
+                update_status(Status="OK", Commit=get_deploy_desc())
             except Exception as e:
-                update_status(Status="Failed")
+                update_status(Status="Failed", Commit=get_deploy_desc())
                 raise
             message.delete()

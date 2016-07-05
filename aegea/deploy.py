@@ -77,6 +77,8 @@ def configure(args):
                                        aws_key=key.id,
                                        aws_secret=key.secret))
     logger.info("Created SNS topic %s and GitHub hook for repo %s", topic, repo)
+    status_bucket = resources.s3.create_bucket(Bucket="deploy-status-" + ARN(topic.arn).account_id)
+    logger.info("Created %s", status_bucket)
     return dict(topic_arn=topic.arn)
 
 parser = register_parser(configure, parent=deploy_parser)
@@ -86,7 +88,9 @@ def get_status_for_queue(queue):
     bucket_name = "deploy-status-{}".format(ARN(queue.attributes["QueueArn"]).account_id)
     bucket = resources.s3.Bucket(bucket_name)
     status_object = bucket.Object(os.path.join(os.path.basename(queue.url), "status"))
-    return json.loads(status_object.get()["Body"].read().decode("utf-8"))
+    status = json.loads(status_object.get()["Body"].read().decode("utf-8"))
+    status.update(Updated=status_object.last_modified)
+    return status
 
 def status(args):
     table = []
@@ -101,7 +105,7 @@ def status(args):
                     except ClientError:
                         pass
                     table.append(row)
-    args.columns = ["Topic", "Queue", "Status", "Commit", "Last deploy", "Last status update"]
+    args.columns = ["Topic", "Queue", "Status", "Commit", "Updated"]
     page_output(tabulate(table, args))
 
 parser = register_parser(status, parent=deploy_parser)
