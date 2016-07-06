@@ -106,7 +106,7 @@ def status(args):
                     except Exception:
                         pass
                     table.append(row)
-    args.columns = ["Owner", "Repo", "Instance", "Status", "Commit", "Updated", "Topic", "Queue"]
+    args.columns = ["Owner", "Repo", "Instance", "Status", "Ref", "Commit", "Updated", "Topic", "Queue"]
     page_output(tabulate(table, args))
 
 parser = register_parser(status, parent=deploy_parser)

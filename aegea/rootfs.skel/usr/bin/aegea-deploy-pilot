@@ -105,12 +105,23 @@ def deploy(branch):
     subprocess.check_call(["make", "-C", deploy_dir, "reload"])
 
 def update_status(**updates):
-    return s3.Bucket("deploy-status-" + account_id).put_object(Key=os.path.join(os.path.basename(queue.url), "status"),
-                                                               Body=json.dumps(updates).encode("utf-8"))
+    try:
+        return s3.Bucket("deploy-status-" + account_id).put_object(Key=os.path.join(os.path.basename(queue.url), "status"),
+                                                                   Body=json.dumps(updates).encode("utf-8"))
+    except Exception as e:
+        logging.error(e)
 
 def get_deploy_desc():
     try:
-        return subprocess.check_output(["git", "describe", "--always"], cwd=args.deploy_location).decode().strip()
+        cmd = ["git", "describe", "--always", "--all"]
+        return subprocess.check_output(cmd, cwd=args.deploy_location).decode().strip()
+    except Exception:
+        return "Unknown"
+
+def get_deploy_rev():
+    try:
+        cmd = ["git", "rev-parse", "--short", "HEAD"]
+        return subprocess.check_output(cmd, cwd=args.deploy_location).decode().strip()
     except Exception:
         return "Unknown"
 
@@ -120,10 +131,11 @@ while True:
         event = json.loads(json.loads(message.body)["Message"])
         if event["ref"] == "refs/heads/" + args.branch:
             try:
+                update_status(Status="Deploying " + args.branch, Ref=get_deploy_desc(), Commit=get_deploy_rev())
                 deploy(args.branch)
                 clean_old_builds(os.path.dirname(args.deploy_location), prefix=gh_repo_name + "-")
-                update_status(Status="OK", Commit=get_deploy_desc())
+                update_status(Status="OK", Ref=get_deploy_desc(), Commit=get_deploy_rev())
             except Exception as e:
-                update_status(Status="Failed", Commit=get_deploy_desc())
+                update_status(Status="Failed", Ref=get_deploy_desc(), Commit=get_deploy_rev())
                 raise
             message.delete()
