@@ -4,7 +4,7 @@ Manage AWS EC2 Elastic Load Balancers (ELBs).
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, getpass
+import os, sys, argparse
 
 from . import register_parser
 from .util import Timestamp, paginate

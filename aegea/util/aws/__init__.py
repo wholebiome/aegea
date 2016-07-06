@@ -6,7 +6,7 @@ from collections import OrderedDict
 from warnings import warn
 from datetime import datetime, timedelta
 
-import botocore
+import botocore.session
 from botocore.exceptions import ClientError
 from botocore.utils import parse_to_aware_datetime
 
@@ -170,8 +170,27 @@ class DNSZone:
 
 class ARN:
     fields = "arn partition service region account_id resource".split()
+    _default_region, _default_account_id = None, None
     def __init__(self, arn="arn:aws::::", **kwargs):
+        # TODO: set default region = clients.[service].meta.region_name
         self.__dict__.update(dict(zip(self.fields, arn.split(":", 5)), **kwargs))
+        if "region" not in kwargs and not self.region:
+            self.region = self.get_region()
+        if "account_id" not in kwargs and not self.account_id:
+            self.account_id = self.get_account_id()
+
+    @classmethod
+    def get_region(cls):
+        if cls._default_region is None:
+            cls._default_region = botocore.session.Session().get_config_variable("region")
+        return cls._default_region
+
+    @classmethod
+    def get_account_id(cls):
+        if cls._default_account_id is None:
+            # TODO: call json.loads(get_metadata("iam/info"))["InstanceProfileArn"] as backup without hanging
+            cls._default_account_id = clients.sts.get_caller_identity()["Account"]
+        return cls._default_account_id
 
     def __str__(self):
         return ":".join(getattr(self, field) for field in self.fields)

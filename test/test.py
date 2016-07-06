@@ -140,7 +140,8 @@ class TestAegea(unittest.TestCase):
 
     def test_aws_utils(self):
         self.assertTrue(isinstance(get_ondemand_price_usd("us-east-1", "t2.micro"), str))
-        self.assertEquals(str(ARN()), "arn:aws::::")
+        self.assertEquals(str(ARN(region="", account_id="")), "arn:aws::::")
+        self.assertTrue(str(ARN()).startswith("arn:aws:"))
         self.assertEquals(str(ARN("arn:aws:foo:bar:xyz:zzt")), "arn:aws:foo:bar:xyz:zzt")
         self.assertEquals(str(ARN("arn:aws:a:b:c:d", service="x", region="us-west-1", account_id="1", resource="2")),
                           "arn:aws:x:us-west-1:1:2")
