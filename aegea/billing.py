@@ -28,7 +28,7 @@ def filter_line_items(items, args):
         yield item
 
 def billing(args):
-    account_id = ARN(resources.iam.CurrentUser().user.arn).account_id
+    account_id = ARN.get_account_id()
     args.detailed_billing_reports_bucket = args.detailed_billing_reports_bucket.format(account_id=account_id)
     now = datetime.utcnow()
     report = "{account_id}-aws-billing-detailed-line-items-with-resources-and-tags-{year}-{month}.csv.zip"

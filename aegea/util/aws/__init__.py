@@ -172,7 +172,6 @@ class ARN:
     fields = "arn partition service region account_id resource".split()
     _default_region, _default_account_id = None, None
     def __init__(self, arn="arn:aws::::", **kwargs):
-        # TODO: set default region = clients.[service].meta.region_name
         self.__dict__.update(dict(zip(self.fields, arn.split(":", 5)), **kwargs))
         if "region" not in kwargs and not self.region:
             self.region = self.get_region()

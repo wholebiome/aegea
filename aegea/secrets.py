@@ -67,7 +67,7 @@ def build_iam_policy(principal, bucket):
 
 def secrets(args):
     iam = resources.iam
-    account_id = ARN(iam.CurrentUser().user.arn).account_id
+    account_id = ARN.get_account_id()
     bucket_name = "credentials-{}".format(account_id)
     bucket = resources.s3.Bucket(bucket_name)
     bucket.create()

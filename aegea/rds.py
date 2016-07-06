@@ -1,5 +1,5 @@
 """
-RDS FTW
+Utilities to manage AWS Relational Database Service instances and snapshots.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -19,10 +19,8 @@ rds_parser = register_parser(rds, help='Manage RDS resources', description=__doc
                              formatter_class=argparse.RawTextHelpFormatter)
 
 def add_tags(resource, prefix, key):
-    region = clients.rds.meta.region_name
-    account_id = ARN(resources.iam.CurrentUser().user.arn).account_id
     resource_id = ":".join([prefix, resource[key]])
-    arn = ARN(region=region, account_id=account_id, service="rds", resource=resource_id)
+    arn = ARN(service="rds", resource=resource_id)
     resource["tags"] = clients.rds.list_tags_for_resource(ResourceName=str(arn))["TagList"]
     return resource
 
