@@ -27,7 +27,8 @@ def ls(args):
                     dns_aliases[value.rstrip(".").replace("dualstack.", "")] = rrs["Name"]
     for row in paginate(clients.elb.get_paginator('describe_load_balancers')):
         row["alias"] = dns_aliases.get(row["DNSName"])
-        table.append(row)
+        instances = clients.elb.describe_instance_health(LoadBalancerName=row["LoadBalancerName"])["InstanceStates"]
+        table.extend([dict(row, **instance) for instance in instances] if instances else [row])
     page_output(tabulate(table, args))
 
 parser = register_parser(ls, parent=elb_parser)

@@ -334,8 +334,10 @@ elb_ls:
   columns:
     - LoadBalancerName
     - DNSName
-    - Instances
     - alias
+    - InstanceId
+    - State
+    - Description
 
 launch:
   commands: []
