@@ -167,11 +167,12 @@ class TestAegea(unittest.TestCase):
             with self.assertRaises(Exception):
                 print(Timestamp(invalid_input))
 
+    @unittest.skipIf(USING_PYTHON2, "requires Python 3 dependencies")
     def test_deploy_utils(self):
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-deploy-pilot"),
-                  expect=[dict(return_codes=[1 if USING_PYTHON2 else 2], stderr="the following arguments are required: --repo, --branch")])
+                  expect=[dict(return_codes=[2], stderr="the following arguments are required: --repo, --branch")])
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-get-secret"),
-                  expect=[dict(return_codes=[1 if USING_PYTHON2 else 2], stderr="the following arguments are required: secret_name")])
+                  expect=[dict(return_codes=[2], stderr="the following arguments are required: secret_name")])
 
 if __name__ == '__main__':
     unittest.main()
