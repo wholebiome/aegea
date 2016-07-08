@@ -5,7 +5,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, unittest, collections, itertools, copy, re, subprocess, importlib, pkgutil, json, datetime
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, pkg_root)
 import aegea
 from aegea.util import Timestamp
 from aegea.util.aws import (resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ubuntu_ami, get_ondemand_price_usd,
@@ -165,6 +166,12 @@ class TestAegea(unittest.TestCase):
         for invalid_input in None, "", {}, []:
             with self.assertRaises(Exception):
                 print(Timestamp(invalid_input))
+
+    def test_deploy_utils(self):
+        self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-deploy-pilot"),
+                  expect=[dict(return_codes=[2], stderr="the following arguments are required: --repo, --branch")])
+        self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-get-secret"),
+                  expect=[dict(return_codes=[2], stderr="the following arguments are required: secret_name")])
 
 if __name__ == '__main__':
     unittest.main()
