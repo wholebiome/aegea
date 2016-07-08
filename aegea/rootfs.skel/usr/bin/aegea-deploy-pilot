@@ -120,11 +120,8 @@ def parse_args():
     parser.add_argument("--deploy-key-name")
     args = parser.parse_args()
 
-    if args.repo is None or args.branch is None:
-        if "SYSTEMD_INSTANCE_NAME" in os.environ:
-            args.gh_owner_name, args.gh_repo_name, args.branch = os.environ["SYSTEMD_INSTANCE_NAME"].split("-")[-3:]
-        else:
-            exit("Arguments --repo and --branch are required")
+    if "SYSTEMD_INSTANCE_NAME" in os.environ:
+        args.gh_owner_name, args.gh_repo_name, args.branch = os.environ["SYSTEMD_INSTANCE_NAME"].split("-")[-3:]
     else:
         args.gh_owner_name, args.gh_repo_name = args.repo.split("/")[-2:]
 
