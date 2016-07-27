@@ -36,3 +36,5 @@ clean:
 	-rm -rf *.egg-info
 
 .PHONY: wheel lint lint_deps test test_deps docs install clean
+
+include common.mk
