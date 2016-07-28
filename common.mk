@@ -1,4 +1,4 @@
-SHELL=/bin/bash -c 'set -eo pipefail; [[ -f environment ]] && source environment; shift; eval $$@' --
+SHELL=/bin/bash -c 'set -eo pipefail; [[ -f environment ]] && source environment; shift; eval $$@' $@
 
 release_major:
 	$(eval export TAG=$(shell git describe --tags --match 'v*.*.*' | perl -ne '/^v(\d)+\.(\d)+\.(\d+)+/; print "v@{[$$1+1]}.0.0"'))
@@ -13,6 +13,7 @@ release_patch:
 	$(MAKE) release
 
 release:
+	@if [[ -z $$TAG ]]; then echo "Use release_{major,minor,patch}"; exit 1; fi
 	git clean -x --force aegea
 	$(eval REMOTE=$(shell git remote get-url origin | perl -ne '/(\w+\/\w+)[^\/]+$$/; print $$1'))
 	$(eval GIT_USER=$(shell git config --get user.email))
