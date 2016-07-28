@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
+"""
+Given lines with pip requirements and an ubuntu release codename, retrieve
+the upstream version for that release's corresponding APT package and all
+its PyPI subdependencies
+
+Example:
+
+    cat requirements.in.txt | pypi-apt-freeze xenial > requirements.txt
+
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import os, sys, logging, pkgutil, importlib, argparse
+import argcomplete, requests
+
+logging.basicConfig(level=logging.WARNING)
+
+LP_API = "https://api.launchpad.net/1.0"
+PKG_ARCHIVE = LP_API + "/ubuntu/+archive/primary"
+
+def get_series(**kwargs):
+    return [s["name"] for s in requests.get(LP_API + "/ubuntu/series/").json()["entries"] if s["status"] != "Obsolete"]
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("series").completer = get_series
+parser.add_argument("requirements", type=argparse.FileType("r"), nargs="?", default=sys.stdin)
+argcomplete.autocomplete(parser)
+args = parser.parse_args()
+
+for requirement in args.requirements.readlines():
+    requirement_name = requirement.split("=")[0].strip()
+    params = {"ws.op": "getPublishedSources",
+              "source_name": requirement_name,
+              "exact_match": "true",
+              "distro_series": "/ubuntu/" + args.series,
+              "status": "Published"}
+    res = requests.get(PKG_ARCHIVE, params=dict(params, source_name=requirement_name))
+    if len(res.json()["entries"]) == 0 and not requirement_name.startswith("python-"):
+        res = requests.get(PKG_ARCHIVE, params=dict(params, source_name="python-" + requirement_name))
+    try:
+        package_data = res.json()["entries"][0]
+        print(package_data)
+        version = package_data["source_package_version"].split("-")[0].split("+")[0]
+        res = requests.get("https://pypi.python.org/pypi/{}/{}/json".format(requirement_name, version))
+        assert res.json()
+        print("==".join([requirement_name, version]))
+    except Exception as e:
+        logging.warn("Unable to resolve version for %s in %s", requirement_name, args.series)
+        print(requirement.strip())
