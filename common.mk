@@ -14,11 +14,11 @@ release_patch:
 
 release:
 	@if [[ -z $$TAG ]]; then echo "Use release_{major,minor,patch}"; exit 1; fi
-	git clean -x --force aegea
 	$(eval REMOTE=$(shell git remote get-url origin | perl -ne '/(\w+\/\w+)[^\/]+$$/; print $$1'))
 	$(eval GIT_USER=$(shell git config --get user.email))
 	$(eval RELEASES_API=https://api.github.com/repos/${REMOTE}/releases)
 	$(eval UPLOADS_API=https://uploads.github.com/repos/${REMOTE}/releases)
+	git clean -x --force aegea
 	git tag --sign --annotate ${TAG}
 	git push --follow-tags
 	http --auth ${GIT_USER} ${RELEASES_API} tag_name=${TAG} name=${TAG} body="$$(git tag --list ${TAG} -n99 | perl -pe 's/^\S+\s*// if $$. == 1' | sed 's/^\s\s\s\s//')"
