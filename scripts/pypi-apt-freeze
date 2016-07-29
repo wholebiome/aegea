@@ -42,7 +42,6 @@ for requirement in args.requirements.readlines():
         if len(res.json()["entries"]) == 0 and not requirement_name.startswith("python-"):
             res = requests.get(PKG_ARCHIVE, params=dict(params, source_name="python-" + requirement_name))
         package_data = res.json()["entries"][0]
-        print(package_data)
         version = package_data["source_package_version"].split("-")[0].split("+")[0]
         res = requests.get("https://pypi.python.org/pypi/{}/{}/json".format(requirement_name, version))
         assert res.json()
