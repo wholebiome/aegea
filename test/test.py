@@ -174,5 +174,13 @@ class TestAegea(unittest.TestCase):
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-get-secret"),
                   expect=[dict(return_codes=[2], stderr="the following arguments are required: secret_name")])
 
+    def test_secrets(self):
+        self.call("test_secret=test aegea secrets put test_secret --iam-role aegea.launch", shell=True)
+        self.call("aegea secrets put test_secret --generate-ssh-key --iam-role aegea.launch", shell=True)
+        self.call("aegea secrets ls", shell=True)
+        self.call("aegea secrets ls --json", shell=True)
+        self.call("aegea secrets get test_secret --iam-role aegea.launch", shell=True)
+        self.call("aegea secrets delete test_secret --iam-role aegea.launch", shell=True)
+
 if __name__ == '__main__':
     unittest.main()

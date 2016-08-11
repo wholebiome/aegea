@@ -402,3 +402,21 @@ class SpotFleetBuilder(VerboseRepr):
                                              SpotFleetRequestConfig=self.spot_fleet_request_config,
                                              **kwargs)
         return res["SpotFleetRequestId"]
+
+def get_iam_role_for_instance(instance):
+    instance = resources.ec2.Instance(resolve_instance_id(instance))
+    profile = resources.iam.InstanceProfile(ARN(instance.iam_instance_profile["Arn"]).resource.split("/")[1])
+    assert len(profile.roles) <= 1
+    return profile.roles[0] if profile.roles else None
+
+def ensure_iam_policy(name, doc):
+    try:
+        return resources.iam.create_policy(PolicyName=name, PolicyDocument=str(doc))
+    except ClientError as e:
+        expect_error_codes(e, "EntityAlreadyExists")
+        policy = resources.iam.Policy(str(ARN(service="iam", region="", resource="policy/" + name)))
+        policy.create_version(PolicyDocument=str(doc), SetAsDefault=True)
+        for version in policy.versions.all():
+            if not version.is_default_version:
+                version.delete()
+        return policy

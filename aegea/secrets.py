@@ -33,7 +33,8 @@ Examples
 ========
 Using ``aegea secrets`` to generate and save an SSH key pair accessible by instances launched by ``aegea launch``::
 
-    aegea secrets put deploy.foo.bar --generate-ssh-key --iam-roles aegea.launch > deploy.foo.bar.pub
+    aegea secrets put deploy.foo.bar --generate-ssh-key --iam-role aegea.launch > secrets.out.json
+    jq --raw-output .ssh_public_key < secrets.out.json > deploy.foo.bar.pub
 
     eval $(ssh-agent -s)
     aegea-get-secret deploy.bitbucket.my-private-repo | ssh-add /dev/stdin
@@ -41,7 +42,7 @@ Using ``aegea secrets`` to generate and save an SSH key pair accessible by insta
 
 Using ``aegea secrets`` to save an API key (password) accessible by the IAM group ``space_marines``::
 
-    RAILGUN_PASSWORD=passw0rd aegea secrets put RAILGUN_PASSWORD --iam-groups space_marines
+    RAILGUN_PASSWORD=passw0rd aegea secrets put RAILGUN_PASSWORD --iam-group space_marines
 
 """
 
@@ -50,8 +51,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys, argparse, subprocess, json, copy
 from textwrap import fill
 
+from botocore.exceptions import ClientError
+
 from . import register_parser
-from .util.aws import ARN, IAMPolicyBuilder, resources
+from .util.aws import ARN, IAMPolicyBuilder, resources, expect_error_codes, ensure_iam_policy
 from .util.printing import format_table, page_output, tabulate
 from .util.exceptions import AegeaException
 from .util.crypto import new_ssh_key, hostkey_line
@@ -63,85 +66,98 @@ def build_s3_bucket_policy(account_id, bucket):
 
 def build_iam_policy(principal, bucket):
     resource = "arn:aws:s3:::{bucket}/{principal}/*".format(bucket=bucket, principal=principal)
-    return IAMPolicyBuilder(action="s3:GetObject", resource=resource).policy
+    return IAMPolicyBuilder(action="s3:GetObject", resource=resource)
 
-def secrets(args):
-    iam = resources.iam
+def ensure_bucket():
     account_id = ARN.get_account_id()
     bucket_name = "credentials-{}".format(account_id)
     bucket = resources.s3.Bucket(bucket_name)
-    bucket.create()
-    policy = bucket.Policy()
-    policy.put(Policy=json.dumps(build_s3_bucket_policy(account_id, bucket.name)))
-    for instance_profile in args.instance_profiles:
-        for role in iam.InstanceProfile(instance_profile).roles:
-            args.iam_roles.append(role.name)
-    principals = []
-    for role_name in args.iam_roles:
-        principals.append(iam.Role(role_name))
-    for group_name in args.iam_groups:
-        principals.append(iam.Group(group_name))
-    for principal in principals:
-        policy_name = __name__ + "." + ARN(principal.arn).resource.replace("/", ".")
-        for policy in iam.policies.all():
-            if policy.policy_name == policy_name:
-                break
-        else:
-            policy = iam.create_policy(PolicyName=policy_name,
-                                       PolicyDocument=json.dumps(build_iam_policy(ARN(principal.arn).resource,
-                                                                                  bucket.name)))
-        principal.attach_policy(PolicyArn=policy.arn)
-    for user_name in args.iam_users:
-        # Users are subject to the /user/${aws:userid} parametric bucket policy, so don't get policies attached to them
-        principals.append(iam.User(user_name))
-    if len(principals) == 0 and args.action != "ls":
-        msg = 'Please supply one or more principals with "--instance-profiles" or "--iam-{roles,users,groups}".'
-        raise AegeaException(msg)
-    if len(args.secrets) == 0 and args.action != "ls":
-        msg = 'Please supply one or more secrets and pass their value(s) via environment variable or on stdin.'
-        raise AegeaException(msg)
-    if args.action == "ls":
-        page_output(tabulate(bucket.objects.all(),
-                             args,
-                             cell_transforms={"owner": lambda x: x.get("DisplayName") if x else None}))
-    elif args.action == "put":
-        for principal in principals:
-            for secret_name in args.secrets:
-                if args.generate_ssh_key:
-                    ssh_key = new_ssh_key()
-                    buf = StringIO()
-                    ssh_key.write_private_key(buf)
-                    secret_value = buf.getvalue()
-                    print(hostkey_line(hostnames=[], key=ssh_key).strip())
-                elif secret_name in os.environ:
-                    secret_value = os.environ[secret_name]
-                else:
-                    secret_value = sys.stdin.read()
-                secret_object = bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name))
-                secret_object.put(Body=secret_value.encode(), ServerSideEncryption='AES256')
-    elif args.action == "get":
-        assert len(principals) == 1 and len(args.secrets) == 1
-        secret_object = bucket.Object(os.path.join(ARN(principals[0].arn).resource, args.secrets[0]))
-        sys.stdout.write(secret_object.get()["Body"].read().decode("utf-8"))
-    elif args.action == "delete":
-        for principal in principals:
-            for secret_name in args.secrets:
-                bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name)).delete()
+    try:
+        bucket.load()
+    except ClientError as e:
+        expect_error_codes(e, "404")
+        bucket.create()
+        policy = bucket.Policy()
+        policy.put(Policy=json.dumps(build_s3_bucket_policy(account_id, bucket.name)))
+    return bucket
 
-parser = register_parser(secrets,
-                         help='Manage credentials (secrets)',
-                         description=__doc__,
-                         formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument('action', choices=["ls", "put", "delete", "get"])
-parser.add_argument('secrets', nargs='*', help=fill("""
-List the secret names. For put, pass the secret value on stdin (and name only one secret), or pass multiple secret
-values via environment variables with the same name as the secret."""))
-parser.add_argument('--instance-profiles', nargs='+', default=[])
-parser.add_argument('--iam-roles', nargs='+', default=[])
-parser.add_argument('--iam-groups', nargs='+', default=[])
-parser.add_argument('--iam-users', nargs='+', default=[], help=fill("""
-Name(s) of IAM instance profiles, roles, groups, or users who will be granted access to the secret"""))
-parser.add_argument('--generate-ssh-key', action='store_true', help=fill("""
-Generate a new SSH key pair and write the private key as the secret value; write the public key to stdout"""))
-parser.add_argument("--columns", nargs="+",
-                    default=["bucket_name", "key", "owner", "size", "last_modified", "storage_class"])
+def get_secret_object(principal, secret_name):
+    bucket = ensure_bucket()
+    return bucket.Object(os.path.join(ARN(principal.arn).resource, secret_name))
+
+def parse_principal(args):
+    if args.instance_profile:
+        return resources.iam.Role(resources.iam.InstanceProfile(args.instance_profile).roles[0])
+    elif args.iam_role:
+        return resources.iam.Role(args.iam_role)
+    elif args.iam_group:
+        return resources.iam.Group(args.iam_group)
+    elif args.iam_user:
+        return resources.iam.User(args.iam_user)
+    else:
+        raise AegeaException('Please specify a principal with "--instance-profile" or "--iam-{role,user,group}".')
+
+def ensure_policy(principal, bucket):
+    # Users are subject to the /user/${aws:userid} parametric bucket policy, so don't get policies attached to them
+    if principal.__class__.__name__ != "iam.User":
+        resource = "arn:aws:s3:::{bucket}/{principal}/*".format(bucket=bucket, principal=principal)
+        policy_name = __name__ + "." + ARN(principal.arn).resource.replace("/", ".")
+        policy_doc = IAMPolicyBuilder(action="s3:GetObject", resource=resource)
+        policy = ensure_iam_policy(policy_name, policy_doc)
+        principal.attach_policy(PolicyArn=policy.arn)
+
+def secrets(args):
+    secrets_parser.print_help()
+
+secrets_parser = register_parser(secrets,
+                                 help='Manage credentials (secrets)',
+                                 description=__doc__,
+                                 formatter_class=argparse.RawTextHelpFormatter)
+
+def ls(args):
+    cell_transforms = {"owner": lambda x: x.get("DisplayName") if x else None}
+    page_output(tabulate(ensure_bucket().objects.all(), args, cell_transforms=cell_transforms))
+
+ls_parser = register_parser(ls, parent=secrets_parser)
+ls_parser.add_argument("--columns", nargs="+",
+                       default=["bucket_name", "key", "owner", "size", "last_modified", "storage_class"])
+
+def put(args):
+    if args.generate_ssh_key:
+        ssh_key = new_ssh_key()
+        buf = StringIO()
+        ssh_key.write_private_key(buf)
+        secret_value = buf.getvalue()
+    elif args.secret_name in os.environ:
+        secret_value = os.environ[args.secret_name]
+    else:
+        secret_value = sys.stdin.read()
+    ensure_policy(parse_principal(args), ensure_bucket())
+    secret_object = get_secret_object(parse_principal(args), args.secret_name)
+    secret_object.put(Body=secret_value.encode(), ServerSideEncryption='AES256')
+    if args.generate_ssh_key:
+        return dict(ssh_public_key=hostkey_line(hostnames=[], key=ssh_key).strip())
+
+put_parser = register_parser(put, parent=secrets_parser)
+put_parser.add_argument('--generate-ssh-key', action='store_true',
+                        help="Generate a new SSH key pair and write the private key as the secret value; write the public key to stdout")  # noqa
+
+def get(args):
+    secret_object = get_secret_object(parse_principal(args), args.secret_name)
+    sys.stdout.write(secret_object.get()["Body"].read().decode("utf-8"))
+
+get_parser = register_parser(get, parent=secrets_parser)
+
+def delete(args):
+    get_secret_object(parse_principal(args), args.secret_name).delete()
+
+delete_parser = register_parser(delete, parent=secrets_parser)
+
+for parser in put_parser, get_parser, delete_parser:
+    parser.add_argument('secret_name',
+                        help="List the secret name. For put, pass the secret value on stdin, or via an environment variable with the same name as the secret.")  # noqa
+    parser.add_argument('--instance-profile')
+    parser.add_argument('--iam-role')
+    parser.add_argument('--iam-group')
+    parser.add_argument('--iam-user',
+                        help="Name of IAM instance profile, role, group, or user who will be granted access to secret")

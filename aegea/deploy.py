@@ -1,5 +1,4 @@
-"""
-Manage deployments from a GitHub repository.
+"""Manage deployments from a GitHub repository.
 
 Aegea deploy is a deployment manager daemon. It uses an SNS-SQS bus
 to notify instances about updates to a GitHub repo. When
@@ -21,12 +20,18 @@ symlink like so:
 Replace <owner>, <repo>, and <branch> with your GitHub user or org name,
 repo name, and branch to deploy from.
 
+The instance using aegea deploy must have permissions to access the
+SNS-SQS bus and the S3 bucket containing Aegea secrets (see ``aegea
+secrets --help`` for more information). Run ``aegea deploy grant`` to
+grant appropriate permissions to an IAM role or instance.
+
 Any updates to the branch will trigger a rebuild. By
 default, the build location is /opt/<owner>/<repo>. Each update is
 pulled and built in a separate timestamped subdirectory by running
 ``make`` in the repo root, and symlinked upon success. Once the update
 is successfully built, the daemon will run ``make reload`` in the repo
 root to reload any services the app needs to run.
+
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -36,9 +41,10 @@ from datetime import datetime
 
 from botocore.exceptions import ClientError
 
-from . import register_parser, logger
+from . import register_parser, logger, secrets
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, BOLD
-from .util.aws import ARN, resources, clients, IAMPolicyBuilder
+from .util.aws import (ARN, resources, clients, IAMPolicyBuilder, resolve_instance_id, get_iam_role_for_instance,
+                       expect_error_codes, ensure_iam_policy)
 
 def deploy(args):
     deploy_parser.print_help()
@@ -46,18 +52,26 @@ def deploy(args):
 deploy_parser = register_parser(deploy, help='Manage deployments of GitHub repositories', description=__doc__,
                                 formatter_class=argparse.RawTextHelpFormatter)
 
-def configure(args):
+def parse_repo_name(repo):
+    if repo.endswith(".git"):
+        repo = repo[:-len(".git")]
+    repo = repo.split(":")[-1]
+    gh_owner_name, gh_repo_name = repo.split("/")[-2:]
+    return gh_owner_name, gh_repo_name
+
+def get_repo(url):
     import github3
     try:
         gh = github3.login(token=os.environ["GH_AUTH"])
     except Exception:
         msg = "GitHub login failed. Please get a token at https://github.com/settings/tokens and set the GH_AUTH environment variable to its value." # noqa
         return SystemExit(msg)
-    if args.repo.endswith(".git"):
-        args.repo = args.repo[:len(".git")]
-    gh_owner_name, gh_repo_name = args.repo.split("/")[-2:]
-    repo = gh.repository(gh_owner_name, gh_repo_name)
+    gh_owner_name, gh_repo_name = parse_repo_name(url)
+    return gh.repository(gh_owner_name, gh_repo_name)
 
+def configure(args):
+    repo = get_repo(args.repo)
+    gh_owner_name, gh_repo_name = parse_repo_name(args.repo)
     iam_user_name = __name__ + "-github-event-relay"
     try:
         user = resources.iam.User(iam_user_name)
@@ -82,7 +96,7 @@ def configure(args):
     return dict(topic_arn=topic.arn)
 
 parser = register_parser(configure, parent=deploy_parser)
-parser.add_argument('repo')
+parser.add_argument('repo', help='URL of GitHub repo, e.g. "git@github.com:kislyuk/aegea.git"')
 
 def get_status_for_queue(queue):
     bucket_name = "deploy-status-{}".format(ARN(queue.attributes["QueueArn"]).account_id)
@@ -93,6 +107,9 @@ def get_status_for_queue(queue):
     return status
 
 def status(args):
+    """
+    List status of all configured SNS-SQS message buses and instances subscribed to them.
+    """
     table = []
     queues = list(resources.sqs.queues.filter(QueueNamePrefix="github"))
     for topic in resources.sns.topics.all():
@@ -110,3 +127,35 @@ def status(args):
     page_output(tabulate(table, args))
 
 parser = register_parser(status, parent=deploy_parser)
+
+def ensure_deploy_iam_policy():
+    policy_doc = IAMPolicyBuilder(action="sqs:*", resource=str(ARN(service="sqs", resource="github-*")))
+    policy_doc.add_statement(action="sns:*", resource=str(ARN(service="sns", resource="github-*")))
+    return ensure_iam_policy(__name__, policy_doc)
+
+def grant(args):
+    """
+    Given an IAM role or instance name, attach an IAM policy granting
+    appropriate permissions to subscribe to deployments. Given a
+    GitHub repo URL, create and record a deployment key accessible to
+    the IAM role.
+    """
+    try:
+        role = resources.iam.Role(args.iam_role_or_instance)
+        role.load()
+    except ClientError:
+        role = get_iam_role_for_instance(args.iam_role_or_instance)
+    role.attach_policy(PolicyArn=ensure_deploy_iam_policy().arn)
+    gh_owner_name, gh_repo_name = parse_repo_name(args.repo)
+    secret = secrets.put(argparse.Namespace(secret_name="deploy.{}.{}".format(gh_owner_name, gh_repo_name),
+                                            iam_role=role.name,
+                                            instance_profile=None,
+                                            iam_group=None,
+                                            iam_user=None,
+                                            generate_ssh_key=True))
+    repo = get_repo(args.repo)
+    repo.create_key(role.name, secret["ssh_public_key"])
+
+parser = register_parser(grant, parent=deploy_parser)
+parser.add_argument('iam_role_or_instance')
+parser.add_argument('repo', help='URL of GitHub repo, e.g. "git@github.com:kislyuk/aegea.git"')
