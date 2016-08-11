@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys
 from . import register_parser, config
-from .util.aws import DNSZone, resources, clients
+from .util.aws import DNSZone, resources, clients, resolve_instance_id, add_tags
 
 def resolve_instance_ids(input_names):
     ids = [n for n in input_names if n.startswith("i-")]
@@ -37,7 +37,13 @@ def terminate(args):
         if not args.dry_run:
             dns_zone.delete(name)
 
-for action in (start, stop, reboot, terminate):
-    parser = register_parser(action, help='{} EC2 instances'.format(action.__name__.capitalize()))
+def rename(args):
+    """Supply two names: Existing instance name or ID, and new name to assign to the instance."""
+    old_name, new_name = args.names
+    add_tags(resources.ec2.Instance(resolve_instance_id(old_name)), Name=new_name, dry_run=args.dry_run)
+
+for action in (start, stop, reboot, terminate, rename):
+    parser = register_parser(action, help='{} EC2 instances'.format(action.__name__.capitalize()),
+                             description=action.__doc__)
     parser.add_argument('--dry-run', '--dryrun', action='store_true')
     parser.add_argument("names", nargs="+")

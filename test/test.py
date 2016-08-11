@@ -61,8 +61,8 @@ class TestAegea(unittest.TestCase):
                 args += ["--help"]
             elif subcommand == "console":
                 args += [instance_id]
-            elif subcommand in ("start", "stop", "reboot", "terminate"):
-                args += [instance_id, "--dry-run"]
+            elif subcommand in ("start", "stop", "reboot", "terminate", "rename"):
+                args += [instance_id, instance_id, "--dry-run"]
             elif subcommand == "deploy":
                 args += ["status"]
             elif subcommand == "grep":

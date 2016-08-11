@@ -249,8 +249,8 @@ def ensure_instance_profile(iam_role_name, policies=frozenset()):
         instance_profile.add_role(RoleName=role.name)
     return instance_profile
 
-def add_tags(resource, **tags):
-    return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()])
+def add_tags(resource, dry_run=False, **tags):
+    return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()], DryRun=dry_run)
 
 #def filter_by_tags(collection, **tags):
 #    return collection.filter(Filters=[dict(Name="tag:"+k, Values=[v]) for k, v in tags.items()])
