@@ -100,7 +100,7 @@ def parse_principal(args):
 def ensure_policy(principal, bucket):
     # Users are subject to the /user/${aws:userid} parametric bucket policy, so don't get policies attached to them
     if principal.__class__.__name__ != "iam.User":
-        resource = "arn:aws:s3:::{bucket}/{principal}/*".format(bucket=bucket, principal=principal)
+        resource = "arn:aws:s3:::{bucket}/{prefix}/*".format(bucket=bucket.name, prefix=ARN(principal.arn).resource)
         policy_name = __name__ + "." + ARN(principal.arn).resource.replace("/", ".")
         policy_doc = IAMPolicyBuilder(action="s3:GetObject", resource=resource)
         policy = ensure_iam_policy(policy_name, policy_doc)

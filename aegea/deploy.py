@@ -129,8 +129,12 @@ def status(args):
 parser = register_parser(status, parent=deploy_parser)
 
 def ensure_deploy_iam_policy():
-    policy_doc = IAMPolicyBuilder(action="sqs:*", resource=str(ARN(service="sqs", resource="github-*")))
-    policy_doc.add_statement(action="sns:*", resource=str(ARN(service="sns", resource="github-*")))
+    sqs_arn = ARN(service="sqs", region="*", resource="github-*")
+    policy_doc = IAMPolicyBuilder(action="sqs:*", resource=str(sqs_arn))
+    sns_arn = ARN(service="sns", resource="github-*")
+    policy_doc.add_statement(action="sns:Subscribe", resource=str(sns_arn))
+    s3_arn = ARN(service="s3", region="", account_id="", resource="deploy-status-{}/*".format(ARN.get_account_id()))
+    policy_doc.add_statement(action="s3:PutObject", resource=str(s3_arn))
     return ensure_iam_policy(__name__, policy_doc)
 
 def grant(args):
@@ -148,7 +152,7 @@ def grant(args):
         role = get_iam_role_for_instance(args.iam_role_or_instance)
     role.attach_policy(PolicyArn=ensure_deploy_iam_policy().arn)
     gh_owner_name, gh_repo_name = parse_repo_name(args.repo)
-    secret = secrets.put(argparse.Namespace(secret_name="deploy.{}.{}".format(gh_owner_name, gh_repo_name),
+    secret = secrets.put(argparse.Namespace(secret_name="deploy.{}.{}".format(gh_repo_name, args.branch),
                                             iam_role=role.name,
                                             instance_profile=None,
                                             iam_group=None,
@@ -159,3 +163,4 @@ def grant(args):
 parser = register_parser(grant, parent=deploy_parser)
 parser.add_argument('iam_role_or_instance')
 parser.add_argument('repo', help='URL of GitHub repo, e.g. "git@github.com:kislyuk/aegea.git"')
+parser.add_argument('branch', help='Branch of GitHub repo')
