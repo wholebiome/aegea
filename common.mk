@@ -1,5 +1,6 @@
 SHELL=/bin/bash -c 'set -eo pipefail; [[ -f environment ]] && source environment; shift; eval $$@' $@
 GH_AUTH_FILE=~/.github_token
+CLEAN_DIRS=aegea
 
 release_major:
 	$(eval export TAG=$(shell git describe --tags --match 'v*.*.*' | perl -ne '/^v(\d)+\.(\d)+\.(\d+)+/; print "v@{[$$1+1]}.0.0"'))
@@ -20,8 +21,8 @@ release:
 	$(eval GH_AUTH=$(shell if [[ -e $(GH_AUTH_FILE) ]]; then echo $(GIT_USER):$$(cat $(GH_AUTH_FILE)); else echo $(GIT_USER); fi))
 	$(eval RELEASES_API=https://api.github.com/repos/${REMOTE}/releases)
 	$(eval UPLOADS_API=https://uploads.github.com/repos/${REMOTE}/releases)
-	git clean -x --force aegea
-	git tag --sign --annotate ${TAG}
+	git clean -x --force ${CLEAN_DIRS}
+	git tag --sign --annotate ${TAG} # --template <(git log --pretty=format:%s $$(git describe --abbrev=0)..HEAD)
 	git push --follow-tags
 	http --auth ${GH_AUTH} ${RELEASES_API} tag_name=${TAG} name=${TAG} body="$$(git tag --list ${TAG} -n99 | perl -pe 's/^\S+\s*// if $$. == 1' | sed 's/^\s\s\s\s//')"
 	$(MAKE) install
