@@ -177,7 +177,7 @@ class TestAegea(unittest.TestCase):
 
     def test_secrets(self):
         unauthorized_ok = [dict(return_codes=[os.EX_OK]),
-                           dict(return_codes=[1, os.EX_SOFTWARE], stderr="AccessDenied")]
+                           dict(return_codes=[1, os.EX_SOFTWARE], stderr="(AccessDenied|NoSuchKey)")]
         self.call("test_secret=test aegea secrets put test_secret --iam-role aegea.launch",
                   shell=True, expect=unauthorized_ok)
         self.call("aegea secrets put test_secret --generate-ssh-key --iam-role aegea.launch",
