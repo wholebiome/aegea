@@ -140,6 +140,7 @@ def grant(args):
     GitHub repo URL, create and record a deployment key accessible to
     the IAM role.
     """
+    repo = get_repo(args.repo)
     try:
         role = resources.iam.Role(args.iam_role_or_instance)
         role.load()
@@ -153,7 +154,6 @@ def grant(args):
                                             iam_group=None,
                                             iam_user=None,
                                             generate_ssh_key=True))
-    repo = get_repo(args.repo)
     repo.create_key(role.name, secret["ssh_public_key"])
 
 parser = register_parser(grant, parent=deploy_parser)
