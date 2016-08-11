@@ -93,7 +93,7 @@ class TestAegea(unittest.TestCase):
                   shell=True, expect=unauthorized_ok)
         self.call("aegea launch unittest --dry-run --duration-hours 1 --no-verify-ssh-key-pem-file",
                   shell=True, expect=unauthorized_ok)
-        self.call("aegea launch unittest --duration-hours 0.5 --min-mem-per-core-gb 6 --cores 2 --dry-run --no-verify-ssh-key-pem-file --client-token t",
+        self.call("aegea launch unittest --duration 0.5 --min-mem 6 --cores 2 --dry-run --no-verify --client-token t",
                   shell=True, expect=unauthorized_ok)
         self.call("aegea build_image i --dry-run --no-verify-ssh-key-pem-file",
                   shell=True, expect=unauthorized_ok)
@@ -103,7 +103,8 @@ class TestAegea(unittest.TestCase):
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()),
                          {"c3.large", "c4.large", "m3.large", "m4.large", "m3.medium"})
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs(max_overprovision=4)),
-                         {"c3.large", "c4.large", "m3.large", "m4.large", "m3.medium", "m4.xlarge", "c3.xlarge", "c4.xlarge", "m3.xlarge"})
+                         {"c3.large", "c4.large", "m3.large", "m4.large", "m3.medium", "m4.xlarge", "c3.xlarge",
+                          "c4.xlarge", "m3.xlarge"})
         with self.assertRaises(AegeaException):
             builder = SpotFleetBuilder(launch_spec={}, min_cores_per_instance=16)
         builder = SpotFleetBuilder(launch_spec={}, cores=16, min_cores_per_instance=16)
@@ -175,12 +176,16 @@ class TestAegea(unittest.TestCase):
                   expect=[dict(return_codes=[2], stderr="the following arguments are required: secret_name")])
 
     def test_secrets(self):
-        self.call("test_secret=test aegea secrets put test_secret --iam-role aegea.launch", shell=True)
-        self.call("aegea secrets put test_secret --generate-ssh-key --iam-role aegea.launch", shell=True)
-        self.call("aegea secrets ls", shell=True)
-        self.call("aegea secrets ls --json", shell=True)
-        self.call("aegea secrets get test_secret --iam-role aegea.launch", shell=True)
-        self.call("aegea secrets delete test_secret --iam-role aegea.launch", shell=True)
+        unauthorized_ok = [dict(return_codes=[os.EX_OK]),
+                           dict(return_codes=[1, os.EX_SOFTWARE], stderr="AccessDenied")]
+        self.call("test_secret=test aegea secrets put test_secret --iam-role aegea.launch",
+                  shell=True, expect=unauthorized_ok)
+        self.call("aegea secrets put test_secret --generate-ssh-key --iam-role aegea.launch",
+                  shell=True, expect=unauthorized_ok)
+        self.call("aegea secrets ls", shell=True, expect=unauthorized_ok)
+        self.call("aegea secrets ls --json", shell=True, expect=unauthorized_ok)
+        self.call("aegea secrets get test_secret --iam-role aegea.launch", shell=True, expect=unauthorized_ok)
+        self.call("aegea secrets delete test_secret --iam-role aegea.launch", shell=True, expect=unauthorized_ok)
 
 if __name__ == '__main__':
     unittest.main()
