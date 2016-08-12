@@ -50,7 +50,7 @@ def clone_and_build(branch, destination):
                                destination, deploy_dir])
         subprocess.check_call(["git", "remote", "set-url", "origin", args.github_url], cwd=deploy_dir)
         run_git_auth("fetch", "origin", branch, cwd=deploy_dir)
-        run_git_auth("checkout", "--force", "origin/" + branch, cwd=deploy_dir)
+        subprocess.check_call(["git", "checkout", "--force", "origin/" + branch], cwd=deploy_dir)
     else:
         run_git_auth("clone", "--recurse-submodules", "--branch", branch, "--depth=1",
                      args.github_url, deploy_dir)
