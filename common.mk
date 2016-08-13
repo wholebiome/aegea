@@ -22,7 +22,7 @@ release:
 	$(eval RELEASES_API=https://api.github.com/repos/${REMOTE}/releases)
 	$(eval UPLOADS_API=https://uploads.github.com/repos/${REMOTE}/releases)
 	git clean -x --force ${CLEAN_DIRS}
-	git tag --sign --annotate ${TAG} # --template <(git log --pretty=format:%s $$(git describe --abbrev=0)..HEAD)
+	TAG_MSG=$$(mktemp); git log --pretty=format:%s $$(git describe --abbrev=0)..HEAD > $$TAG_MSG; $${EDITOR:-emacs} $$TAG_MSG; git tag --sign --annotate --file $$TAG_MSG ${TAG}
 	git push --follow-tags
 	http --auth ${GH_AUTH} ${RELEASES_API} tag_name=${TAG} name=${TAG} body="$$(git tag --list ${TAG} -n99 | perl -pe 's/^\S+\s*// if $$. == 1' | sed 's/^\s\s\s\s//')"
 	$(MAKE) install
