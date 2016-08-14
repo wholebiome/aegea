@@ -22,11 +22,20 @@ release:
 	$(eval RELEASES_API=https://api.github.com/repos/${REMOTE}/releases)
 	$(eval UPLOADS_API=https://uploads.github.com/repos/${REMOTE}/releases)
 	git clean -x --force ${CLEAN_DIRS}
-	TAG_MSG=$$(mktemp); git log --pretty=format:%s $$(git describe --abbrev=0)..HEAD > $$TAG_MSG; $${EDITOR:-emacs} $$TAG_MSG; git tag --sign --annotate --file $$TAG_MSG ${TAG}
+	touch Changes.md; git add Changes.md
+	TAG_MSG=$$(mktemp); \
+	    echo "# Changes for ${TAG} ($$(date +%Y-%m-%d))" > $$TAG_MSG; \
+	    git log --pretty=format:%s $$(git describe --abbrev=0)..HEAD >> $$TAG_MSG; \
+	    $${EDITOR:-emacs} $$TAG_MSG; \
+	    cat $$TAG_MSG <(echo -e "\n") Changes.md | sponge Changes.md; \
+	    git commit -m ${TAG} Changes.md; \
+	    git tag --sign --annotate --file $$TAG_MSG ${TAG}
 	git push --follow-tags
-	http --auth ${GH_AUTH} ${RELEASES_API} tag_name=${TAG} name=${TAG} body="$$(git tag --list ${TAG} -n99 | perl -pe 's/^\S+\s*// if $$. == 1' | sed 's/^\s\s\s\s//')"
+	http --auth ${GH_AUTH} ${RELEASES_API} tag_name=${TAG} name=${TAG} \
+	    body="$$(git tag --list ${TAG} -n99 | perl -pe 's/^\S+\s*// if $$. == 1' | sed 's/^\s\s\s\s//')"
 	$(MAKE) install
-	http --auth ${GH_AUTH} POST ${UPLOADS_API}/$$(http --auth ${GH_AUTH} ${RELEASES_API}/latest | jq .id)/assets name==$$(basename dist/*.whl) label=="Python Wheel" < dist/*.whl
+	http --auth ${GH_AUTH} POST ${UPLOADS_API}/$$(http --auth ${GH_AUTH} ${RELEASES_API}/latest | jq .id)/assets \
+	    name==$$(basename dist/*.whl) label=="Python Wheel" < dist/*.whl
 
 pypi_release:
 	python setup.py sdist bdist_wheel upload --sign
