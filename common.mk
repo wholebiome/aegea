@@ -27,7 +27,7 @@ release:
 	    git log --pretty=format:%s $$(git describe --abbrev=0)..HEAD >> $$TAG_MSG; \
 	    $${EDITOR:-emacs} $$TAG_MSG; \
 	    if [[ -f Changes.md ]]; then cat $$TAG_MSG <(echo) Changes.md | sponge Changes.md; git add Changes.md; fi; \
-	    if [[ -f Changes.rst ]]; then cat <(pandoc --from markdown --to rst $$TAG_MSG) Changes.rst | sponge Changes.rst; git add Changes.rst; fi; \
+	    if [[ -f Changes.rst ]]; then cat <(pandoc --from markdown --to rst $$TAG_MSG) <(echo) Changes.rst | sponge Changes.rst; git add Changes.rst; fi; \
 	    git commit -m ${TAG}; \
 	    git tag --sign --annotate --file $$TAG_MSG ${TAG}
 	git push --follow-tags
