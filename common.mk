@@ -22,13 +22,13 @@ release:
 	$(eval RELEASES_API=https://api.github.com/repos/${REMOTE}/releases)
 	$(eval UPLOADS_API=https://uploads.github.com/repos/${REMOTE}/releases)
 	git clean -x --force ${CLEAN_DIRS}
-	touch Changes.md; git add Changes.md
 	TAG_MSG=$$(mktemp); \
 	    echo "# Changes for ${TAG} ($$(date +%Y-%m-%d))" > $$TAG_MSG; \
 	    git log --pretty=format:%s $$(git describe --abbrev=0)..HEAD >> $$TAG_MSG; \
 	    $${EDITOR:-emacs} $$TAG_MSG; \
-	    cat $$TAG_MSG <(echo -e "\n") Changes.md | sponge Changes.md; \
-	    git commit -m ${TAG} Changes.md; \
+	    if [[ -f Changes.md ]]; then cat $$TAG_MSG <(echo) Changes.md | sponge Changes.md; git add Changes.md; fi; \
+	    if [[ -f Changes.rst ]]; then cat <(pandoc --from markdown --to rst $$TAG_MSG) Changes.rst | sponge Changes.rst; git add Changes.rst; fi; \
+	    git commit -m ${TAG}; \
 	    git tag --sign --annotate --file $$TAG_MSG ${TAG}
 	git push --follow-tags
 	http --auth ${GH_AUTH} ${RELEASES_API} tag_name=${TAG} name=${TAG} \
