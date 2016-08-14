@@ -1,3 +1,7 @@
+Changes for v0.9.5 (2016-08-14)
+===============================
+
+Continue release script
 Version 0.7.0 (2016-05-29)
 --------------------------
 - Introduce rds subcommand
