@@ -1,4 +1,4 @@
-SHELL=/bin/bash -c 'set -eo pipefail; [[ -f environment ]] && source environment; shift; eval $$@' $@
+# SHELL=/bin/bash -c 'set -eo pipefail; [[ -f environment ]] && source environment; shift; eval $$@' $@
 GH_AUTH_FILE=~/.github_token
 CLEAN_DIRS=aegea
 
