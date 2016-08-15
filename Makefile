@@ -1,4 +1,4 @@
-SHELL=/bin/bash -e
+SHELL=/bin/bash -eo pipefail
 
 wheel: lint constants clean
 	./setup.py bdist_wheel
