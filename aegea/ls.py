@@ -51,30 +51,37 @@ def ls(args):
         return instance
     instances = [add_name(i) for i in filter_collection(resources.ec2.instances, args)]
     args.columns = ["name"] + args.columns
-    cell_transforms = {"state": lambda x: x["Name"], "iam_instance_profile": lambda x: x.get("Arn", "").split("/")[-1] if x else None}  # noqa
+    cell_transforms = {
+        "state": lambda x, r: x["Name"],
+        "iam_instance_profile": lambda x, r: x.get("Arn", "").split("/")[-1] if x else None
+    }
     page_output(tabulate(instances, args, cell_transforms=cell_transforms))
 
 parser = register_filtering_parser(ls, help='List EC2 instances')
 parser.add_argument("--sort-by")
 
+def get_policies_for_principal(cell, row):
+    return ", ".join([p.policy_name for p in row.policies.all()] + [p.policy_name for p in row.attached_policies.all()])
+
 def users(args):
     current_user = resources.iam.CurrentUser()
-    if "user_id" not in args.columns:
-        args.columns.append("user_id")
-    def marker(u):
-        return [">>>" if u.user_id == current_user.user_id else ""]
-    table = [marker(i) + [get_cell(i, f) for f in args.columns] for i in resources.iam.users.all()]
-    page_output(format_table(table, column_names=["cur"] + args.columns, max_col_width=args.max_col_width))
+    def mark_cur_user(cell, row):
+        return ">>>" if row.user_id == current_user.user_id else ""
+    users = list(resources.iam.users.all())
+    for user in users:
+        user.cur = ""
+    cell_transforms = {"cur": mark_cur_user, "policies": get_policies_for_principal}
+    page_output(tabulate(users, args, cell_transforms=cell_transforms))
 
 parser = register_listing_parser(users, help='List IAM users')
 
 def groups(args):
-    page_output(tabulate(resources.iam.groups.all(), args))
+    page_output(tabulate(resources.iam.groups.all(), args, cell_transforms={"policies": get_policies_for_principal}))
 
 parser = register_listing_parser(groups, help='List IAM groups')
 
 def roles(args):
-    page_output(tabulate(resources.iam.roles.all(), args))
+    page_output(tabulate(resources.iam.roles.all(), args, cell_transforms={"policies": get_policies_for_principal}))
 
 parser = register_listing_parser(roles, help='List IAM roles')
 
@@ -272,7 +279,7 @@ def filesystems(args):
             mount_target.update(filesystem)
             table.append(mount_target)
     args.columns += args.mount_target_columns
-    page_output(tabulate(table, args, cell_transforms={"SizeInBytes": lambda x: x.get("Value") if x else None}))
+    page_output(tabulate(table, args, cell_transforms={"SizeInBytes": lambda x, r: x.get("Value") if x else None}))
 
 parser = register_listing_parser(filesystems, help='List EFS filesystems')
 parser.add_argument("--mount-target-columns", nargs="+")

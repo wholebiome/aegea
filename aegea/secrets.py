@@ -115,7 +115,7 @@ secrets_parser = register_parser(secrets,
                                  formatter_class=argparse.RawTextHelpFormatter)
 
 def ls(args):
-    cell_transforms = {"owner": lambda x: x.get("DisplayName") if x else None}
+    cell_transforms = {"owner": lambda x, r: x.get("DisplayName") if x else None}
     page_output(tabulate(ensure_bucket().objects.all(), args, cell_transforms=cell_transforms))
 
 ls_parser = register_parser(ls, parent=secrets_parser)

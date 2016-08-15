@@ -97,11 +97,13 @@ ls:
 
 users:
   columns:
+    - cur
     - name
     - user_id
     - create_date
     - password_last_used
     - groups
+    - policies
 
 groups:
   columns:
@@ -109,6 +111,7 @@ groups:
     - group_id
     - create_date
     - users
+    - policies
 
 roles:
   columns:
@@ -116,6 +119,7 @@ roles:
     - role_id
     - create_date
     - instance_profiles
+    - policies
 
 policies:
   columns:

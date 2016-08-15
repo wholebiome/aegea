@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json, shutil, subprocess, re
 from datetime import datetime
+from .exceptions import GetFieldError
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 
@@ -175,7 +176,7 @@ def get_field(item, field):
             try:
                 item = item.get(element)
             except AttributeError:
-                raise Exception('Unable to access field or attribute "{}" of {}'.format(field, item))
+                raise GetFieldError('Unable to access field or attribute "{}" of {}'.format(field, item))
     return item
 
 def format_datetime(d):
@@ -187,12 +188,12 @@ def format_datetime(d):
 
 def get_cell(resource, field, transform=None):
     cell = get_field(resource, field)
-    cell = transform(cell) if transform else cell
+    cell = transform(cell, resource) if transform else cell
     if isinstance(cell, datetime):
         cell = format_datetime(cell)
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
-def format_tags(cell):
+def format_tags(cell, row):
     tags = {tag["Key"]: tag["Value"] for tag in cell} if cell else {}
     return ", ".join("{}={}".format(k, v) for k, v in tags.items())
 
