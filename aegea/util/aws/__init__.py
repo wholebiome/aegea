@@ -104,7 +104,9 @@ def ensure_ingress_rule(security_group, **kwargs):
     else:
         security_group.authorize_ingress(CidrIp=cidr_ip, **kwargs)
 
-def resolve_security_group(name, vpc):
+def resolve_security_group(name, vpc=None):
+    if vpc is None:
+        vpc = ensure_vpc()
     for security_group in vpc.security_groups.filter(GroupNames=[name]):
         assert security_group.group_name == name
         return security_group
@@ -123,7 +125,7 @@ class DNSZone:
     def __init__(self, zone_name=None, use_unique_private_zone=True):
         if zone_name:
             self.zone = clients.route53.list_hosted_zones_by_name(DNSName=zone_name)["HostedZones"][0]
-            assert self.zone["Name"] == zone_name + "."
+            assert self.zone["Name"].rstrip(".") == zone_name.rstrip(".")
         elif use_unique_private_zone:
             private_zones = []
             for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):

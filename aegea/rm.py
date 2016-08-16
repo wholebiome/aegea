@@ -18,6 +18,11 @@ def rm(args):
         try:
             if args.key_pair:
                 resources.ec2.KeyPair(name).delete(DryRun=not args.force)
+            elif args.elb:
+                if args.force:
+                    clients.elb.delete_load_balancer(LoadBalancerName=name)
+                else:
+                    clients.elb.describe_load_balancer_attributes(LoadBalancerName=name)
             elif name.startswith("sg-"):
                 resources.ec2.SecurityGroup(name).delete(DryRun=not args.force)
             elif name.startswith("vol-"):
@@ -55,10 +60,12 @@ def rm(args):
         except ClientError as e:
             expect_error_codes(e, "DryRunOperation")
     if not args.force:
-        logger.info("Dry run succeeded. Run %s again with --force (-f) to actually remove.", __name__)
+        logger.info("Dry run succeeded on %s. Run %s again with --force (-f) to actually remove.", args.names, __name__)
 
 parser = register_parser(rm, help='Remove or deprovision resources', description=__doc__)
 parser.add_argument('names', nargs='+')
 parser.add_argument('-f', '--force', action="store_true")
 parser.add_argument('--key-pair', action="store_true", help="""
 Assume input names are EC2 SSH key pair names (required when deleting key pairs, since they have no ID or ARN)""")
+parser.add_argument('--elb', action="store_true", help="""
+Assume input names are Elastic Load Balancer names (required when deleting ELBs, since they have no ID or ARN)""")
