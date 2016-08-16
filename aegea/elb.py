@@ -9,7 +9,7 @@ import os, sys, argparse
 from . import register_parser
 from .util import Timestamp, paginate
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
-from .util.aws import ARN, resources, clients, resolve_instance_id
+from .util.aws import ARN, resources, clients, resolve_instance_id, get_elb_dns_aliases
 
 def elb(args):
     elb_parser.print_help()
@@ -18,13 +18,8 @@ elb_parser = register_parser(elb, help='Manage Elastic Load Balancers', descript
                              formatter_class=argparse.RawTextHelpFormatter)
 
 def ls(args):
-    table, dns_aliases = [], {}
-    for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):
-        for rrs in paginate(clients.route53.get_paginator('list_resource_record_sets'), HostedZoneId=zone["Id"]):
-            for record in rrs.get("ResourceRecords", [rrs.get("AliasTarget", {})]):
-                value = record.get("Value", record.get("DNSName"))
-                if value.endswith("elb.amazonaws.com."):
-                    dns_aliases[value.rstrip(".").replace("dualstack.", "")] = rrs["Name"]
+    table = []
+    dns_aliases = get_elb_dns_aliases()
     for row in paginate(clients.elb.get_paginator('describe_load_balancers')):
         row["alias"] = dns_aliases.get(row["DNSName"])
         instances = clients.elb.describe_instance_health(LoadBalancerName=row["LoadBalancerName"])["InstanceStates"]

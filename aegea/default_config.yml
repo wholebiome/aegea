@@ -344,6 +344,20 @@ elb_ls:
     - State
     - Description
 
+alb_ls:
+  columns:
+    - LoadBalancerName
+    - DNSName
+    - alias
+    - InstanceId
+    - State
+    - Description
+
+certificates:
+  columns:
+    - CertificateArn
+    - DomainName
+
 launch:
   commands: []
   packages: []

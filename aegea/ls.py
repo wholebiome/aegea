@@ -244,7 +244,7 @@ def sirs(args):
 parser = register_listing_parser(sirs, help='List EC2 spot instance requests')
 
 def sfrs(args):
-    page_output(tabulate(clients.ec2.describe_spot_fleet_requests()['SpotFleetRequestConfigs'], args))
+    page_output(tabulate(paginate(clients.ec2.get_paginator('describe_spot_fleet_requests')), args))
 
 parser = register_listing_parser(sfrs, help='List EC2 spot fleet requests')
 parser.add_argument("--trim-col-names", nargs="+", default=["SpotFleetRequestConfig.", "SpotFleetRequest"])
@@ -306,3 +306,8 @@ def cmks(args):
     page_output(tabulate(table, args))
 
 parser = register_parser(cmks, help="List KMS Customer Master Keys")
+
+def certificates(args):
+    page_output(tabulate(paginate(clients.acm.get_paginator('list_certificates')), args))
+
+parser = register_parser(certificates, help="List Amazon Certificate Manager SSL certificates")

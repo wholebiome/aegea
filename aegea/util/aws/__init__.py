@@ -420,3 +420,13 @@ def ensure_iam_policy(name, doc):
             if not version.is_default_version:
                 version.delete()
         return policy
+
+def get_elb_dns_aliases():
+    dns_aliases = {}
+    for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):
+        for rrs in paginate(clients.route53.get_paginator('list_resource_record_sets'), HostedZoneId=zone["Id"]):
+            for record in rrs.get("ResourceRecords", [rrs.get("AliasTarget", {})]):
+                value = record.get("Value", record.get("DNSName"))
+                if value.endswith("elb.amazonaws.com."):
+                    dns_aliases[value.rstrip(".").replace("dualstack.", "")] = rrs["Name"]
+    return dns_aliases
