@@ -62,6 +62,7 @@ build_ami:
     - sysstat
     - dstat
     - numactl
+    - gdebi-core
   commands:
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
