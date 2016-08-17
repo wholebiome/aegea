@@ -1,3 +1,12 @@
+Changes for v0.9.7 (2016-08-17)
+===============================
+
+-  Add babel and format relative dates
+-  Add aegea elb create
+-  Changes in support of app deploy infrastructure
+-  Add R default mirror config
+-  IAM principal lists now report attached policies
+
 Changes for v0.9.6 (2016-08-14)
 ===============================
 
