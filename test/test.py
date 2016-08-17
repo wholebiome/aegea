@@ -49,6 +49,7 @@ class TestAegea(unittest.TestCase):
         self.call(["aegea", "--help"])
         self.call(["aegea", "--version"])
         self.call(["aegea", "pricing"])
+        self.call(["aegea", "ls", "-w9"])
         self.call(["aegea", "ssh", "nonexistent_instance"],
                   expect=[dict(return_codes=[1, os.EX_SOFTWARE], stderr="AegeaException: Could not resolve")])
         instance_id = json.loads(self.call(["aegea", "ls", "--json"]).stdout)[0]["id"]

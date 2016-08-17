@@ -87,6 +87,8 @@ def create(args):
 parser = register_parser(create, parent=elb_parser, help="Create a new ELB")
 parser.add_argument("elb_name")
 parser.add_argument("instances", nargs="+", type=resolve_instance_id)
-parser.add_argument("--security-groups", nargs="+", type=resolve_security_group, required=True)
-parser.add_argument("--dns-alias", required=True)
+parser.add_argument("--security-groups", nargs="+", type=resolve_security_group, required=True, help="""
+Security groups to be used by the ELB's internal interface.
+Security groups must allow TCP traffic to flow between the ELB and the instances on INSTANCE_PORT.""")
+parser.add_argument("--dns-alias", required=True, help="Fully qualified DNS name that will point to the ELB")
 parser.add_argument("--instance-port", type=int)

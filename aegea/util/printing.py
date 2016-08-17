@@ -3,8 +3,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json, shutil, subprocess, re
 from datetime import datetime, timedelta
-from dateutil.tz import tzutc
-from babel import dates
 from .exceptions import GetFieldError
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
@@ -182,6 +180,8 @@ def get_field(item, field):
     return item
 
 def format_datetime(d, human=True):
+    from dateutil.tz import tzutc
+    from babel import dates
     d = d.replace(microsecond=0)
     if not USING_PYTHON2:
         # Switch from UTC to local TZ
@@ -191,6 +191,7 @@ def format_datetime(d, human=True):
     return str(d)
 
 def get_cell(resource, field, transform=None, human=True):
+    from babel import dates
     cell = get_field(resource, field)
     cell = transform(cell, resource) if transform else cell
     if isinstance(cell, datetime):
