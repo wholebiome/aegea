@@ -81,7 +81,7 @@ def create(args):
                                            AvailabilityZones=azs,
                                            SecurityGroups=[sg.id for sg in args.security_groups])
     register(args)
-    DNSZone(zone["Name"]).update(args.dns_alias, elb["DNSName"])
+    DNSZone(zone["Name"]).update(args.dns_alias.replace("." + zone["Name"].rstrip("."), ""), elb["DNSName"])
     return dict(elb_name=args.elb_name, dns_name=elb["DNSName"], dns_alias=args.dns_alias)
 
 parser = register_parser(create, parent=elb_parser, help="Create a new ELB")

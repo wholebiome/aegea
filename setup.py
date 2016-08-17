@@ -21,21 +21,22 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=[
         'setuptools',
-        'boto3 >= 1.3.0',
-        'argcomplete >= 1.1.0',
-        'paramiko >= 1.16.0',
-        'requests >= 2.9.1',
-        'tweak >= 0.3.2',
-        'keymaker >= 0.1.7',
-        'pyyaml >= 3.11',
-        'python-dateutil >= 2.1',
-        'github3.py'
+        'boto3 >= 1.4.0, < 2',
+        'argcomplete >= 1.4.1, < 2',
+        'paramiko >= 2.0.2, < 3',
+        'requests >= 2.11.0, < 3',
+        'tweak >= 0.3.3, < 1',
+        'keymaker >= 0.2.1, < 1',
+        'pyyaml >= 3.11, < 4',
+        'python-dateutil >= 2.5.3, < 3',
+        'babel >= 2.3.4, < 3',
+        'github3.py >= 0.9.5, < 1'
     ],
     extras_require={
         ':python_version == "2.7"': [
-            'enum34 >= 1.0.4',
-            'ipaddress >= 1.0.16',
-            'backports.statistics >= 0.1.0'
+            'enum34 >= 1.1.6, < 2',
+            'ipaddress >= 1.0.16, < 2',
+            'backports.statistics >= 0.1.0, < 1'
         ]
     },
     tests_require=[

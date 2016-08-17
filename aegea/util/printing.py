@@ -2,7 +2,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, json, shutil, subprocess, re
-from datetime import datetime
+from datetime import datetime, timedelta
+from dateutil.tz import tzutc
+from babel import dates
 from .exceptions import GetFieldError
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
@@ -179,18 +181,22 @@ def get_field(item, field):
                 raise GetFieldError('Unable to access field or attribute "{}" of {}'.format(field, item))
     return item
 
-def format_datetime(d):
+def format_datetime(d, human=True):
     d = d.replace(microsecond=0)
     if not USING_PYTHON2:
         # Switch from UTC to local TZ
         d = d.astimezone(tz=None)
+    if human:
+        d = dates.format_timedelta(d - datetime.now(tzutc()), add_direction=True)
     return str(d)
 
-def get_cell(resource, field, transform=None):
+def get_cell(resource, field, transform=None, human=True):
     cell = get_field(resource, field)
     cell = transform(cell, resource) if transform else cell
     if isinstance(cell, datetime):
-        cell = format_datetime(cell)
+        cell = format_datetime(cell, human=human)
+    elif human and isinstance(cell, timedelta):
+        cell = dates.format_timedelta(-cell, add_direction=True)
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
 def format_tags(cell, row):
@@ -209,7 +215,7 @@ def tabulate(collection, args, cell_transforms=None):
         cell_transforms = {}
     cell_transforms["tags"] = format_tags
     if getattr(args, "json", None):
-        table = [{f: get_cell(i, f, cell_transforms.get(f)) for f in args.columns} for i in collection]
+        table = [{f: get_cell(i, f, cell_transforms.get(f), human=False) for f in args.columns} for i in collection]
         return json.dumps(table, indent=2)
     else:
         table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
