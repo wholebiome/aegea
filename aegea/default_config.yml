@@ -338,9 +338,11 @@ rds_restore:
 elb_ls:
   columns:
     - LoadBalancerName
+    - type
     - DNSName
     - alias
     - InstanceId
+    - Target
     - State
     - Description
 
