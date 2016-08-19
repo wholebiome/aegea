@@ -74,3 +74,7 @@ class Timestamp(datetime):
                 return datetime.utcnow().replace(microsecond=0) + relativedelta(**diffs)
         else:
             return datetime.utcfromtimestamp(t//1000)
+
+class hashabledict(dict):
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
