@@ -1,5 +1,5 @@
 """
-Manage AWS EC2 Elastic Load Balancers (ELBs).
+Manage AWS EC2 Elastic Load Balancers (ELBs) and Application Load Balancers (ALBs).
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
