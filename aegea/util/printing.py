@@ -179,25 +179,26 @@ def get_field(item, field):
                 raise GetFieldError('Unable to access field or attribute "{}" of {}'.format(field, item))
     return item
 
-def format_datetime(d, human=True):
+def format_datetime(d):
     from dateutil.tz import tzutc
     from babel import dates
     d = d.replace(microsecond=0)
     if not USING_PYTHON2:
         # Switch from UTC to local TZ
         d = d.astimezone(tz=None)
-    if human:
-        d = dates.format_timedelta(d - datetime.now(tzutc()), add_direction=True)
-    return str(d)
+    return dates.format_timedelta(d - datetime.now(tzutc()), add_direction=True)
 
-def get_cell(resource, field, transform=None, human=True):
-    from babel import dates
+def format_cell(cell):
+    if isinstance(cell, datetime):
+        cell = format_datetime(cell)
+    if isinstance(cell, timedelta):
+        from babel import dates
+        cell = dates.format_timedelta(-cell, add_direction=True)
+    return cell
+
+def get_cell(resource, field, transform=None):
     cell = get_field(resource, field)
     cell = transform(cell, resource) if transform else cell
-    if isinstance(cell, datetime):
-        cell = format_datetime(cell, human=human)
-    elif human and isinstance(cell, timedelta):
-        cell = dates.format_timedelta(-cell, add_direction=True)
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
 def format_tags(cell, row):
@@ -216,8 +217,8 @@ def tabulate(collection, args, cell_transforms=None):
         cell_transforms = {}
     cell_transforms["tags"] = format_tags
     if getattr(args, "json", None):
-        table = [{f: get_cell(i, f, cell_transforms.get(f), human=False) for f in args.columns} for i in collection]
-        return json.dumps(table, indent=2)
+        table = [{f: get_cell(i, f, cell_transforms.get(f)) for f in args.columns} for i in collection]
+        return json.dumps(table, indent=2, default=lambda x: str(x))
     else:
         table = [[get_cell(i, f, cell_transforms.get(f)) for f in args.columns] for i in collection]
         if getattr(args, "sort_by", None):
@@ -226,6 +227,7 @@ def tabulate(collection, args, cell_transforms=None):
                 reverse = True
                 args.sort_by = args.sort_by[:-len(":reverse")]
             table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)], reverse=reverse)
+        table = [[format_cell(c) for c in row] for row in table]
         args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
         return format_table(table,
                             column_names=getattr(args, "display_column_names", args.columns),
