@@ -134,9 +134,9 @@ def zones(args):
             for record in rrs.get("ResourceRecords", [rrs.get("AliasTarget", {})]):
                 row = [rrs.get(f) for f in rrs_cols]
                 row += [record.get(f, record.get("DNSName")) for f in record_cols]
-                row += [get_field(zone, "Config.PrivateZone")]
+                row += [get_field(zone, "Config.PrivateZone"), zone["Id"].rpartition("/")[-1]]
                 table.append(row)
-    column_names = rrs_cols + record_cols + ["Private"]
+    column_names = rrs_cols + record_cols + ["Private", "Id"]
     page_output(format_table(table, column_names=column_names, max_col_width=args.max_col_width))
 
 parser = register_parser(zones, help='List Route53 DNS zones')
