@@ -110,6 +110,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                 while not instances:
                     res = clients.ec2.describe_spot_fleet_instances(SpotFleetRequestId=sfr_id)
                     instances = res["ActiveInstances"]
+                    time.sleep(0 if instances else 1)
                 # FIXME: there may be multiple instances, and spot fleet provides no indication of whether the SFR is
                 # fulfilled
                 instance = resources.ec2.Instance(instances[0]["InstanceId"])
