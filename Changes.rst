@@ -1,3 +1,11 @@
+Changes for v0.9.8 (2016-08-23)
+===============================
+
+-  Update release script
+-  Config updates
+-  Sort properly while formatting datetimes
+-  Continue ALB support
+
 Changes for v0.9.7 (2016-08-17)
 ===============================
 
