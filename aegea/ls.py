@@ -53,6 +53,7 @@ def ls(args):
     args.columns = ["name"] + args.columns
     cell_transforms = {
         "state": lambda x, r: x["Name"],
+        "security_groups": lambda x, r: ", ".join(sg["GroupName"] for sg in x),
         "iam_instance_profile": lambda x, r: x.get("Arn", "").split("/")[-1] if x else None
     }
     page_output(tabulate(instances, args, cell_transforms=cell_transforms))

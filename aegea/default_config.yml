@@ -99,7 +99,7 @@ ls:
     - image_id
     - tags
     - iam_instance_profile
-    - client_token
+    - security_groups
 
 users:
   columns:
