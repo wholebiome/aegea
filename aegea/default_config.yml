@@ -184,8 +184,7 @@ security_groups:
     - id
     - group_name
     - description
-    - ip_permissions
-    - ip_permissions_egress
+    - rule
     - vpc_id
 
 clusters:

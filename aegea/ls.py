@@ -1,6 +1,7 @@
+# coding: utf-8
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys
+import os, sys, copy
 from datetime import datetime
 
 from . import register_parser
@@ -150,7 +151,19 @@ parser = register_filtering_parser(images, help='List EC2 AMIs')
 parser.add_argument("--sort-by")
 
 def security_groups(args):
-    page_output(filter_and_tabulate(resources.ec2.security_groups, args))
+    def format_rule(row, perm, peer, egress=False):
+        peer_desc = peer["CidrIp"] if "CidrIp" in peer else resources.ec2.SecurityGroup(peer["GroupId"]).group_name
+        row.rule = "*:" + str(perm.get("FromPort" if egress else "ToPort", "*"))
+        row.rule += "▶" if egress else "◀"
+        row.rule += peer_desc + ":" + str(perm.get("ToPort" if egress else "FromPort", "*"))
+        row.rule += "" if perm["IpProtocol"] == "-1" else " " + perm["IpProtocol"]
+    table = []
+    for sg in resources.ec2.security_groups.all():
+        for i, perm in enumerate(sg.ip_permissions + sg.ip_permissions_egress):
+            for peer in perm["IpRanges"] + perm["UserIdGroupPairs"]:
+                table.append(copy.copy(sg))
+                format_rule(table[-1], perm, peer, egress=True if i > len(sg.ip_permissions) - 1 else False)
+    page_output(tabulate(table, args))
 
 parser = register_filtering_parser(security_groups, help='List EC2 security groups')
 

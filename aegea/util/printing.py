@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys, json, shutil, subprocess, re
 from datetime import datetime, timedelta
 from .exceptions import GetFieldError
+from .compat import str
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 

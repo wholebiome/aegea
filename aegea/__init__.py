@@ -54,9 +54,10 @@ def main(args=None):
     except Exception as e:
         if isinstance(e, NoRegionError):
             msg = "The AWS CLI is not configured."
-            msg += " See http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html"
+            msg += " Please configure it using instructions at"
+            msg += " http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html"
             exit(msg)
-        elif logging.getLogger().level < logging.ERROR:
+        elif logger.level < logging.ERROR:
             raise
         else:
             err_msg = traceback.format_exc()
