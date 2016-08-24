@@ -185,6 +185,7 @@ security_groups:
     - group_name
     - description
     - rule
+    - proto
     - vpc_id
 
 clusters:

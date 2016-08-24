@@ -156,7 +156,7 @@ def security_groups(args):
         row.rule = "*:" + str(perm.get("FromPort" if egress else "ToPort", "*"))
         row.rule += "▶" if egress else "◀"
         row.rule += peer_desc + ":" + str(perm.get("ToPort" if egress else "FromPort", "*"))
-        row.rule += "" if perm["IpProtocol"] == "-1" else " " + perm["IpProtocol"]
+        row.proto = "*" if perm["IpProtocol"] == "-1" else perm["IpProtocol"]
     table = []
     for sg in resources.ec2.security_groups.all():
         for i, perm in enumerate(sg.ip_permissions + sg.ip_permissions_egress):
