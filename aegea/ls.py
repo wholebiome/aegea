@@ -6,7 +6,7 @@ from datetime import datetime
 
 from . import register_parser
 from .util import Timestamp, paginate
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN
+from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE
 from .util.aws import ARN, resolve_instance_id, resources, clients
 
 def register_listing_parser(function, **kwargs):
@@ -153,7 +153,7 @@ parser.add_argument("--sort-by")
 def security_groups(args):
     def format_rule(row, perm, peer, egress=False):
         peer_desc = peer["CidrIp"] if "CidrIp" in peer else resources.ec2.SecurityGroup(peer["GroupId"]).group_name
-        row.rule = "*:" + str(perm.get("FromPort" if egress else "ToPort", "*"))
+        row.rule = BLUE("●") + ":" + str(perm.get("FromPort" if egress else "ToPort", "*"))
         row.rule += GREEN("▶") if egress else GREEN("◀")
         row.rule += peer_desc + ":" + str(perm.get("ToPort" if egress else "FromPort", "*"))
         row.proto = "*" if perm["IpProtocol"] == "-1" else perm["IpProtocol"]
