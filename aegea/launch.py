@@ -126,7 +126,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
                     DryRun=args.dry_run
                 )
                 sir_id = res["SpotInstanceRequests"][0]["SpotInstanceRequestId"]
-                clients.ec2.get_waiter('spot_instance_request_fulfilled').wait(SpotInstanceRequestIds=[sir_id])
+                clients.ec2.get_waiter("spot_instance_request_fulfilled").wait(SpotInstanceRequestIds=[sir_id])
                 res = clients.ec2.describe_spot_instance_requests(SpotInstanceRequestIds=[sir_id])
                 instance = resources.ec2.Instance(res["SpotInstanceRequests"][0]["InstanceId"])
         else:
@@ -153,7 +153,7 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     if args.essential_services:
         filter_args = dict(logGroupName="syslog", logStreamNames=[instance.private_dns_name], filterPattern="service",
                            startTime=int((time.time()-900)*1000))
-        for event in paginate(clients.logs.get_paginator('filter_log_events'), **filter_args):
+        for event in paginate(clients.logs.get_paginator("filter_log_events"), **filter_args):
             # print(event["timestamp"], event["message"])
             raise NotImplementedError()
     # FIXME: this doesn't work. Figure out a way to vivify current user's account
@@ -168,34 +168,34 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     logger.info("Launched %s in %s", instance, subnet)
     return dict(instance_id=instance.id)
 
-parser = register_parser(launch, help='Launch a new EC2 instance', description=__doc__)
-parser.add_argument('hostname')
-parser.add_argument('--commands', nargs="+", help="Commands to run on host")
-parser.add_argument('--add-commands', nargs="+", default=[],
+parser = register_parser(launch, help="Launch a new EC2 instance", description=__doc__)
+parser.add_argument("hostname")
+parser.add_argument("--commands", nargs="+", help="Commands to run on host")
+parser.add_argument("--add-commands", nargs="+", default=[],
                     help="Commands to run on host (add to those previously configured)")
-parser.add_argument('--packages', nargs="+", help="APT packages to install on host")
-parser.add_argument('--add-packages', nargs="+", default=[],
+parser.add_argument("--packages", nargs="+", help="APT packages to install on host")
+parser.add_argument("--add-packages", nargs="+", default=[],
                     help="APT packages to install on host (add to those previously configured)")
 parser.add_argument("--ssh-key-name", default=__name__)
-parser.add_argument('--no-verify-ssh-key-pem-file', dest='verify_ssh_key_pem_file', action='store_false')
-parser.add_argument('--ami')
-parser.add_argument('--spot', action='store_true')
-parser.add_argument('--duration-hours', type=float, help='Terminate the spot instance after this number of hours')
-parser.add_argument('--cores', type=int)
-parser.add_argument('--min-mem-per-core-gb', type=float)
-parser.add_argument('--instance-type', '-t', default="t2.micro")
-parser.add_argument('--spot-price', type=float,
+parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_file", action="store_false")
+parser.add_argument("--ami")
+parser.add_argument("--spot", action="store_true")
+parser.add_argument("--duration-hours", type=float, help="Terminate the spot instance after this number of hours")
+parser.add_argument("--cores", type=int)
+parser.add_argument("--min-mem-per-core-gb", type=float)
+parser.add_argument("--instance-type", "-t", default="t2.micro")
+parser.add_argument("--spot-price", type=float,
                     help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
-parser.add_argument('--no-dns', dest='use_dns', action='store_false',
+parser.add_argument("--no-dns", dest="use_dns", action="store_false",
                     help="Skip registering instance name in private DNS. Use if you don't use private DNS, or don't want the launching principal to have Route53 write access.")  # noqa
-parser.add_argument('--client-token', help="Token used to identify your instance, SIR or SFR")
-parser.add_argument('--subnet')
-parser.add_argument('--availability-zone', '-z')
-parser.add_argument('--security-groups', nargs="+")
-parser.add_argument('--tags', nargs="+", default=[])
-parser.add_argument('--wait-for-ssh', action='store_true')
-parser.add_argument('--essential-services', nargs="+")
-parser.add_argument('--iam-role', default=__name__)
-parser.add_argument('--iam-policies', nargs="+", default=["IAMReadOnlyAccess", "AmazonElasticFileSystemFullAccess"],
-                    help='Ensure the default or specified IAM role has the listed IAM managed policies attached')
-parser.add_argument('--dry-run', '--dryrun', action='store_true')
+parser.add_argument("--client-token", help="Token used to identify your instance, SIR or SFR")
+parser.add_argument("--subnet")
+parser.add_argument("--availability-zone", "-z")
+parser.add_argument("--security-groups", nargs="+")
+parser.add_argument("--tags", nargs="+", default=[])
+parser.add_argument("--wait-for-ssh", action="store_true")
+parser.add_argument("--essential-services", nargs="+")
+parser.add_argument("--iam-role", default=__name__)
+parser.add_argument("--iam-policies", nargs="+", default=["IAMReadOnlyAccess", "AmazonElasticFileSystemFullAccess"],
+                    help="Ensure the default or specified IAM role has the listed IAM managed policies attached")
+parser.add_argument("--dry-run", "--dryrun", action="store_true")

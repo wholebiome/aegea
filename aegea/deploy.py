@@ -49,7 +49,7 @@ from .util.aws import (ARN, resources, clients, IAMPolicyBuilder, resolve_instan
 def deploy(args):
     deploy_parser.print_help()
 
-deploy_parser = register_parser(deploy, help='Manage deployments of GitHub repositories', description=__doc__,
+deploy_parser = register_parser(deploy, help="Manage deployments of GitHub repositories", description=__doc__,
                                 formatter_class=argparse.RawTextHelpFormatter)
 
 def parse_repo_name(repo):
@@ -96,7 +96,7 @@ def configure(args):
     return dict(topic_arn=topic.arn)
 
 parser = register_parser(configure, parent=deploy_parser)
-parser.add_argument('repo', help='URL of GitHub repo, e.g. "git@github.com:kislyuk/aegea.git"')
+parser.add_argument("repo", help='URL of GitHub repo, e.g. "git@github.com:kislyuk/aegea.git"')
 
 def get_status_for_queue(queue):
     bucket_name = "deploy-status-{}".format(ARN(queue.attributes["QueueArn"]).account_id)
@@ -161,6 +161,6 @@ def grant(args):
     repo.create_key(role.name, secret["ssh_public_key"])
 
 parser = register_parser(grant, parent=deploy_parser)
-parser.add_argument('iam_role_or_instance')
-parser.add_argument('repo', help='URL of GitHub repo, e.g. "git@github.com:kislyuk/aegea.git"')
-parser.add_argument('branch', help='Branch of GitHub repo')
+parser.add_argument("iam_role_or_instance")
+parser.add_argument("repo", help='URL of GitHub repo, e.g. "git@github.com:kislyuk/aegea.git"')
+parser.add_argument("branch", help="Branch of GitHub repo")

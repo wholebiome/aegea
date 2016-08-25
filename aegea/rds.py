@@ -15,7 +15,7 @@ from .util.aws import ARN, resources, clients
 def rds(args):
     rds_parser.print_help()
 
-rds_parser = register_parser(rds, help='Manage RDS resources', description=__doc__,
+rds_parser = register_parser(rds, help="Manage RDS resources", description=__doc__,
                              formatter_class=argparse.RawTextHelpFormatter)
 
 def add_tags(resource, prefix, key):
@@ -25,14 +25,14 @@ def add_tags(resource, prefix, key):
     return resource
 
 def ls(args):
-    paginator = clients.rds.get_paginator('describe_db_instances')
+    paginator = clients.rds.get_paginator("describe_db_instances")
     table = [add_tags(i, "db", "DBInstanceIdentifier") for i in paginate(paginator)]
     page_output(tabulate(table, args))
 
 parser = register_parser(ls, parent=rds_parser)
 
 def snapshots(args):
-    paginator = clients.rds.get_paginator('describe_db_snapshots')
+    paginator = clients.rds.get_paginator("describe_db_snapshots")
     table = [add_tags(i, "snapshot", "DBSnapshotIdentifier") for i in paginate(paginator)]
     page_output(tabulate(table, args))
 
@@ -56,27 +56,27 @@ def create(args):
     if args.db_name:
         create_args.update(DBName=args.db_name)
     clients.rds.create_db_instance(**create_args)
-    clients.rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=args.name)
+    clients.rds.get_waiter("db_instance_available").wait(DBInstanceIdentifier=args.name)
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId", "DBInstanceStatus")}
 
 parser = register_parser(create, parent=rds_parser)
-parser.add_argument('name')
-parser.add_argument('--db-name')
-parser.add_argument('--engine')
-parser.add_argument('--storage', type=int)
-parser.add_argument('--storage-type')
-parser.add_argument('--master-username', '--username')
-parser.add_argument('--master-user-password', '--password', required=True)
-parser.add_argument('--db-instance-class')
-parser.add_argument('--tags', nargs="+", default=[])
-parser.add_argument('--security-groups', nargs="+", default=[])
+parser.add_argument("name")
+parser.add_argument("--db-name")
+parser.add_argument("--engine")
+parser.add_argument("--storage", type=int)
+parser.add_argument("--storage-type")
+parser.add_argument("--master-username", "--username")
+parser.add_argument("--master-user-password", "--password", required=True)
+parser.add_argument("--db-instance-class")
+parser.add_argument("--tags", nargs="+", default=[])
+parser.add_argument("--security-groups", nargs="+", default=[])
 
 def delete(args):
     clients.rds.delete_db_instance(DBInstanceIdentifier=args.name, SkipFinalSnapshot=True)
 
 parser = register_parser(delete, parent=rds_parser)
-parser.add_argument('name')
+parser.add_argument("name")
 
 def snapshot(args):
     raise NotImplementedError()
@@ -93,13 +93,13 @@ def restore(args):
                                                      DBInstanceClass=args.db_instance_class,
                                                      Tags=[dict(Key=k, Value=v) for k, v in tags.items()],
                                                      CopyTagsToSnapshot=True)
-    clients.rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=args.instance_name)
+    clients.rds.get_waiter("db_instance_available").wait(DBInstanceIdentifier=args.instance_name)
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.instance_name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId")}
 
 parser = register_parser(restore, parent=rds_parser)
-parser.add_argument('snapshot_name')
-parser.add_argument('instance_name')
-parser.add_argument('--storage-type')
-parser.add_argument('--db-instance-class')
-parser.add_argument('--tags', nargs="+", default=[])
+parser.add_argument("snapshot_name")
+parser.add_argument("instance_name")
+parser.add_argument("--storage-type")
+parser.add_argument("--db-instance-class")
+parser.add_argument("--tags", nargs="+", default=[])

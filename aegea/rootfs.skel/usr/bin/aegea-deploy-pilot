@@ -34,7 +34,11 @@ def clean_old_builds(build_root, prefix, min_old_builds=2):
         shutil.rmtree(d, ignore_errors=True)
 
 def run_git_auth(*cmd, **kwargs):
-    shellcode = "set -eo pipefail; trap 'ssh-agent -k' EXIT; eval $(ssh-agent); aegea-get-secret {} | ssh-add /dev/stdin; git "
+    shellcode = ";".join("set -eo pipefail",
+                         "trap 'ssh-agent -k' EXIT",
+                         "eval $(ssh-agent)",
+                         "aegea-get-secret {} | ssh-add /dev/stdin",
+                         "git ")
     shellcode = shellcode.format(args.deploy_key_name)
     return subprocess.check_call(shellcode + " ".join(cmd), shell=True, executable="/bin/bash", **kwargs)
 
@@ -136,7 +140,7 @@ args = parse_args()
 az = get_metadata("placement/availability-zone")
 instance_id = get_metadata("instance-id")
 session = boto3.Session(region_name=az[:-1])
-sqs, sns, s3 = session.resource('sqs'), session.resource('sns'), session.resource('s3')
+sqs, sns, s3 = session.resource("sqs"), session.resource("sns"), session.resource("s3")
 account_id = ARN(json.loads(get_metadata("iam/info"))["InstanceProfileArn"]).account_id
 queue = init_queue()
 

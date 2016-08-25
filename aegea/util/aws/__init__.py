@@ -128,7 +128,7 @@ class DNSZone:
             assert self.zone["Name"].rstrip(".") == zone_name.rstrip(".")
         elif use_unique_private_zone:
             private_zones = []
-            for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):
+            for zone in paginate(clients.route53.get_paginator("list_hosted_zones")):
                 if zone.get("Config", {}).get("PrivateZone") is True:
                     private_zones.append(zone)
             if len(private_zones) == 1:
@@ -245,7 +245,7 @@ def ensure_instance_profile(iam_role_name, policies=frozenset()):
             break
     else:
         instance_profile = resources.iam.create_instance_profile(InstanceProfileName=iam_role_name)
-        clients.iam.get_waiter('instance_profile_exists').wait(InstanceProfileName=iam_role_name)
+        clients.iam.get_waiter("instance_profile_exists").wait(InstanceProfileName=iam_role_name)
     role = ensure_iam_role(iam_role_name, policies=policies, trust=["ec2"])
     if not any(r.name == iam_role_name for r in instance_profile.roles):
         instance_profile.add_role(RoleName=role.name)
@@ -292,7 +292,7 @@ offers_api = "https://pricing.us-east-1.amazonaws.com/offers/v1.0"
 def region_name(region_id):
     region_names, region_ids = {}, {}
     from botocore import loaders
-    for partition_data in loaders.create_loader().load_data('endpoints')["partitions"]:
+    for partition_data in loaders.create_loader().load_data("endpoints")["partitions"]:
         region_names.update({k: v["description"] for k, v in partition_data["regions"].items()})
         region_ids.update({v: k for k, v in region_names.items()})
     return region_names[region_id]
@@ -425,8 +425,8 @@ def ensure_iam_policy(name, doc):
 
 def get_elb_dns_aliases():
     dns_aliases = {}
-    for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):
-        for rrs in paginate(clients.route53.get_paginator('list_resource_record_sets'), HostedZoneId=zone["Id"]):
+    for zone in paginate(clients.route53.get_paginator("list_hosted_zones")):
+        for rrs in paginate(clients.route53.get_paginator("list_resource_record_sets"), HostedZoneId=zone["Id"]):
             for record in rrs.get("ResourceRecords", [rrs.get("AliasTarget", {})]):
                 value = record.get("Value", record.get("DNSName"))
                 if value.endswith("elb.amazonaws.com."):

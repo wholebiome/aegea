@@ -10,14 +10,14 @@ from .util.aws import ARN, resolve_instance_id, resources, clients
 def alarms(args):
     page_output(tabulate(resources.cloudwatch.alarms.all(), args))
 
-parser = register_listing_parser(alarms, help='List CloudWatch alarms')
+parser = register_listing_parser(alarms, help="List CloudWatch alarms")
 
 def put_alarm(args):
     sns = resources.sns
     logs = clients.logs
     cloudwatch = clients.cloudwatch
     topic = sns.create_topic(Name=args.alarm_name)
-    topic.subscribe(Protocol='email', Endpoint=args.email)
+    topic.subscribe(Protocol="email", Endpoint=args.email)
     logs.put_metric_filter(logGroupName=args.log_group_name,
                            filterName=args.alarm_name,
                            filterPattern=args.pattern,
@@ -34,8 +34,8 @@ def put_alarm(args):
                                 EvaluationPeriods=1,
                                 AlarmActions=[topic.arn])
 
-parser = register_parser(put_alarm, help='Configure a CloudWatch alarm')
-parser.add_argument('--log-group-name', required=True)
-parser.add_argument('--alarm-name', required=True)
-parser.add_argument('--pattern', required=True)
-parser.add_argument('--email', required=True)
+parser = register_parser(put_alarm, help="Configure a CloudWatch alarm")
+parser.add_argument("--log-group-name", required=True)
+parser.add_argument("--alarm-name", required=True)
+parser.add_argument("--pattern", required=True)
+parser.add_argument("--email", required=True)

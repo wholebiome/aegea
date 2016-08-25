@@ -4,9 +4,9 @@ class Loader:
         self.factory = factory
 
     def __getattr__(self, attr):
-        if attr == '__all__':
+        if attr == "__all__":
             return list(self.cache[self.factory])
-        if attr == '__path__' or attr == '__loader__':
+        if attr == "__path__" or attr == "__loader__":
             return None
         if attr not in self.cache[self.factory]:
             if self.factory == "client" and attr in self.cache["resource"]:

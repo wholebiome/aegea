@@ -46,7 +46,7 @@ class VerboseRepr:
         )
 
 def natural_sort(i):
-    return sorted(i, key=lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)])
+    return sorted(i, key=lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split("(\d+)", s)])
 
 def paginate(boto3_paginator, *args, **kwargs):
     for page in boto3_paginator.paginate(*args, **kwargs):

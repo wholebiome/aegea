@@ -16,13 +16,13 @@ from .util.aws import (ARN, resources, clients, resolve_instance_id, resolve_sec
 def elb(args):
     elb_parser.print_help()
 
-elb_parser = register_parser(elb, help='Manage Elastic Load Balancers', description=__doc__,
+elb_parser = register_parser(elb, help="Manage Elastic Load Balancers", description=__doc__,
                              formatter_class=argparse.RawTextHelpFormatter)
 
 def ls(args):
     table = []
     dns_aliases = get_elb_dns_aliases()
-    for row in paginate(clients.elb.get_paginator('describe_load_balancers')):
+    for row in paginate(clients.elb.get_paginator("describe_load_balancers")):
         row.update(alias=dns_aliases.get(row["DNSName"]), type="ELB")
         instances = clients.elb.describe_instance_health(LoadBalancerName=row["LoadBalancerName"])["InstanceStates"]
         table.extend([dict(row, **instance) for instance in instances] if instances else [row])
@@ -87,12 +87,12 @@ parser_replace = register_parser(replace, parent=elb_parser,
                                  help="Replace all EC2 instances in an ELB with the ones given")
 
 def create(args):
-    for zone in paginate(clients.route53.get_paginator('list_hosted_zones')):
+    for zone in paginate(clients.route53.get_paginator("list_hosted_zones")):
         if args.dns_alias.endswith("." + zone["Name"].rstrip(".")):
             break
     else:
         raise AegeaException("Unable to find Route53 DNS zone for {}".format(args.dns_alias))
-    for cert in paginate(clients.acm.get_paginator('list_certificates')):
+    for cert in paginate(clients.acm.get_paginator("list_certificates")):
         if cert["DomainName"] in (args.dns_alias, ".".join(["*"] + args.dns_alias.split(".")[1:])):
             break
     else:

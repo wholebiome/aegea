@@ -110,7 +110,7 @@ def secrets(args):
     secrets_parser.print_help()
 
 secrets_parser = register_parser(secrets,
-                                 help='Manage credentials (secrets)',
+                                 help="Manage credentials (secrets)",
                                  description=__doc__,
                                  formatter_class=argparse.RawTextHelpFormatter)
 
@@ -134,12 +134,12 @@ def put(args):
         secret_value = sys.stdin.read()
     ensure_policy(parse_principal(args), ensure_bucket())
     secret_object = get_secret_object(parse_principal(args), args.secret_name)
-    secret_object.put(Body=secret_value.encode(), ServerSideEncryption='AES256')
+    secret_object.put(Body=secret_value.encode(), ServerSideEncryption="AES256")
     if args.generate_ssh_key:
         return dict(ssh_public_key=hostkey_line(hostnames=[], key=ssh_key).strip())
 
 put_parser = register_parser(put, parent=secrets_parser)
-put_parser.add_argument('--generate-ssh-key', action='store_true',
+put_parser.add_argument("--generate-ssh-key", action="store_true",
                         help="Generate a new SSH key pair and write the private key as the secret value; write the public key to stdout")  # noqa
 
 def get(args):
@@ -154,10 +154,10 @@ def delete(args):
 delete_parser = register_parser(delete, parent=secrets_parser)
 
 for parser in put_parser, get_parser, delete_parser:
-    parser.add_argument('secret_name',
+    parser.add_argument("secret_name",
                         help="List the secret name. For put, pass the secret value on stdin, or via an environment variable with the same name as the secret.")  # noqa
-    parser.add_argument('--instance-profile')
-    parser.add_argument('--iam-role')
-    parser.add_argument('--iam-group')
-    parser.add_argument('--iam-user',
+    parser.add_argument("--instance-profile")
+    parser.add_argument("--iam-role")
+    parser.add_argument("--iam-group")
+    parser.add_argument("--iam-user",
                         help="Name of IAM instance profile, role, group, or user who will be granted access to secret")

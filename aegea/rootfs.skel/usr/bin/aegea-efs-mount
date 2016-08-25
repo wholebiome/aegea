@@ -35,7 +35,10 @@ else:
 mount_procs = []
 for mountpoint, filesystem in mountpoints.items():
     logging.info("Mounting %s on %s", filesystem["FileSystemId"], mountpoint)
-    fs_url = "{az}.{fs}.efs.{region}.{domain}:/".format(az=az, fs=filesystem["FileSystemId"], region=efs.meta.region_name, domain=services_domain)
+    fs_url = "{az}.{fs}.efs.{region}.{domain}:/".format(az=az,
+                                                        fs=filesystem["FileSystemId"],
+                                                        region=efs.meta.region_name,
+                                                        domain=services_domain)
     mount_procs.append(subprocess.Popen(["mount", "-t", "nfs4", fs_url, mountpoint]))
 
 for p in mount_procs:

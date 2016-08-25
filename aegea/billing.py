@@ -46,7 +46,7 @@ def billing(args):
             reader = csv.DictReader(fh)
             page_output(tabulate(filter_line_items(reader, args), args))
 
-parser = register_parser(billing, help='List contents of AWS detailed billing reports', description=__doc__)
+parser = register_parser(billing, help="List contents of AWS detailed billing reports", description=__doc__)
 parser.add_argument("--columns", nargs="+")
 #parser.add_argument("--sort-by")
 parser.add_argument("--year", type=int, help="Year to get billing reports for. Defaults to current year")

@@ -43,7 +43,7 @@ def rename(args):
     add_tags(resources.ec2.Instance(resolve_instance_id(old_name)), Name=new_name, dry_run=args.dry_run)
 
 for action in (start, stop, reboot, terminate, rename):
-    parser = register_parser(action, help='{} EC2 instances'.format(action.__name__.capitalize()),
+    parser = register_parser(action, help="{} EC2 instances".format(action.__name__.capitalize()),
                              description=action.__doc__)
-    parser.add_argument('--dry-run', '--dryrun', action='store_true')
+    parser.add_argument("--dry-run", "--dryrun", action="store_true")
     parser.add_argument("names", nargs="+")
