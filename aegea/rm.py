@@ -29,6 +29,12 @@ def rm(args):
                 resources.ec2.Volume(name).delete(DryRun=not args.force)
             elif name.startswith("snap-"):
                 resources.ec2.Snapshot(name).delete(DryRun=not args.force)
+            elif name.startswith("fl-"):
+                if args.force:
+                    clients.ec2.delete_flow_logs(FlowLogIds=[name])
+                else:
+                    res = clients.ec2.describe_flow_logs(Filters=[dict(Name="flow-log-id", Values=[name])])
+                    assert res["FlowLogs"], "Unknown flow log ID"
             elif name.startswith("ami-"):
                 image = resources.ec2.Image(name)
                 snapshot_id = image.block_device_mappings[0].get("Ebs", {}).get("SnapshotId")

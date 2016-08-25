@@ -351,14 +351,15 @@ elb_ls:
     - State
     - Description
 
-alb_ls:
+flow_logs_ls:
   columns:
-    - LoadBalancerName
-    - DNSName
-    - alias
-    - InstanceId
-    - State
-    - Description
+    - FlowLogId
+    - ResourceId
+    - CreationTime
+    - LogGroupName
+    - TrafficType
+    - FlowLogStatus
+    - DeliverLogsErrorMessage
 
 certificates:
   columns:
@@ -369,7 +370,7 @@ launch:
   commands: []
   packages: []
 
-log_level: "WARNING"
+log_level: "INFO"
 
 audit:
   email: "akislyuk@exabio.com"

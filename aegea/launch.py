@@ -196,6 +196,8 @@ parser.add_argument("--tags", nargs="+", default=[])
 parser.add_argument("--wait-for-ssh", action="store_true")
 parser.add_argument("--essential-services", nargs="+")
 parser.add_argument("--iam-role", default=__name__)
-parser.add_argument("--iam-policies", nargs="+", default=["IAMReadOnlyAccess", "AmazonElasticFileSystemFullAccess"],
+parser.add_argument("--iam-policies", nargs="+", default=["IAMReadOnlyAccess",
+                                                          "AmazonElasticFileSystemFullAccess",
+                                                          "service-role/AmazonAPIGatewayPushToCloudWatchLogs"],
                     help="Ensure the default or specified IAM role has the listed IAM managed policies attached")
 parser.add_argument("--dry-run", "--dryrun", action="store_true")

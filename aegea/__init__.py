@@ -73,7 +73,9 @@ def main(args=None):
     if isinstance(result, SystemExit):
         raise result
     elif result is not None:
-        print(json.dumps(result))
+        if isinstance(result, dict) and "ResponseMetadata" in result:
+            del result["ResponseMetadata"]
+        print(json.dumps(result, indent=2, default=lambda x: str(x)))
 
 def register_parser(function, parent=None, **kwargs):
     if config is None:

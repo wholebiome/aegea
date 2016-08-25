@@ -218,9 +218,13 @@ parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-se
 http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")
 parser.add_argument("log_group", help="CloudWatch log group")
 parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
-parser.add_argument("--start-time", type=Timestamp, default=Timestamp("-7d"),
-                    help=Timestamp.__doc__, metavar="-7d")
-parser.add_argument("--end-time", type=Timestamp, help=Timestamp.__doc__)
+
+def add_time_bound_args(p):
+    p.add_argument("--start-time", type=Timestamp, default=Timestamp("-7d"),
+                   help=Timestamp.__doc__, metavar="-7d")
+    p.add_argument("--end-time", type=Timestamp, help=Timestamp.__doc__)
+
+add_time_bound_args(parser)
 
 def clusters(args):
     cluster_arns = sum([p["clusterArns"] for p in clients.ecs.get_paginator("list_clusters").paginate()], [])
