@@ -80,6 +80,7 @@ build_ami:
     - "apt-get remove --yes popularity-contest postfix apport"
     - "apt-get autoremove --yes"
     - "apt-get clean --yes"
+    - "find /etc/cron.* -type f -not -name .placeholder -and -not -name logrotate -and -not -name fstrim -delete"
 
 # Name your Route 53 private DNS zone here. If you leave the value as
 # null, Aegea will enumerate the private DNS zones in your account,

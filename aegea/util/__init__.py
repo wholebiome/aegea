@@ -81,7 +81,7 @@ class hashabledict(dict):
 
 def describe_cidr(cidr):
     import ipwhois, ipaddress, socket
-    address = ipaddress.ip_network(cidr).network_address
+    address = ipaddress.ip_network(str(cidr)).network_address
     try:
         whois = ipwhois.IPWhois(address).lookup_rdap()
         whois_names = [whois.get("asn_country_code")]
