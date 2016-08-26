@@ -78,3 +78,17 @@ class Timestamp(datetime):
 class hashabledict(dict):
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
+
+def describe_cidr(cidr):
+    import ipwhois, ipaddress, socket
+    address = ipaddress.ip_network(cidr).network_address
+    try:
+        whois = ipwhois.IPWhois(address).lookup_rdap()
+        whois_names = [whois.get("asn_country_code")]
+        whois_names += [o.get("contact", {}).get("name", "") for o in whois.get("objects", {}).values()]
+    except Exception:
+        try:
+            whois_names = [socket.gethostbyaddr(address)]
+        except Exception:
+            whois_names = [cidr]
+    return ", ".join(whois_names)

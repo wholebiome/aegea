@@ -5,7 +5,7 @@ import os, sys, copy
 from datetime import datetime
 
 from . import register_parser
-from .util import Timestamp, paginate
+from .util import Timestamp, paginate, describe_cidr
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE
 from .util.aws import ARN, resolve_instance_id, resources, clients
 
@@ -150,9 +150,20 @@ def images(args):
 parser = register_filtering_parser(images, help="List EC2 AMIs")
 parser.add_argument("--sort-by")
 
+peer_desc_cache = {}
+def describe_peer(peer):
+    if "CidrIp" in peer:
+        if peer["CidrIp"] not in peer_desc_cache:
+            peer_desc_cache[peer["CidrIp"]] = describe_cidr(peer["CidrIp"])
+        return peer["CidrIp"], peer_desc_cache[peer["CidrIp"]]
+    else:
+        if peer["GroupId"] not in peer_desc_cache:
+            peer_desc_cache[peer["GroupId"]] = resources.ec2.SecurityGroup(peer["GroupId"])
+        return peer_desc_cache[peer["GroupId"]].group_name, peer_desc_cache[peer["GroupId"]].description
+
 def security_groups(args):
     def format_rule(row, perm, peer, egress=False):
-        peer_desc = peer["CidrIp"] if "CidrIp" in peer else resources.ec2.SecurityGroup(peer["GroupId"]).group_name
+        peer_desc, row.peer_description = describe_peer(peer)
         row.rule = BLUE("●") + ":" + str(perm.get("FromPort" if egress else "ToPort", "*"))
         row.rule += GREEN("▶") if egress else GREEN("◀")
         row.rule += peer_desc + ":" + str(perm.get("ToPort" if egress else "FromPort", "*"))

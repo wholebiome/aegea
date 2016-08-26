@@ -187,6 +187,7 @@ security_groups:
     - rule
     - proto
     - vpc_id
+    - peer_description
 
 clusters:
   columns:

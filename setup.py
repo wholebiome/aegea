@@ -30,6 +30,7 @@ setup(
         "pyyaml >= 3.11, < 4",
         "python-dateutil >= 2.5.3, < 3",
         "babel >= 2.3.4, < 3",
+        "ipwhois >= 0.13.0, < 1",
         "github3.py >= 0.9.5, < 1"
     ],
     extras_require={
