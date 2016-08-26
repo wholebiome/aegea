@@ -59,8 +59,21 @@ def BOLD(message=None):
 def ENDC():
     return "\033[0m" if sys.stdout.isatty() else ""
 
+ansi_pattern = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
+
 def strip_ansi_codes(i):
-    return re.sub(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]", "", i)
+    return re.sub(ansi_pattern, "", i)
+
+def ansi_truncate(s, max_len):
+    ansi_total_len = 0
+    for ansi_code in ansi_pattern.finditer(s):
+        ansi_code_start, ansi_code_end = ansi_code.span()
+        if ansi_code_start > max_len + ansi_total_len - 1:
+            break
+        ansi_total_len += ansi_code_end - ansi_code_start
+    if len(s) > max_len + ansi_total_len:
+        return s[:max_len + ansi_total_len - 1] + "…"
+    return s
 
 def format_table(table, column_names=None, column_specs=None, max_col_width=32, report_dimensions=False):
     """
@@ -81,18 +94,14 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
         column_specs = [{"name": "Row", "type": "float"}] + column_specs
     if column_names is not None:
         for i in range(len(column_names)):
-            my_col = str(column_names[i])
-            if len(my_col) > max_col_width:
-                my_col = my_col[:max_col_width-1] + "…"
+            my_col = ansi_truncate(str(column_names[i]), max_col_width)
             my_col_names.append(my_col)
             col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_col)))
     my_table = []
     for row in table:
         my_row = []
         for i in range(len(row)):
-            my_item = str(row[i])
-            if len(my_item) > max_col_width:
-                my_item = my_item[:max_col_width-1] + "…"
+            my_item = ansi_truncate(str(row[i]), max_col_width)
             my_row.append(my_item)
             col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_item)))
         my_table.append(my_row)
