@@ -111,8 +111,8 @@ def init_queue():
                                   Condition=dict(ArnEquals={"aws:SourceArn": topic.arn}))])
     # In multi-node deployments, use DelaySeconds to stagger builds
     queue.set_attributes(Attributes=dict(Policy=json.dumps(policy),
-                                         MessageRetentionPeriod="3600",
-                                         VisibilityTimeout="9000"))
+                                         MessageRetentionPeriod="300",
+                                         VisibilityTimeout="10"))
     topic.subscribe(Protocol="sqs", Endpoint=queue.attributes["QueueArn"])
     return queue
 
