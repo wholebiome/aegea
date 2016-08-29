@@ -102,7 +102,7 @@ def deploy(branch):
 def init_queue():
     topic_name = "github-{}-{}-events".format(args.gh_owner_name, args.gh_repo_name)
     topic = get_topic(topic_name)
-    queue_name = "{}-{}".format(topic_name, instance_id)
+    queue_name = "{}-{}-{}".format(topic_name, instance_id, os.getpid())
     queue = sqs.create_queue(QueueName=queue_name)
 
     policy = dict(Version="2012-10-17",
