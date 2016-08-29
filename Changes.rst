@@ -1,3 +1,13 @@
+-  Initial support for flow logs
+-  Pretty-print and perform whois lookups for aegea security\_groups
+-  aegea ls security\_groups: break out protocol into its own column
+-  Print security group rules in aegea ls security\_groups
+-  List security groups in aegea ls
+-  Print zone ID in aegea zones
+-  Aegea deploy reliability improvements: use per-pid queues
+-  Aegea launch reliability improvements: Back off on polling the EC2
+   API
+
 Changes for v0.9.8 (2016-08-23)
 ===============================
 
