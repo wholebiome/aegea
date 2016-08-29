@@ -81,7 +81,7 @@ def configure(args):
 
     topic = resources.sns.create_topic(Name="github-{}-{}-events".format(gh_owner_name, gh_repo_name))
     policy = IAMPolicyBuilder(action="sns:Publish", resource=topic.arn)
-    user.create_policy(PolicyName="sqs_send_message", PolicyDocument=str(policy))
+    user.create_policy(PolicyName="sns_send_message", PolicyDocument=str(policy))
 
     for key in user.access_keys.all():
         key.delete()
