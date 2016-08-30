@@ -37,7 +37,8 @@ setup(
         ':python_version == "2.7"': [
             "enum34 >= 1.1.6, < 2",
             "ipaddress >= 1.0.16, < 2",
-            "backports.statistics >= 0.1.0, < 1"
+            "backports.statistics >= 0.1.0, < 1",
+            "backports.functools_lru_cache >= 1.0.1, < 2"
         ]
     },
     tests_require=[

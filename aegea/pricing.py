@@ -2,10 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json
 from datetime import datetime, timedelta
-try:
-    from statistics import median
-except ImportError:
-    from backports.statistics import median
 
 import requests
 
@@ -13,6 +9,7 @@ from . import register_parser
 from .util import paginate
 from .util.printing import format_table, page_output, tabulate, format_datetime
 from .util.aws import region_name, get_pricing_data, offers_api, clients
+from .util.compat import median
 
 def pricing(args):
     table = []
