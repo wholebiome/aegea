@@ -6,7 +6,7 @@ For more information, see ``aegea deploy --help``.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-import os, sys, subprocess, json, logging, argparse, shutil
+import os, sys, subprocess, json, logging, argparse, shutil, signal
 import boto3, requests
 from datetime import datetime
 
@@ -146,6 +146,8 @@ queue = init_queue()
 
 if not os.path.exists(args.deploy_location):
     deploy(args.branch)
+
+signal.signal(signal.SIGUSR1, lambda signum, frame: deploy(args.branch))
 
 while True:
     for message in queue.receive_messages(WaitTimeSeconds=20):

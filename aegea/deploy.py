@@ -32,6 +32,10 @@ pulled and built in a separate timestamped subdirectory by running
 is successfully built, the daemon will run ``make reload`` in the repo
 root to reload any services the app needs to run.
 
+You can also manually trigger a rebuild with a service reload:
+
+    service aegea-deploy@<owner>-<repo>-<branch> reload
+
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
