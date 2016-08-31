@@ -32,7 +32,8 @@ def ssh(args):
     ssh_args = ["ssh", prefix + at + instance.public_dns_name] + args.ssh_args
     os.execvp("ssh", ssh_args)
 
-parser = register_parser(ssh, help="Connect to an instance", description=__doc__)
+parser = register_parser(ssh, help="Connect to an EC2 instance", description=__doc__,
+                         formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("name")
 parser.add_argument("ssh_args", nargs=argparse.REMAINDER,
                     help="Arguments to pass to ssh; please see " + BOLD("man ssh") + " for details")
