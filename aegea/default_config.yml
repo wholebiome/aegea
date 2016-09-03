@@ -77,7 +77,7 @@ build_ami:
     - "activate-global-python-argcomplete"
     - "dpkg-reconfigure debconf -f noninteractive -p critical"
     - "apt-get install --yes docker.io || true"
-    - "apt-get remove --yes popularity-contest postfix apport"
+    - "apt-get remove --yes popularity-contest postfix apport snapd"
     - "apt-get autoremove --yes"
     - "apt-get clean --yes"
     - "find /etc/cron.* -type f -not -name .placeholder -and -not -name logrotate -and -not -name fstrim -delete"
