@@ -4,6 +4,9 @@ Description=Run Docker Event SNS Relay
 [Service]
 Environment=AWS_CONFIG_FILE=/etc/aws.conf
 ExecStart=/usr/bin/aegea-docker-event-relay
+StandardOutput=syslog
+Restart=on-failure
+RestartSec=20
 
 [Install]
 WantedBy=multi-user.target
