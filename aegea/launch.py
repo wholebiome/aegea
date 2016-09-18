@@ -33,14 +33,16 @@ def get_spot_bid_price(instance_type, ondemand_multiplier=1.2):
     ondemand_price = get_ondemand_price_usd(clients.ec2.meta.region_name, instance_type)
     return float(ondemand_price) * ondemand_multiplier
 
-def get_startup_commands(args):
+def get_startup_commands(args, username):
+    hostname = ".".join([args.hostname, config.dns.private_zone.rstrip(".")]) if args.use_dns else args.hostname
     return [
-        "hostnamectl set-hostname {}.{}".format(args.hostname, config.dns.private_zone),
+        "hostnamectl set-hostname " + hostname,
         "service awslogs restart",
-        "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource"
-    ] + args.commands + args.add_commands
+        "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource",
+        "ssh -oBatchMode=yes -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no {}@localhost -N".format(username)
+    ] + args.commands
 
-def launch(args, user_data_commands=None, user_data_packages=None, user_data_files=None):
+def launch(args, **cloud_config_data):
     if args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
         args.spot = True
     if args.use_dns:
@@ -68,15 +70,17 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         security_groups = [ensure_security_group(__name__, vpc)]
 
     ssh_host_key = new_ssh_key()
+    iam_username = resources.iam.CurrentUser().user.name
+    user_data_args = dict(host_key=ssh_host_key,
+                          commands=get_startup_commands(args, iam_username),
+                          packages=args.packages)
+    user_data_args.update(**cloud_config_data)
     launch_spec = dict(ImageId=args.ami,
                        KeyName=args.ssh_key_name,
                        SecurityGroupIds=[sg.id for sg in security_groups],
                        InstanceType=args.instance_type,
                        BlockDeviceMappings=get_bdm(),
-                       UserData=get_user_data(host_key=ssh_host_key,
-                                              commands=user_data_commands or get_startup_commands(args),
-                                              packages=user_data_packages or args.packages + args.add_packages,
-                                              files=user_data_files))
+                       UserData=get_user_data(**user_data_args))
     if args.iam_role:
         instance_profile = ensure_instance_profile(args.iam_role, policies=args.iam_policies)
         launch_spec["IamInstanceProfile"] = dict(Arn=instance_profile.arn)
@@ -87,12 +91,8 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
     if args.client_token is None:
         from getpass import getuser
         from socket import gethostname
-        args.client_token = "{}.{}.{}:{}@{}".format(resources.iam.CurrentUser().user.name,
-                                                    __name__,
-                                                    int(time.time()),
-                                                    getuser(),
-                                                    gethostname().split(".")[0])
-        args.client_token = args.client_token[:64]
+        tok = "{}.{}.{}:{}@{}".format(iam_username, __name__, int(time.time()), getuser(), gethostname().split(".")[0])
+        args.client_token = tok[:64]
     try:
         if args.spot:
             launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"]).decode()
@@ -139,9 +139,10 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         exit()
     instance.wait_until_running()
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
-    tags = dict([tag.split("=", 1) for tag in args.tags])
+    tags = dict(tag.split("=", 1) for tag in args.tags)
     add_tags(instance, Name=args.hostname, Owner=resources.iam.CurrentUser().user.name,
-             SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:], **tags)
+             SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:],
+             OwnerSSHKeyName=args.ssh_key_name, **tags)
     if args.use_dns:
         dns_zone.update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
@@ -156,26 +157,13 @@ def launch(args, user_data_commands=None, user_data_packages=None, user_data_fil
         for event in paginate(clients.logs.get_paginator("filter_log_events"), **filter_args):
             # print(event["timestamp"], event["message"])
             raise NotImplementedError()
-    # FIXME: this doesn't work. Figure out a way to vivify current user's account
-    #from .util.ssh import AegeaSSHClient
-    #try:
-    #    ssh_client = AegeaSSHClient()
-    #    ssh_client.load_system_host_keys()
-    #    ssh_client.connect(instance.public_dns_name, password="password", look_for_keys=False)
-    #    ssh_client.check_output("systemctl")
-    #except Exception as e:
-    #    print(e)
     logger.info("Launched %s in %s", instance, subnet)
     return dict(instance_id=instance.id)
 
 parser = register_parser(launch, help="Launch a new EC2 instance", description=__doc__)
 parser.add_argument("hostname")
 parser.add_argument("--commands", nargs="+", help="Commands to run on host")
-parser.add_argument("--add-commands", nargs="+", default=[],
-                    help="Commands to run on host (add to those previously configured)")
 parser.add_argument("--packages", nargs="+", help="APT packages to install on host")
-parser.add_argument("--add-packages", nargs="+", default=[],
-                    help="APT packages to install on host (add to those previously configured)")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_file", action="store_false")
 parser.add_argument("--ami")

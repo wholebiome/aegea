@@ -63,17 +63,20 @@ class Timestamp(datetime):
     def __new__(cls, t):
         if isinstance(t, (str, bytes)) and t.isdigit():
             t = int(t)
-        if isinstance(t, (str, bytes)):
-            try:
-                return dateutil_parse(t)
-            except (ValueError, OverflowError, AssertionError):
-                units = {"weeks", "days", "hours", "minutes", "seconds"}
-                diffs = {u: float(t[:-1]) for u in units if u.startswith(t[-1])}
-                if len(diffs) != 1:
-                    raise ValueError('Could not parse "{}" as a timestamp or time delta'.format(t))
-                return datetime.utcnow().replace(microsecond=0) + relativedelta(**diffs)
-        else:
+        if not isinstance(t, (str, bytes)):
             return datetime.utcfromtimestamp(t//1000)
+        try:
+            units = {"weeks", "days", "hours", "minutes", "seconds"}
+            diffs = {u: float(t[:-1]) for u in units if u.startswith(t[-1])}
+            if len(diffs) == 1:
+                return datetime.now().replace(microsecond=0) + relativedelta(**diffs)
+            return dateutil_parse(t)
+        except (ValueError, OverflowError, AssertionError):
+            raise ValueError('Could not parse "{}" as a timestamp or time delta'.format(t))
+
+def add_time_bound_args(p):
+    p.add_argument("--start-time", type=Timestamp, default=Timestamp("-7d"), help=Timestamp.__doc__, metavar="START")
+    p.add_argument("--end-time", type=Timestamp, help=Timestamp.__doc__, metavar="END")
 
 class hashabledict(dict):
     def __hash__(self):

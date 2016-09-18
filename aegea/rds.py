@@ -39,7 +39,7 @@ def snapshots(args):
 parser = register_parser(snapshots, parent=rds_parser)
 
 def create(args):
-    tags = dict([tag.split("=", 1) for tag in args.tags])
+    tags = dict(tag.split("=", 1) for tag in args.tags)
     create_args = dict(DBInstanceIdentifier=args.name,
                        AllocatedStorage=args.storage,
                        Engine=args.engine,
@@ -84,7 +84,7 @@ def snapshot(args):
 parser = register_parser(snapshot, parent=rds_parser)
 
 def restore(args):
-    tags = dict([tag.split("=", 1) for tag in args.tags])
+    tags = dict(tag.split("=", 1) for tag in args.tags)
     clients.rds.restore_db_instance_from_db_snapshot(DBInstanceIdentifier=args.instance_name,
                                                      DBSnapshotIdentifier=args.snapshot_name,
                                                      StorageType=args.storage_type,

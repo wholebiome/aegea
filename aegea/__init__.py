@@ -77,14 +77,14 @@ def main(args=None):
             del result["ResponseMetadata"]
         print(json.dumps(result, indent=2, default=lambda x: str(x)))
 
-def register_parser(function, parent=None, **kwargs):
+def register_parser(function, parent=None, name=None, **add_parser_args):
     if config is None:
         initialize()
     if parent is None:
         parent = parser
     if parent.prog not in _subparsers:
         _subparsers[parent.prog] = parent.add_subparsers()
-    subparser = _subparsers[parent.prog].add_parser(function.__name__, **kwargs)
+    subparser = _subparsers[parent.prog].add_parser(name or function.__name__, **add_parser_args)
     subparser.add_argument("--max-col-width", "-w", type=int, default=32)
     subparser.add_argument("--json", action="store_true",
                            help="Output tabular data as a JSON-formatted list of objects")
@@ -95,5 +95,5 @@ def register_parser(function, parent=None, **kwargs):
     command = subparser.prog[len(parser.prog)+1:].replace(" ", "_")
     subparser.set_defaults(**config.get(command, {}))
     if subparser.description is None:
-        subparser.description = kwargs.get("help", function.__doc__)
+        subparser.description = add_parser_args.get("help", function.__doc__)
     return subparser

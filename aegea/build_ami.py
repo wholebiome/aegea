@@ -3,17 +3,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys, json, time
 from argparse import Namespace
 
-from . import register_parser, logger, config
+from . import register_parser, logger, config, __version__
 from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
                        ensure_security_group, add_tags, get_bdm, resolve_instance_id, resources, clients)
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
 from .launch import launch
 
-def get_bootstrap_files():
+def get_bootstrap_files(rootfs_skel_dirs):
     manifest = []
     aegea_conf = os.getenv("AEGEA_CONFIG_FILE")
 
-    for rootfs_skel_dir in config.build_ami.rootfs_skel_dirs:
+    for rootfs_skel_dir in rootfs_skel_dirs:
         if aegea_conf:
             fn = os.path.join(os.path.dirname(aegea_conf), "rootfs.skel")
         elif os.path.exists(rootfs_skel_dir):
@@ -33,13 +33,7 @@ def get_bootstrap_files():
                                          permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:]))
     return manifest
 
-def get_bootstrap_commands():
-    return config.build_ami.commands
-
-def get_bootstrap_packages():
-    return config.build_ami.packages
-
-def build_image(args):
+def build_ami(args):
     from .util.ssh import AegeaSSHClient
     ssh_key_filename = get_ssh_key_filename(args, base_name=__name__)
     if args.snapshot_existing_host:
@@ -47,15 +41,13 @@ def build_image(args):
         args.ami = instance.image_id
     else:
         args.ami = args.base_ami or locate_ubuntu_ami(region=clients.ec2.meta.region_name)
-        args.hostname = "{}-{}".format(__name__.replace(".", "-").replace("_", "-"), int(time.time()))
+        hostname = "{}-{}-{}".format(__name__, args.name, int(time.time()))
+        args.hostname = hostname.replace(".", "-").replace("_", "-")
         args.wait_for_ssh = True
         fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb client_token essential_services"  # noqa
         for field in fields.split():
             setattr(args, field, None)
-        instance = resources.ec2.Instance(launch(args,
-                                                 user_data_commands=get_bootstrap_commands(),
-                                                 user_data_packages=get_bootstrap_packages(),
-                                                 user_data_files=get_bootstrap_files())["instance_id"])
+        instance = resources.ec2.Instance(launch(args, files=get_bootstrap_files(args.rootfs_skel_dirs))["instance_id"])
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
@@ -75,8 +67,8 @@ def build_image(args):
     description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     print(image.id)
-    tags = dict([tag.split("=", 1) for tag in args.tags])
-    add_tags(image, Owner=resources.iam.CurrentUser().user.name, Base=args.ami, **tags)
+    tags = dict(tag.split("=", 1) for tag in args.tags)
+    add_tags(image, Owner=resources.iam.CurrentUser().user.name, Base=args.ami, AegeaVersion=__version__, **tags)
     clients.ec2.get_waiter("image_available").wait(ImageIds=[image.id])
     while resources.ec2.Image(image.id).state != "available":
         sys.stderr.write(".")
@@ -84,7 +76,7 @@ def build_image(args):
         time.sleep(1)
     instance.terminate()
 
-parser = register_parser(build_image, help="Build an EC2 AMI")
+parser = register_parser(build_ami, help="Build an EC2 AMI")
 parser.add_argument("name", default="test")
 parser.add_argument("--snapshot-existing-host", type=str, metavar="HOST")
 parser.add_argument("--wait-for-ami", action="store_true")
@@ -95,3 +87,4 @@ parser.add_argument("--security-groups", nargs="+")
 parser.add_argument("--base-ami", default=config.get("base_ami"))
 parser.add_argument("--dry-run", "--dryrun", action="store_true")
 parser.add_argument("--tags", nargs="+", default=[])
+parser.add_argument("--cloud-config-data", type=json.loads)

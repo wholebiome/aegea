@@ -54,14 +54,14 @@ def locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="re
             return ami["id"]
     raise AegeaException("No AMI found for {} {} {} {} {}".format(product, version, region, root_store, virt))
 
-def get_user_data(host_key=None, commands=None, packages=None, files=None):
+def get_user_data(host_key=None, commands=None, packages=None, files=None, **kwargs):
     if packages is None:
         packages = []
     if commands is None:
         commands = []
     if files is None:
         files = []
-    cloud_config_data = OrderedDict(packages=packages, write_files=files, runcmd=commands)
+    cloud_config_data = OrderedDict(packages=packages, write_files=files, runcmd=commands, **kwargs)
     if host_key is not None:
         buf = StringIO()
         host_key.write_private_key(buf)
