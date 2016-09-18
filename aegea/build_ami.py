@@ -40,7 +40,8 @@ def build_ami(args):
         instance = resources.ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
     else:
-        args.ami = args.base_ami or locate_ubuntu_ami(region=clients.ec2.meta.region_name)
+        args.ami = args.base_ami or locate_ubuntu_ami(product=args.base_ami_product,
+                                                      region=clients.ec2.meta.region_name)
         hostname = "{}-{}-{}".format(__name__, args.name, int(time.time()))
         args.hostname = hostname.replace(".", "-").replace("_", "-")
         args.wait_for_ssh = True
@@ -66,15 +67,17 @@ def build_ami(args):
 
     description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
-    print(image.id)
     tags = dict(tag.split("=", 1) for tag in args.tags)
-    add_tags(image, Owner=resources.iam.CurrentUser().user.name, Base=args.ami, AegeaVersion=__version__, **tags)
+    tags.update(Owner=resources.iam.CurrentUser().user.name, Base=args.ami, AegeaVersion=__version__)
+    add_tags(image, **tags)
+    logger.info("Waiting for %s to become available...", image.id)
     clients.ec2.get_waiter("image_available").wait(ImageIds=[image.id])
     while resources.ec2.Image(image.id).state != "available":
         sys.stderr.write(".")
         sys.stderr.flush()
         time.sleep(1)
     instance.terminate()
+    return dict(ImageID=image.id, **tags)
 
 parser = register_parser(build_ami, help="Build an EC2 AMI")
 parser.add_argument("name", default="test")
@@ -85,6 +88,7 @@ parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_fil
 parser.add_argument("--instance-type", default="c3.xlarge")
 parser.add_argument("--security-groups", nargs="+")
 parser.add_argument("--base-ami", default=config.get("base_ami"))
+parser.add_argument("--base-ami-product", default="com.ubuntu.cloud:server:16.04:amd64")
 parser.add_argument("--dry-run", "--dryrun", action="store_true")
 parser.add_argument("--tags", nargs="+", default=[])
 parser.add_argument("--cloud-config-data", type=json.loads)
