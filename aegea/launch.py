@@ -56,7 +56,8 @@ def launch(args, **cloud_config_data):
     except AegeaException:
         validate_hostname(args.hostname)
         assert not args.hostname.startswith("i-")
-    args.ami = resolve_ami(args.ami)
+    ami_tags = dict(tag.split("=", 1) for tag in args.ami_tags or [])
+    args.ami = resolve_ami(args.ami, **ami_tags)
     if args.subnet:
         subnet = resources.ec2.Subnet(args.subnet)
         vpc = resources.ec2.Vpc(subnet.vpc_id)
@@ -166,7 +167,9 @@ parser.add_argument("--commands", nargs="+", help="Commands to run on host")
 parser.add_argument("--packages", nargs="+", help="APT packages to install on host")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_file", action="store_false")
-parser.add_argument("--ami")
+parser.add_argument("--ami", help="AMI to use for the instance. Default: the most recently built AMI in the account")
+parser.add_argument("--ami-tags", nargs="+",
+                    help="Use the most recent AMI with these tags, e.g. --ami-tags os=ubuntu version=16.04")
 parser.add_argument("--spot", action="store_true")
 parser.add_argument("--duration-hours", type=float, help="Terminate the spot instance after this number of hours")
 parser.add_argument("--cores", type=int)
@@ -175,7 +178,7 @@ parser.add_argument("--instance-type", "-t", default="t2.micro")
 parser.add_argument("--spot-price", type=float,
                     help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
 parser.add_argument("--no-dns", dest="use_dns", action="store_false",
-                    help="Skip registering instance name in private DNS. Use if you don't use private DNS, or don't want the launching principal to have Route53 write access.")  # noqa
+                    help="Skip registering instance name in private DNS (if you don't use private DNS, or don't want the launching principal to have Route53 write access)")  # noqa
 parser.add_argument("--client-token", help="Token used to identify your instance, SIR or SFR")
 parser.add_argument("--subnet")
 parser.add_argument("--availability-zone", "-z")

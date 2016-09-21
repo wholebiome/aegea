@@ -47,10 +47,11 @@ def locate_ubuntu_ami(product, region, channel="releases", stream="released", ro
     if product not in manifest["products"]:
         raise AegeaException("Ubuntu version {} not found in Ubuntu cloud image manifest".format(product))
     versions = manifest["products"][product]["versions"]
-    version = max(versions)
-    for ami in versions[version]["items"].values():
-        if ami["crsn"] == region and ami["root_store"] == root_store and ami["virt"] == virt:
-            return ami["id"]
+    for version in sorted(versions.keys(), reverse=True)[:8]:
+        for ami in versions[version]["items"].values():
+            if ami["crsn"] == region and ami["root_store"] == root_store and ami["virt"] == virt:
+                logger.info("Found %s for %s", ami["id"], ":".join([product, version, region, root_store, virt]))
+                return ami["id"]
     raise AegeaException("No AMI found for {} {} {} {} {}".format(product, version, region, root_store, virt))
 
 def get_user_data(host_key=None, commands=None, packages=None, files=None, **kwargs):
@@ -253,14 +254,15 @@ def ensure_instance_profile(iam_role_name, policies=frozenset()):
 def add_tags(resource, dry_run=False, **tags):
     return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()], DryRun=dry_run)
 
-#def filter_by_tags(collection, **tags):
-#    return collection.filter(Filters=[dict(Name="tag:"+k, Values=[v]) for k, v in tags.items()])
+def filter_by_tags(collection, **tags):
+    return collection.filter(Filters=[dict(Name="tag:"+k, Values=[v]) for k, v in tags.items()])
 
 def resolve_instance_id(name):
+    filter_name = "dns-name" if name.startswith("ec2") and name.endswith("compute.amazonaws.com") else "tag:Name"
     if name.startswith("i-"):
         return name
     try:
-        desc = clients.ec2.describe_instances(Filters=[dict(Name="tag:Name", Values=[name])])
+        desc = clients.ec2.describe_instances(Filters=[dict(Name=filter_name, Values=[name])])
         return desc["Reservations"][0]["Instances"][0]["InstanceId"]
     except IndexError:
         raise AegeaException('Could not resolve "{}" to a known instance'.format(name))
@@ -276,13 +278,16 @@ def expect_error_codes(exception, *codes):
     if exception.response["Error"]["Code"] not in codes:
         raise
 
-def resolve_ami(ami=None):
+def resolve_ami(ami=None, **tags):
     if ami is None or not ami.startswith("ami-"):
         if ami is None:
             filters = dict(Owners=["self"], Filters=[dict(Name="state", Values=["available"])])
         else:
             filters = dict(Owners=["self"], Filters=[dict(Name="name", Values=[ami])])
-        amis = sorted(resources.ec2.images.filter(**filters), key=lambda x: x.creation_date)
+        amis = resources.ec2.images.filter(**filters)
+        if tags:
+            amis = filter_by_tags(amis, **tags)
+        amis = sorted(amis, key=lambda x: x.creation_date)
         ami = amis[-1].id
     return ami
 

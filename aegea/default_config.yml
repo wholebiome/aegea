@@ -4,7 +4,8 @@
 # happen.  Once the file is written, you can modify it with your site
 # or user-specific settings.
 build_ami:
-  base: auto
+  base_ami: auto
+  base_ami_product: com.ubuntu.cloud:server:16.04:amd64
   rootfs_skel_dirs:
     - auto
   packages:
@@ -32,6 +33,7 @@ build_ami:
     - libgmp-dev
     - libmpfr-dev
     - libhts-dev
+    - libsqlite3-dev
     - htop
     - pydf
     - jq
@@ -47,7 +49,6 @@ build_ami:
     - python3-pip
     - python3-setuptools
     - python3-wheel
-    - virtualenv
     - nfs-common
     - fail2ban
     - emacs24-nox
@@ -76,8 +77,9 @@ build_ami:
     - "keymaker install"
     - "activate-global-python-argcomplete"
     - "dpkg-reconfigure debconf -f noninteractive -p critical"
-    - "apt-get install --yes docker.io || true"
-    - "apt-get remove --yes popularity-contest postfix apport snapd"
+    - "apt-get install --yes virtualenv docker.io || true"
+    - "apt-get remove --yes popularity-contest postfix apport"
+    - "if dpkg-query --show snapd; then apt-get remove --yes snapd; fi"
     - "apt-get autoremove --yes"
     - "apt-get clean --yes"
     - "find /etc/cron.* -type f -not -name .placeholder -and -not -name logrotate -and -not -name fstrim -delete"

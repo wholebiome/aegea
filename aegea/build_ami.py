@@ -14,12 +14,13 @@ def get_bootstrap_files(rootfs_skel_dirs):
     aegea_conf = os.getenv("AEGEA_CONFIG_FILE")
 
     for rootfs_skel_dir in rootfs_skel_dirs:
-        if aegea_conf:
-            fn = os.path.join(os.path.dirname(aegea_conf), "rootfs.skel")
+        if rootfs_skel_dir == "auto":
+            fn = os.path.join(os.path.dirname(__file__), "rootfs.skel")
+        elif aegea_conf:
+            # FIXME: not compatible with colon-separated AEGEA_CONFIG_FILE
+            fn = os.path.join(os.path.dirname(aegea_conf), rootfs_skel_dir)
         elif os.path.exists(rootfs_skel_dir):
             fn = os.path.abspath(os.path.normpath(rootfs_skel_dir))
-        elif rootfs_skel_dir == "auto":
-            fn = os.path.join(os.path.dirname(__file__), "rootfs.skel")
         else:
             raise Exception("rootfs_skel directory {} not found".format(fn))
         logger.debug("Trying rootfs.skel: %s" % fn)
@@ -40,8 +41,10 @@ def build_ami(args):
         instance = resources.ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
     else:
-        args.ami = args.base_ami or locate_ubuntu_ami(product=args.base_ami_product,
-                                                      region=clients.ec2.meta.region_name)
+        if args.base_ami == "auto":
+            args.ami = locate_ubuntu_ami(product=args.base_ami_product, region=clients.ec2.meta.region_name)
+        else:
+            args.ami = args.base_ami
         hostname = "{}-{}-{}".format(__name__, args.name, int(time.time()))
         args.hostname = hostname.replace(".", "-").replace("_", "-")
         args.wait_for_ssh = True
@@ -54,11 +57,12 @@ def build_ami(args):
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
     for i in range(900):
         try:
+            ssh_client.check_call("ls /var/lib/cloud/data/result.json")
             if ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json").strip() != "[]":
                 raise Exception("cloud-init encountered errors")
             break
         except Exception as e:
-            if "ENOENT" in str(e) or "EPERM" in str(e):
+            if "ENOENT" in str(e) or "EPERM" in str(e) or "No such file or directory" in str(e):
                 time.sleep(1)
             else:
                 raise
@@ -68,6 +72,7 @@ def build_ami(args):
     description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     tags = dict(tag.split("=", 1) for tag in args.tags)
+    # FIXME: add base AMI name
     tags.update(Owner=resources.iam.CurrentUser().user.name, Base=args.ami, AegeaVersion=__version__)
     add_tags(image, **tags)
     logger.info("Waiting for %s to become available...", image.id)
@@ -85,10 +90,10 @@ parser.add_argument("--snapshot-existing-host", type=str, metavar="HOST")
 parser.add_argument("--wait-for-ami", action="store_true")
 parser.add_argument("--ssh-key-name")
 parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_file", action="store_false")
-parser.add_argument("--instance-type", default="c3.xlarge")
+parser.add_argument("--instance-type", default="c3.xlarge", help="Instance type to use for building the AMI")
 parser.add_argument("--security-groups", nargs="+")
-parser.add_argument("--base-ami", default=config.get("base_ami"))
-parser.add_argument("--base-ami-product", default="com.ubuntu.cloud:server:16.04:amd64")
+parser.add_argument("--base-ami")
+parser.add_argument("--base-ami-product")
 parser.add_argument("--dry-run", "--dryrun", action="store_true")
 parser.add_argument("--tags", nargs="+", default=[])
 parser.add_argument("--cloud-config-data", type=json.loads)
