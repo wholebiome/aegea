@@ -22,13 +22,12 @@ class TestAegea(unittest.TestCase):
     def setUp(self):
         pass
 
-    def call(self, *args, **kwargs):
-        cmd = kwargs.get("args", args[0])
+    def call(self, cmd, **kwargs):
         print('Running "{}"'.format(cmd), file=sys.stderr)
         expect = kwargs.pop("expect", [dict(return_codes=[os.EX_OK], stdout=None, stderr=None)])
-        args = ["coverage", "run"] + list(args)
-        process = subprocess.Popen(stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, *args, **kwargs)
+        cmd = ["coverage", "run"] + cmd
+        process = subprocess.Popen(cmd, stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, **kwargs)
         out, err = process.communicate()
         return_code = process.poll()
         out = out.decode(sys.stdin.encoding)
