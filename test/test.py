@@ -83,6 +83,10 @@ class TestAegea(unittest.TestCase):
                     args += ["--detailed-billing-reports-bucket", os.environ["AWS_DETAILED_BILLING_REPORTS_BUCKET"]]
             elif subcommand == "ls":
                 args += ["--filter", "state=running"]
+            elif subcommand == "tag":
+                args += [instance_id, "test=test test2=test"]
+            elif subcommand == "untag":
+                args += [instance_id, "test test2"]
             self.call(["aegea", subcommand] + args, expect=expect)
 
     def test_dry_run_commands(self):
