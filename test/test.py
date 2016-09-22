@@ -154,7 +154,7 @@ class TestAegea(unittest.TestCase):
 
     def test_locate_ubuntu_ami(self):
         self.assertTrue(locate_ubuntu_ami("com.ubuntu.cloud:server:16.04:amd64", "us-east-1").startswith("ami-"))
-        ami = locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="daily", stream="daily",
+        ami = locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="releases", stream="released",
                                 region="us-west-2")
         self.assertTrue(ami.startswith("ami-"))
 
