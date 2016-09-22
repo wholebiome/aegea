@@ -178,7 +178,7 @@ class TestAegea(unittest.TestCase):
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-deploy-pilot"),
                   expect=[dict(return_codes=[2], stderr="argument --repo is required")])
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-get-secret"),
-                  expect=[dict(return_codes=[2], stderr="the following arguments are required: secret_name")])
+                  expect=[dict(return_codes=[2])])
 
     def test_secrets(self):
         unauthorized_ok = [dict(return_codes=[os.EX_OK]),
