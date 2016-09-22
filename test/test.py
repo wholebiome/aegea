@@ -153,8 +153,8 @@ class TestAegea(unittest.TestCase):
         get_user_data(commands=["ls"], packages=["foo"], files=["bar"])
 
     def test_locate_ubuntu_ami(self):
-        self.assertTrue(locate_ubuntu_ami("com.ubuntu.cloud.daily:server:16.04:amd64", "us-east-1").startswith("ami-"))
-        ami = locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily",
+        self.assertTrue(locate_ubuntu_ami("com.ubuntu.cloud:server:16.04:amd64", "us-east-1").startswith("ami-"))
+        ami = locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="daily", stream="daily",
                                 region="us-west-2")
         self.assertTrue(ami.startswith("ami-"))
 
@@ -172,7 +172,7 @@ class TestAegea(unittest.TestCase):
     @unittest.skipIf(USING_PYTHON2, "requires Python 3 dependencies")
     def test_deploy_utils(self):
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-deploy-pilot"),
-                  expect=[dict(return_codes=[2], stderr="the following arguments are required: --repo, --branch")])
+                  expect=[dict(return_codes=[2], stderr="argument --repo is required")])
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-get-secret"),
                   expect=[dict(return_codes=[2], stderr="the following arguments are required: secret_name")])
 

@@ -31,7 +31,7 @@ def get_assume_role_policy_doc(*principals):
 
 def locate_ubuntu_ami(product, region, channel="releases", stream="released", root_store="ssd", virt="hvm"):
     """
-    Example: locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily",
+    Example: locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="daily", stream="daily",
                                region="us-west-2")
     """
     partition = "aws"
