@@ -1,3 +1,15 @@
+Changes for v1.0.0 (2016-09-22)
+===============================
+
+-  Aegea build\_image renamed to build\_ami
+-  Aegea tag, untag
+-  Doc improvements
+-  Ubuntu 14.04 compatibility and role improvements
+-  docker-event-relay reliability improvements
+-  Remove snapd from default loadout
+-  aegea volumes: display attachment instance names
+-  aegea-deploy-pilot: Deploy on SIGUSR1
+
 -  Initial support for flow logs
 -  Pretty-print and perform whois lookups for aegea security\_groups
 -  aegea ls security\_groups: break out protocol into its own column
