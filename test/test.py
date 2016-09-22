@@ -26,6 +26,7 @@ class TestAegea(unittest.TestCase):
         cmd = kwargs.get("args", args[0])
         print('Running "{}"'.format(cmd), file=sys.stderr)
         expect = kwargs.pop("expect", [dict(return_codes=[os.EX_OK], stdout=None, stderr=None)])
+        args = ["coverage", "run"] + list(args)
         process = subprocess.Popen(stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, *args, **kwargs)
         out, err = process.communicate()
