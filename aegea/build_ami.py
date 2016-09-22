@@ -48,7 +48,7 @@ def build_ami(args):
         hostname = "{}-{}-{}".format(__name__, args.name, int(time.time()))
         args.hostname = hostname.replace(".", "-").replace("_", "-")
         args.wait_for_ssh = True
-        fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb client_token essential_services"  # noqa
+        fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb client_token essential_services ami_tags"  # noqa
         for field in fields.split():
             setattr(args, field, None)
         instance = resources.ec2.Instance(launch(args, files=get_bootstrap_files(args.rootfs_skel_dirs))["instance_id"])

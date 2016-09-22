@@ -153,7 +153,7 @@ class TestAegea(unittest.TestCase):
         get_user_data(commands=["ls"], packages=["foo"], files=["bar"])
 
     def test_locate_ubuntu_ami(self):
-        self.assertTrue(locate_ubuntu_ami().startswith("ami-"))
+        self.assertTrue(locate_ubuntu_ami("com.ubuntu.cloud.daily:server:16.04:amd64", "us-east-1").startswith("ami-"))
         ami = locate_ubuntu_ami(product="com.ubuntu.cloud.daily:server:16.04:amd64", channel="daily", stream="daily",
                                 region="us-west-2")
         self.assertTrue(ami.startswith("ami-"))
