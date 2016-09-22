@@ -18,9 +18,10 @@ def register_listing_parser(function, **kwargs):
 
 def register_filtering_parser(function, **kwargs):
     parser = register_listing_parser(function, **kwargs)
-    parser.add_argument("-f", "--filter", nargs="+", default=[],
+    parser.add_argument("-f", "--filter", nargs="+", default=[], metavar="FILTER_NAME=VALUE",
                         help="Filter(s) to apply to output, e.g. --filter state=available")
-    parser.add_argument("-t", "--tag", nargs="+", default=[], help="Tag(s) to filter output by, e.g. --tag Owner=bezos")
+    parser.add_argument("-t", "--tag", nargs="+", default=[], metavar="TAG_NAME=VALUE",
+                        help="Tag(s) to filter output by")
     return parser
 
 def filter_collection(collection, args):

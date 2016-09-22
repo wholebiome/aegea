@@ -163,13 +163,12 @@ def launch(args, **cloud_config_data):
 
 parser = register_parser(launch, help="Launch a new EC2 instance", description=__doc__)
 parser.add_argument("hostname")
-parser.add_argument("--commands", nargs="+", help="Commands to run on host")
-parser.add_argument("--packages", nargs="+", help="APT packages to install on host")
+parser.add_argument("--commands", nargs="+", metavar="COMMAND", help="Commands to run on host")
+parser.add_argument("--packages", nargs="+", metavar="PACKAGE", help="APT packages to install on host")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_file", action="store_false")
 parser.add_argument("--ami", help="AMI to use for the instance. Default: the most recently built AMI in the account")
-parser.add_argument("--ami-tags", nargs="+",
-                    help="Use the most recent AMI with these tags, e.g. --ami-tags os=ubuntu version=16.04")
+parser.add_argument("--ami-tags", nargs="+", metavar="NAME=VALUE", help="Use the most recent AMI with these tags")
 parser.add_argument("--spot", action="store_true")
 parser.add_argument("--duration-hours", type=float, help="Terminate the spot instance after this number of hours")
 parser.add_argument("--cores", type=int)
@@ -182,13 +181,14 @@ parser.add_argument("--no-dns", dest="use_dns", action="store_false",
 parser.add_argument("--client-token", help="Token used to identify your instance, SIR or SFR")
 parser.add_argument("--subnet")
 parser.add_argument("--availability-zone", "-z")
-parser.add_argument("--security-groups", nargs="+")
-parser.add_argument("--tags", nargs="+", default=[])
+parser.add_argument("--security-groups", nargs="+", metavar="SECURITY_GROUP")
+parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE")
 parser.add_argument("--wait-for-ssh", action="store_true")
 parser.add_argument("--essential-services", nargs="+")
 parser.add_argument("--iam-role", default=__name__)
-parser.add_argument("--iam-policies", nargs="+", default=["IAMReadOnlyAccess",
-                                                          "AmazonElasticFileSystemFullAccess",
-                                                          "service-role/AmazonAPIGatewayPushToCloudWatchLogs"],
+parser.add_argument("--iam-policies", nargs="+", metavar="IAM_POLICY_NAME",
+                    default=["IAMReadOnlyAccess",
+                             "AmazonElasticFileSystemFullAccess",
+                             "service-role/AmazonAPIGatewayPushToCloudWatchLogs"],
                     help="Ensure the default or specified IAM role has the listed IAM managed policies attached")
 parser.add_argument("--dry-run", "--dryrun", action="store_true")

@@ -93,7 +93,8 @@ parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_fil
 parser.add_argument("--instance-type", default="c3.xlarge", help="Instance type to use for building the AMI")
 parser.add_argument("--security-groups", nargs="+")
 parser.add_argument("--base-ami")
-parser.add_argument("--base-ami-product")
+parser.add_argument("--base-ami-product",
+                    help="Ubuntu cloud image manifest product to use, e.g. com.ubuntu.cloud:server:16.04:amd64")
 parser.add_argument("--dry-run", "--dryrun", action="store_true")
-parser.add_argument("--tags", nargs="+", default=[])
+parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help="Tag the resulting AMI with these tags")
 parser.add_argument("--cloud-config-data", type=json.loads)
