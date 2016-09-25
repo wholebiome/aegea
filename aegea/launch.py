@@ -163,15 +163,15 @@ def launch(args, **cloud_config_data):
 
 parser = register_parser(launch, help="Launch a new EC2 instance", description=__doc__)
 parser.add_argument("hostname")
-parser.add_argument("--commands", nargs="+", metavar="COMMAND", help="Commands to run on host")
-parser.add_argument("--packages", nargs="+", metavar="PACKAGE", help="APT packages to install on host")
+parser.add_argument("--commands", nargs="+", metavar="COMMAND", help="Commands to run on host upon startup")
+parser.add_argument("--packages", nargs="+", metavar="PACKAGE", help="APT packages to install on host upon startup")
 parser.add_argument("--ssh-key-name", default=__name__)
 parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_file", action="store_false")
 parser.add_argument("--ami", help="AMI to use for the instance. Default: the most recently built AMI in the account")
 parser.add_argument("--ami-tags", nargs="+", metavar="NAME=VALUE", help="Use the most recent AMI with these tags")
 parser.add_argument("--spot", action="store_true")
 parser.add_argument("--duration-hours", type=float, help="Terminate the spot instance after this number of hours")
-parser.add_argument("--cores", type=int)
+parser.add_argument("--cores", type=int, help="Minimum number of cores to request (spot fleet API)")
 parser.add_argument("--min-mem-per-core-gb", type=float)
 parser.add_argument("--instance-type", "-t", default="t2.micro")
 parser.add_argument("--spot-price", type=float,
@@ -180,7 +180,7 @@ parser.add_argument("--no-dns", dest="use_dns", action="store_false",
                     help="Skip registering instance name in private DNS (if you don't use private DNS, or don't want the launching principal to have Route53 write access)")  # noqa
 parser.add_argument("--client-token", help="Token used to identify your instance, SIR or SFR")
 parser.add_argument("--subnet")
-parser.add_argument("--availability-zone", "-z")
+parser.add_argument("--availability-zone", "--az")
 parser.add_argument("--security-groups", nargs="+", metavar="SECURITY_GROUP")
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE")
 parser.add_argument("--wait-for-ssh", action="store_true")
