@@ -69,7 +69,7 @@ def get_repo(url):
         gh = github3.login(token=os.environ["GH_AUTH"])
     except Exception:
         msg = "GitHub login failed. Please get a token at https://github.com/settings/tokens and set the GH_AUTH environment variable to its value." # noqa
-        return SystemExit(msg)
+        raise SystemExit(msg)
     gh_owner_name, gh_repo_name = parse_repo_name(url)
     return gh.repository(gh_owner_name, gh_repo_name)
 
