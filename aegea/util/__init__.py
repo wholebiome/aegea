@@ -87,7 +87,7 @@ def describe_cidr(cidr):
     address = ipaddress.ip_network(str(cidr)).network_address
     try:
         whois = ipwhois.IPWhois(address).lookup_rdap()
-        whois_names = [whois.get("asn_country_code")]
+        whois_names = [whois["asn_country_code"]] if "asn_country_code" in whois else []
         whois_names += [o.get("contact", {}).get("name", "") for o in whois.get("objects", {}).values()]
     except Exception:
         try:
