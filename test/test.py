@@ -25,7 +25,13 @@ class TestAegea(unittest.TestCase):
     def call(self, cmd, **kwargs):
         print('Running "{}"'.format(cmd), file=sys.stderr)
         expect = kwargs.pop("expect", [dict(return_codes=[os.EX_OK], stdout=None, stderr=None)])
-        cmd = ["coverage", "run"] + cmd
+        if isinstance(cmd, list) and cmd[0] == "aegea":
+            cmd[0] = subprocess.check_output(["which", cmd[0]]).decode().strip()
+            cmd = ["coverage", "run"] + cmd
+        elif cmd.startswith("aegea"):
+            cmd = cmd.split(" ", 1)
+            cmd[0] = subprocess.check_output(["which", cmd[0]]).decode().strip()
+            cmd = "coverage run " + " ".join(cmd)
         process = subprocess.Popen(cmd, stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, **kwargs)
         out, err = process.communicate()
