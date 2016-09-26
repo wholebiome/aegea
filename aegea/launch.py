@@ -82,6 +82,7 @@ def launch(args, **cloud_config_data):
                        InstanceType=args.instance_type,
                        BlockDeviceMappings=get_bdm(),
                        UserData=get_user_data(**user_data_args))
+    logger.info("Launch spec user data is %i bytes long", len(launch_spec["UserData"]))
     if args.iam_role:
         instance_profile = ensure_instance_profile(args.iam_role, policies=args.iam_policies)
         launch_spec["IamInstanceProfile"] = dict(Arn=instance_profile.arn)

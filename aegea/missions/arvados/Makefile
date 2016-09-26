@@ -1,4 +1,4 @@
-rootfs.skel: %: %.in
+rootfs.skel: %: %.in environment
 	cp -R $@.in $@
 	source environment; for i in $$(find $@ -type f); do cat $$i | envsubst | sponge $$i; done
 
