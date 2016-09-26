@@ -1,0 +1,11 @@
+common:
+  uuid_prefix: $ARVADOS_UUID_PREFIX
+  secret_token: $ARVADOS_SECRET_TOKEN
+  site_title: $ARVADOS_SITE_TITLE
+  default_link_title: $ARVADOS_SITE_TITLE
+  default_link_url: $ARVADOS_HOST_URL
+  allow_account_registration: false
+  require_email_confirmation: true
+  google_oauth2_client_id: $ARVADOS_SSO_GOOGLE_OAUTH2_CLIENT_ID
+  google_oauth2_client_secret: $ARVADOS_SSO_GOOGLE_OAUTH2_CLIENT_SECRET
+  use_ldap: false

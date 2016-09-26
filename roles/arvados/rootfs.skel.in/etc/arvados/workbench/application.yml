@@ -1,0 +1,5 @@
+common:
+  secret_token: $ARVADOS_SECRET_TOKEN
+  arvados_login_base: $ARVADOS_HOST_URL/login
+  arvados_v1_base: $ARVADOS_HOST_URL/arvados/v1
+  arvados_insecure_https: true

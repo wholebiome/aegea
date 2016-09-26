@@ -11,7 +11,7 @@ build_ami:
       - "echo deb http://apt.arvados.org/ trusty main > /etc/apt/sources.list.d/arvados.list"
       - "apt-get update"
       - "apt-get install --yes ruby2.1 ruby2.1-dev"
-      - "apt-get install --yes arvados-api-server arvados-data-manager arvados-docker-cleaner arvados-git-httpd arvados-node-manager arvados-sso-server arvados-workbench"
+      - "apt-get install --yes arvados-api-server arvados-data-manager arvados-docker-cleaner arvados-git-httpd arvados-node-manager arvados-sso-server arvados-workbench runit"
 
 #      Assumption: nginx is configured to serve Rails from
 #            /var/www/arvados-api/current

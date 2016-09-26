@@ -1,0 +1,9 @@
+common:
+  uuid_prefix: $ARVADOS_UUID_PREFIX
+  secret_token: $ARVADOS_SECRET_TOKEN
+  blob_signing_key: $ARVADOS_BLOB_SIGNING_KEY
+  sso_app_id: $ARVADOS_SSO_APP_ID
+  sso_app_secret: $ARVADOS_SSO_APP_SECRET
+  sso_provider_url: $ARVADOS_SSO_PROVIDER_URL
+  workbench_address: $ARVADOS_SSO_WORKBENCH_ADDRESS
+  websocket_address: $ARVADOS_SSO_WEBSOCKET_ADDRESS
