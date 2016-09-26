@@ -1,0 +1,31 @@
+server {
+  listen 127.0.0.1:8900;
+  server_name localhost-sso;
+
+  root   /var/www/arvados-sso/current/public;
+  index  index.html;
+
+  passenger_enabled on;
+  # If you're not using RVM, comment out the line below.
+  # passenger_ruby /usr/local/rvm/wrappers/default/ruby;
+}
+
+upstream sso {
+  server     127.0.0.1:8900  fail_timeout=10s;
+}
+
+proxy_http_version 1.1;
+
+server {
+  listen       localhost:$ARVADOS_SSO_ELB_FACING_PORT;
+  server_name  auth.$ARVADOS_HOSTNAME;
+
+  index  index.html;
+
+  location / {
+    proxy_pass            http://sso;
+    proxy_redirect        off;
+    proxy_connect_timeout 90s;
+    proxy_read_timeout    300s;
+  }
+}
