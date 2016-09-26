@@ -7,7 +7,7 @@ For help with individual commands, run ``aegea <command> --help``.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, logging, shutil, json, datetime, traceback
+import os, sys, argparse, logging, shutil, json, datetime, traceback, errno
 from textwrap import fill
 from tweak import Config
 from botocore.exceptions import NoRegionError
@@ -29,7 +29,12 @@ def initialize():
     from .util.printing import BOLD, RED, ENDC
     config = Config(__name__, use_yaml=True, save_on_exit=False)
     if not os.path.exists(config.config_files[1]):
-        config.save()
+        config_dir = os.path.dirname(os.path.abspath(config.config_files[1]))
+        try:
+            os.makedirs(config_dir)
+        except OSError as e:
+            if not (e.errno == errno.EEXIST and os.path.isdir(config_dir)):
+                raise
         shutil.copy(os.path.join(os.path.dirname(__file__), "default_config.yml"), config.config_files[1])
         logger.info("Wrote new config file %s with default values", config.config_files[1])
         config = Config(__name__, use_yaml=True, save_on_exit=False)
