@@ -1,3 +1,14 @@
+Changes for v1.1.0 (2016-09-27)
+===============================
+
+-  Begin work on missions
+
+-  aegea-deploy-pilot: admit dashes in branch name via service name
+
+-  Fix bug where tweak overwrote config file supplied via environment
+
+-  Online documentation improvements
+
 Changes for v1.0.0 (2016-09-22)
 ===============================
 
