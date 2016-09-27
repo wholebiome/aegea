@@ -1,3 +1,8 @@
+Changes for v1.1.1 (2016-09-27)
+===============================
+
+-  Initial support for arvados mission
+
 Changes for v1.1.0 (2016-09-27)
 ===============================
 
