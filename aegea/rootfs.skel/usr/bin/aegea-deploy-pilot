@@ -126,7 +126,7 @@ def parse_args():
     args = parser.parse_args()
 
     if "SYSTEMD_INSTANCE_NAME" in os.environ:
-        args.gh_owner_name, args.gh_repo_name, args.branch = os.environ["SYSTEMD_INSTANCE_NAME"].split("-")[-3:]
+        args.gh_owner_name, args.gh_repo_name, args.branch = os.environ["SYSTEMD_INSTANCE_NAME"].split("-", 2)[-3:]
     else:
         args.gh_owner_name, args.gh_repo_name = args.repo.split("/")[-2:]
 
