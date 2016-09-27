@@ -110,7 +110,7 @@ def get_status_for_queue(queue):
     status.update(Updated=status_object.last_modified)
     return status
 
-def status(args):
+def ls(args):
     """
     List status of all configured SNS-SQS message buses and instances subscribed to them.
     """
@@ -130,7 +130,7 @@ def status(args):
     args.columns = ["Owner", "Repo", "Instance", "Status", "Ref", "Commit", "Updated", "Topic", "Queue"]
     page_output(tabulate(table, args))
 
-parser = register_parser(status, parent=deploy_parser)
+parser = register_parser(ls, parent=deploy_parser)
 
 def ensure_deploy_iam_policy():
     sqs_arn = ARN(service="sqs", region="*", resource="github-*")
