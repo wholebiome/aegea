@@ -2,17 +2,3 @@ build_ami:
   base_ami_product: com.ubuntu.cloud:server:14.04:amd64
   rootfs_skel_dirs:
     $append: rootfs.skel
-  packages:
-    $remove: ruby
-  commands:
-    $extend:
-      - "apt-add-repository --yes ppa:brightbox/ruby-ng"
-      - "apt-key adv --keyserver pool.sks-keyservers.net --recv 1078ECD7"
-      - "echo deb http://apt.arvados.org/ trusty main > /etc/apt/sources.list.d/arvados.list"
-      - "apt-get update"
-      - "apt-get install --yes ruby2.1 ruby2.1-dev"
-      - "apt-get install --yes arvados-api-server arvados-data-manager arvados-docker-cleaner arvados-git-httpd arvados-node-manager arvados-sso-server arvados-workbench"
-
-#      Assumption: nginx is configured to serve Rails from
-#            /var/www/arvados-api/current
-#Assumption: nginx and passenger run as www-data
