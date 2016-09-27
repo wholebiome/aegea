@@ -18,7 +18,7 @@ upstream workbench {
   server     127.0.0.1:9000  fail_timeout=10s;
 }
 
-proxy_http_version 1.1;
+# proxy_http_version 1.1;
 
 server {
   listen       localhost:$ARVADOS_WORKBENCH_ELB_FACING_PORT;

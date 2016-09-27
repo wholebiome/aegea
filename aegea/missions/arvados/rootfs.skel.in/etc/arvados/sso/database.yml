@@ -1,19 +1,23 @@
 production:
   adapter: postgresql
   encoding: utf8
-  database: arvados_sso_production
-  username: arvados_sso
-  password: $ARVADOS_SSO_PRODUCTION_DB_PASSWORD
-  host: $ARVADOS_SSO_PRODUCTION_DB_HOST
+  database: $ARVADOS_DB_NAME
+  username: $ARVADOS_DB_USERNAME
+  password: $ARVADOS_DB_PASSWORD
+  host: $ARVADOS_DB_HOST
   template: template0
+  # For the websockets server, prefer a larger database connection pool size since it
+  # multithreaded and can serve a large number of long-lived clients.  See also
+  # websocket_max_connections configuration option.
+  pool: 50
 
 development:
   adapter: postgresql
   encoding: utf8
-  database: arvados_sso_development
-  username: arvados_sso
-  password: $ARVADOS_SSO_DEVELOPMENT_DB_PASSWORD
-  host: $ARVADOS_SSO_DEVELOPMENT_DB_HOST
+  database: $ARVADOS_DB_NAME
+  username: $ARVADOS_DB_USERNAME
+  password: $ARVADOS_DB_PASSWORD
+  host: $ARVADOS_DB_HOST
   template: template0
 
 # Warning: The database defined as "test" will be erased and
@@ -22,8 +26,8 @@ development:
 test:
   adapter: postgresql
   encoding: utf8
-  database: arvados_sso_test
-  username: arvados_sso
-  password: $ARVADOS_SSO_TEST_DB_PASSWORD
-  host: $ARVADOS_SSO_TEST_DB_HOST
+  database: $ARVADOS_TEST_DB_NAME
+  username: $ARVADOS_DB_USERNAME
+  password: $ARVADOS_DB_PASSWORD
+  host: $ARVADOS_DB_HOST
   template: template0

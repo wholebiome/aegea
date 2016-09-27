@@ -25,7 +25,7 @@ upstream websockets {
   server     127.0.0.1:8100  fail_timeout=10s;
 }
 
-proxy_http_version 1.1;
+# proxy_http_version 1.1;
 
 # When Keep clients request a list of Keep services from the API server, the
 # server will automatically return the list of available proxies if
