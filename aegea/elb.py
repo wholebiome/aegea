@@ -86,17 +86,21 @@ def replace(args):
 parser_replace = register_parser(replace, parent=elb_parser,
                                  help="Replace all EC2 instances in an ELB with the ones given")
 
+def find_acm_cert(dns_name):
+    for cert in paginate(clients.acm.get_paginator("list_certificates")):
+        cert.update(clients.acm.describe_certificate(CertificateArn=cert["CertificateArn"])["Certificate"])
+        for name in cert["SubjectAlternativeNames"]:
+            if name in [dns_name, ".".join(["*"] + dns_name.split(".")[1:])]:
+                return cert
+    raise AegeaException("Unable to find ACM certificate for {}".format(dns_name))
+
 def create(args):
     for zone in paginate(clients.route53.get_paginator("list_hosted_zones")):
         if args.dns_alias.endswith("." + zone["Name"].rstrip(".")):
             break
     else:
         raise AegeaException("Unable to find Route53 DNS zone for {}".format(args.dns_alias))
-    for cert in paginate(clients.acm.get_paginator("list_certificates")):
-        if cert["DomainName"] in (args.dns_alias, ".".join(["*"] + args.dns_alias.split(".")[1:])):
-            break
-    else:
-        raise AegeaException("Unable to find ACM certificate for {}".format(args.dns_alias))
+    cert = find_acm_cert(args.dns_alias)
     azs = [az["ZoneName"] for az in clients.ec2.describe_availability_zones()["AvailabilityZones"]]
     if args.type == "ELB":
         listener = dict(Protocol="https",
@@ -109,6 +113,8 @@ def create(args):
                                                AvailabilityZones=azs,
                                                SecurityGroups=[sg.id for sg in args.security_groups])
     elif args.type == "ALB":
+        if args.target_group is None:
+            args.target_group = args.elb_name + "-default-tg"
         vpc = ensure_vpc()
         res = clients.elbv2.create_load_balancer(Name=args.elb_name,
                                                  Subnets=[subnet.id for subnet in vpc.subnets.all()],
@@ -142,8 +148,8 @@ def create(args):
 
 parser_create = register_parser(create, parent=elb_parser, help="Create a new ELB")
 parser_create.add_argument("--security-groups", nargs="+", type=resolve_security_group, required=True, help="""
-Security groups to be used by the ELB's internal interface.
-Security groups must allow TCP traffic to flow between the ELB and the instances on INSTANCE_PORT.""")
+Security groups to assign the ELB. You must allow TCP traffic to flow between clients and the ELB on ports 80/443
+and allow TCP traffic to flow between the ELB and the instances on INSTANCE_PORT.""")
 parser_create.add_argument("--dns-alias", required=True, help="Fully qualified DNS name that will point to the ELB")
 parser_create.add_argument("--path-pattern")
 
@@ -151,5 +157,5 @@ for parser in parser_register, parser_deregister, parser_replace, parser_create:
     parser.add_argument("elb_name")
     parser.add_argument("instances", nargs="+", type=resolve_instance_id)
     parser.add_argument("--type", choices={"ELB", "ALB"}, default="ALB")
-    parser.add_argument("--target-group", default="aegea-default-tg")
+    parser.add_argument("--target-group")
     parser.add_argument("--instance-port", type=int, default=80)
