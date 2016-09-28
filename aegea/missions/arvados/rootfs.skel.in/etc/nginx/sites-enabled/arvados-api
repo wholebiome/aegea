@@ -38,7 +38,7 @@ geo $external_client {
 }
 
 server {
-  listen       localhost:$ARVADOS_API_ELB_FACING_PORT;
+  listen       *:$ARVADOS_API_ELB_FACING_PORT;
   server_name  $ARVADOS_UUID_PREFIX.$ARVADOS_HOSTNAME;
 
   index  index.html index.htm index.php;
@@ -57,7 +57,7 @@ server {
 }
 
 server {
-  listen       localhost:$ARVADOS_API_ELB_FACING_PORT;
+  listen       *:$ARVADOS_API_ELB_FACING_PORT;
   server_name  ws.$ARVADOS_UUID_PREFIX.$ARVADOS_HOSTNAME;
 
   index  index.html index.htm index.php;
