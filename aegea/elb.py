@@ -128,7 +128,7 @@ def create(args):
         if res["Listeners"]:
             res = clients.elbv2.modify_listener(ListenerArn=res["Listeners"][0]["ListenerArn"], **listener_params)
         else:
-            res = clients.elbv2.create_listener(**listener_params)
+            res = clients.elbv2.create_listener(LoadBalancerArn=elb["LoadBalancerArn"], **listener_params)
         listener = res["Listeners"][0]
         if args.path_pattern:
             rules = clients.elbv2.describe_rules(ListenerArn=listener["ListenerArn"])["Rules"]
