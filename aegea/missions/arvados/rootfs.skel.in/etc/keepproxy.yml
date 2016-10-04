@@ -1,0 +1,14 @@
+{
+  "Client": {
+    "APIHost": "$ARVADOS_UUID_PREFIX.$ARVADOS_HOSTNAME:443",
+    "AuthToken": "FIXME",
+    "Insecure": false
+  },
+  "Listen": ":25107",
+  "DisableGet": false,
+  "DisablePut": false,
+  "DefaultReplicas": 0,
+  "Timeout": "15s",
+  "PIDFile": "",
+  "Debug": false
+}
