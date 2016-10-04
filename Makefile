@@ -13,7 +13,7 @@ test_deps:
 
 lint: test_deps
 	./setup.py flake8
-#	flake8 scripts/*
+	flake8 --filename='*' $$(grep -r -l '/usr/bin/env python' aegea scripts)
 
 test: test_deps lint
 	coverage run setup.py test
