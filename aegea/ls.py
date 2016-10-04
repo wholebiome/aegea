@@ -131,25 +131,6 @@ def console(args):
 parser = register_parser(console, help="Get console output for an EC2 instance")
 parser.add_argument("instance")
 
-def zones(args):
-    table = []
-    rrs_cols = ["Name", "Type", "TTL"]
-    record_cols = ["Value"]
-    for zone in paginate(clients.route53.get_paginator("list_hosted_zones")):
-        if args.zones and zone["Name"] not in args.zones + [z + "." for z in args.zones]:
-            continue
-        for rrs in paginate(clients.route53.get_paginator("list_resource_record_sets"), HostedZoneId=zone["Id"]):
-            for record in rrs.get("ResourceRecords", [rrs.get("AliasTarget", {})]):
-                row = [rrs.get(f) for f in rrs_cols]
-                row += [record.get(f, record.get("DNSName")) for f in record_cols]
-                row += [get_field(zone, "Config.PrivateZone"), zone["Id"].rpartition("/")[-1]]
-                table.append(row)
-    column_names = rrs_cols + record_cols + ["Private", "Id"]
-    page_output(format_table(table, column_names=column_names, max_col_width=args.max_col_width))
-
-parser = register_parser(zones, help="List Route53 DNS zones")
-parser.add_argument("zones", nargs="*")
-
 def images(args):
     page_output(filter_and_tabulate(resources.ec2.images.filter(Owners=["self"]), args))
 

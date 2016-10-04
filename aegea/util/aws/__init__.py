@@ -148,8 +148,8 @@ class DNSZone:
                                                  Type=record_type,
                                                  TTL=ttl,
                                                  ResourceRecords=value))
-        clients.route53.change_resource_record_sets(HostedZoneId=self.zone_id,
-                                                    ChangeBatch=dict(Changes=[dns_update]))
+        return clients.route53.change_resource_record_sets(HostedZoneId=self.zone_id,
+                                                           ChangeBatch=dict(Changes=[dns_update]))
 
     def delete(self, name, value=None, record_type="CNAME", missing_ok=True):
         if value is None:
@@ -168,7 +168,7 @@ class DNSZone:
                     return
                 else:
                     raise AegeaException(msg)
-        self.update(name, value, action="DELETE", record_type=record_type)
+        return self.update(name, value, action="DELETE", record_type=record_type)
 
 class ARN:
     fields = "arn partition service region account_id resource".split()
