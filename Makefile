@@ -17,6 +17,7 @@ lint: test_deps
 
 test: test_deps lint
 	coverage run setup.py test
+	coverage combine
 
 init_docs:
 	cd docs; sphinx-quickstart
