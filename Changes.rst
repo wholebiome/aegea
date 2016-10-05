@@ -1,3 +1,16 @@
+Changes for v1.2.0 (2016-10-05)
+===============================
+
+-  Online documentation improvements
+
+-  aegea zones: begin ability to edit records from command line
+
+-  Begin support for recursive git clone deploy keys (#4)
+
+-  Pretty-print dicts and lists as json in tables
+
+-  Logic fixes in elb create command
+
 Changes for v1.1.1 (2016-09-27)
 ===============================
 
