@@ -34,7 +34,7 @@ def ls(args):
             table.extend([dict(row, **target) for target in targets] if targets else [row])
     page_output(tabulate(table, args))
 
-parser = register_listing_parser(ls, parent=elb_parser)
+parser = register_listing_parser(ls, parent=elb_parser, help="List ELBs")
 
 def get_target_group(alb_name, target_group_name):
     alb = clients.elbv2.describe_load_balancers(Names=[alb_name])["LoadBalancers"][0]

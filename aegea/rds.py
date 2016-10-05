@@ -29,14 +29,14 @@ def ls(args):
     table = [add_tags(i, "db", "DBInstanceIdentifier") for i in paginate(paginator)]
     page_output(tabulate(table, args))
 
-parser = register_parser(ls, parent=rds_parser)
+parser = register_parser(ls, parent=rds_parser, help="List RDS instances")
 
 def snapshots(args):
     paginator = clients.rds.get_paginator("describe_db_snapshots")
     table = [add_tags(i, "snapshot", "DBSnapshotIdentifier") for i in paginate(paginator)]
     page_output(tabulate(table, args))
 
-parser = register_parser(snapshots, parent=rds_parser)
+parser = register_parser(snapshots, parent=rds_parser, help="List RDS snapshots")
 
 def create(args):
     tags = dict(tag.split("=", 1) for tag in args.tags)
@@ -60,7 +60,7 @@ def create(args):
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId", "DBInstanceStatus")}
 
-parser = register_parser(create, parent=rds_parser)
+parser = register_parser(create, parent=rds_parser, help="Create an RDS instance")
 parser.add_argument("name")
 parser.add_argument("--db-name")
 parser.add_argument("--engine")
@@ -75,13 +75,13 @@ parser.add_argument("--security-groups", nargs="+", default=[])
 def delete(args):
     clients.rds.delete_db_instance(DBInstanceIdentifier=args.name, SkipFinalSnapshot=True)
 
-parser = register_parser(delete, parent=rds_parser)
+parser = register_parser(delete, parent=rds_parser, help="Delete an RDS instance")
 parser.add_argument("name")
 
 def snapshot(args):
     raise NotImplementedError()
 
-parser = register_parser(snapshot, parent=rds_parser)
+parser = register_parser(snapshot, parent=rds_parser, help="Create an RDS snapshot")
 
 def restore(args):
     tags = dict(tag.split("=", 1) for tag in args.tags)
@@ -97,7 +97,7 @@ def restore(args):
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.instance_name)["DBInstances"][0]
     return {k: instance[k] for k in ("Endpoint", "DbiResourceId")}
 
-parser = register_parser(restore, parent=rds_parser)
+parser = register_parser(restore, parent=rds_parser, help="Restore an RDS instance from a snapshot")
 parser.add_argument("snapshot_name")
 parser.add_argument("instance_name")
 parser.add_argument("--storage-type")

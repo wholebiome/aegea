@@ -32,7 +32,7 @@ def ls(args):
     column_names = rrs_cols + record_cols + ["Private", "Id"]
     page_output(format_table(table, column_names=column_names, max_col_width=args.max_col_width))
 
-parser = register_parser(ls, parent=zones_parser, help="List Route53 DNS zones")
+parser = register_parser(ls, parent=zones_parser, help="List Route53 DNS zones and records")
 parser.add_argument("zones", nargs="*")
 
 def update(args):
