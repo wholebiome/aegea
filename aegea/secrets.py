@@ -57,7 +57,7 @@ from . import register_parser
 from .util.aws import ARN, IAMPolicyBuilder, resources, expect_error_codes, ensure_iam_policy
 from .util.printing import format_table, page_output, tabulate
 from .util.exceptions import AegeaException
-from .util.crypto import new_ssh_key, hostkey_line
+from .util.crypto import new_ssh_key, hostkey_line, key_fingerprint
 from .util.compat import StringIO
 
 def build_s3_bucket_policy(account_id, bucket):
@@ -136,7 +136,8 @@ def put(args):
     secret_object = get_secret_object(parse_principal(args), args.secret_name)
     secret_object.put(Body=secret_value.encode(), ServerSideEncryption="AES256")
     if args.generate_ssh_key:
-        return dict(ssh_public_key=hostkey_line(hostnames=[], key=ssh_key).strip())
+        return dict(ssh_public_key=hostkey_line(hostnames=[], key=ssh_key).strip(),
+                    ssh_key_fingerprint=key_fingerprint(ssh_key))
 
 put_parser = register_parser(put, parent=secrets_parser)
 put_parser.add_argument("--generate-ssh-key", action="store_true",

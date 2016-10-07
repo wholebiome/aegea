@@ -11,8 +11,8 @@ def new_ssh_key(bits=2048):
 def get_public_key_from_pair(key):
     return key.get_name() + " " + key.get_base64()
 
-def host_key_fingerprint(key):
-    return key.get_name() + " " + ":".join("{:02x}".format(i) for i in key.get_fingerprint())
+def key_fingerprint(key):
+    return key.get_name() + " " + ":".join("{:02x}".format(ord(i)) for i in key.get_fingerprint())
 
 def get_ssh_key_path(name):
     return os.path.expanduser("~/.ssh/{}.pem".format(name))

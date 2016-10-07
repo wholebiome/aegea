@@ -47,6 +47,7 @@ from botocore.exceptions import ClientError
 
 from . import register_parser, logger, secrets
 from .util.git import parse_repo_name, get_repo, private_submodules
+from .util.crypto import key_fingerprint
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, BOLD
 from .util.aws import (ARN, resources, clients, IAMPolicyBuilder, resolve_instance_id, get_iam_role_for_instance,
                        expect_error_codes, ensure_iam_policy)
@@ -81,10 +82,12 @@ def configure(args):
     logger.info("Created SNS topic %s and GitHub hook for repo %s", topic, repo)
     status_bucket = resources.s3.create_bucket(Bucket="deploy-status-" + ARN(topic.arn).account_id)
     logger.info("Created %s", status_bucket)
+    grant(args)
     return dict(topic_arn=topic.arn)
 
 parser = register_parser(configure, parent=deploy_parser)
 parser.add_argument("repo", help="URL of GitHub repo, e.g. git@github.com:kislyuk/aegea.git")
+parser.add_argument("iam_role_or_instance")
 
 def get_status_for_queue(queue):
     bucket_name = "deploy-status-{}".format(ARN(queue.attributes["QueueArn"]).account_id)
@@ -148,8 +151,9 @@ def grant(args):
                                                 iam_user=None,
                                                 generate_ssh_key=True))
         get_repo(private_repo).create_key(role.name, secret["ssh_public_key"])
+        logger.info("Created deploy key %s for IAM role %s to access GitHub repo %s",
+                    secret["ssh_key_fingerprint"], role.name, private_repo)
 
 parser = register_parser(grant, parent=deploy_parser)
-parser.add_argument("iam_role_or_instance")
 parser.add_argument("repo", help="URL of GitHub repo, e.g. git@github.com:kislyuk/aegea.git")
-parser.add_argument("branch", help="Branch of GitHub repo")
+parser.add_argument("iam_role_or_instance")
