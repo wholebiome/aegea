@@ -5,5 +5,4 @@ test:
 dependencies:
   override:
     - pip install tox tox-pyenv
-    - export PY_V='from platform import python_version as v; print(v())'
-    - pyenv local $(python2.7 -c "$PY_V") $(python3.5 -c "$PY_V")
+    - pyenv local 2.7.12 3.5.2
