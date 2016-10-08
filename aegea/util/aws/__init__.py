@@ -433,6 +433,6 @@ def get_elb_dns_aliases():
         for rrs in paginate(clients.route53.get_paginator("list_resource_record_sets"), HostedZoneId=zone["Id"]):
             for record in rrs.get("ResourceRecords", [rrs.get("AliasTarget", {})]):
                 value = record.get("Value", record.get("DNSName"))
-                if value.endswith("elb.amazonaws.com."):
+                if value.endswith("elb.amazonaws.com") or value.endswith("elb.amazonaws.com."):
                     dns_aliases[value.rstrip(".").replace("dualstack.", "")] = rrs["Name"]
     return dns_aliases

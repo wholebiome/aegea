@@ -368,6 +368,7 @@ elb_ls:
     - alias
     - InstanceId
     - Target
+    - TargetHealth
     - State
     - Description
 

@@ -24,10 +24,14 @@ def ls(args):
     dns_aliases = get_elb_dns_aliases()
     for row in paginate(clients.elb.get_paginator("describe_load_balancers")):
         row.update(alias=dns_aliases.get(row["DNSName"]), type="ELB")
+        if args.elbs and row["LoadBalancerName"] not in args.elbs and (row["alias"] or "").rstrip(".") not in args.elbs:
+            continue
         instances = clients.elb.describe_instance_health(LoadBalancerName=row["LoadBalancerName"])["InstanceStates"]
         table.extend([dict(row, **instance) for instance in instances] if instances else [row])
     for row in clients.elbv2.describe_load_balancers()["LoadBalancers"]:
         row.update(alias=dns_aliases.get(row["DNSName"]), type="ALB")
+        if args.elbs and row["LoadBalancerName"] not in args.elbs and (row["alias"] or "").rstrip(".") not in args.elbs:
+            continue
         target_groups = clients.elbv2.describe_target_groups(LoadBalancerArn=row["LoadBalancerArn"])["TargetGroups"]
         for tg in target_groups:
             targets = get_targets(tg)
@@ -35,6 +39,7 @@ def ls(args):
     page_output(tabulate(table, args))
 
 parser = register_listing_parser(ls, parent=elb_parser, help="List ELBs")
+parser.add_argument("elbs", nargs="*")
 
 def get_target_group(alb_name, target_group_name):
     alb = clients.elbv2.describe_load_balancers(Names=[alb_name])["LoadBalancers"][0]
@@ -123,7 +128,8 @@ def create(args):
         res = clients.elbv2.create_target_group(Name=args.target_group,
                                                 Protocol="HTTP",
                                                 Port=args.instance_port,
-                                                VpcId=vpc.id)
+                                                VpcId=vpc.id,
+                                                Matcher=dict(HttpCode=args.ok_http_codes))
         target_group = res["TargetGroups"][0]
         listener_params = dict(Protocol="HTTPS",
                                Port=443,
@@ -152,6 +158,8 @@ Security groups to assign the ELB. You must allow TCP traffic to flow between cl
 and allow TCP traffic to flow between the ELB and the instances on INSTANCE_PORT.""")
 parser_create.add_argument("--dns-alias", required=True, help="Fully qualified DNS name that will point to the ELB")
 parser_create.add_argument("--path-pattern")
+parser_create.add_argument("--ok-http-codes", default="200-399",
+                           help="Comma or dash-separated HTTP response codes considered healthy by ELB health check")
 
 for parser in parser_register, parser_deregister, parser_replace, parser_create:
     parser.add_argument("elb_name")
