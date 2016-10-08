@@ -1,3 +1,8 @@
+Changes for v1.2.2 (2016-10-08)
+===============================
+
+-  ELB provisioning and listing improvements
+
 Changes for v1.2.1 (2016-10-07)
 ===============================
 
