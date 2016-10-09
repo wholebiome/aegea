@@ -3,7 +3,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, unittest, collections, itertools, copy, re, subprocess, importlib, pkgutil, json, datetime
+import os, sys, unittest, collections, itertools, copy, re, subprocess, importlib, pkgutil, json, datetime, glob
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, pkg_root)
@@ -26,13 +26,6 @@ class TestAegea(unittest.TestCase):
     def call(self, cmd, **kwargs):
         print('Running "{}"'.format(cmd), file=sys.stderr)
         expect = kwargs.pop("expect", [dict(return_codes=[os.EX_OK], stdout=None, stderr=None)])
-        if isinstance(cmd, list) and cmd[0] == "aegea":
-            cmd[0] = subprocess.check_output(["which", cmd[0]]).decode().strip()
-            cmd = ["coverage", "run"] + cmd
-        elif cmd.startswith("aegea"):
-            cmd = cmd.split(" ", 1)
-            cmd[0] = subprocess.check_output(["which", cmd[0]]).decode().strip()
-            cmd = "coverage run " + " ".join(cmd)
         process = subprocess.Popen(cmd, stdin=kwargs.get("stdin", subprocess.PIPE), stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, **kwargs)
         out, err = process.communicate()
@@ -180,8 +173,11 @@ class TestAegea(unittest.TestCase):
 
     @unittest.skipIf(USING_PYTHON2, "requires Python 3 dependencies")
     def test_deploy_utils(self):
+        deploy_utils_bindir = os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin")
+        for script in glob.glob(deploy_utils_bindir + "/aegea*"):
+            self.call([script, "--help"], expect=[dict(return_codes=[0, 1])])
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-deploy-pilot"),
-                  expect=[dict(return_codes=[2], stderr="argument --repo is required")])
+                  expect=[dict(return_codes=[2], stderr="the following arguments are required: --repo, --branch")])
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-get-secret"),
                   expect=[dict(return_codes=[2])])
         self.call(os.path.join(pkg_root, "aegea", "rootfs.skel", "usr", "bin", "aegea-git-ssh-helper"),

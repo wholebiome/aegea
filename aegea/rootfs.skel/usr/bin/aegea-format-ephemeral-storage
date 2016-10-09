@@ -1,5 +1,11 @@
 #!/bin/bash -eu
 
+if [[ $# != 1 ]] || [[ $1 != "--yes" ]]; then
+    echo "$(basename $0): Format and mount EC2 ephemeral storage."
+    echo "Usage: $(basename $0) --yes"
+    exit 1
+fi
+
 shopt -s nullglob
 devices=(/dev/xvd[b-m])
 if [[ ${#devices[@]} == 0 ]]; then
