@@ -35,7 +35,7 @@ def clean_old_builds(build_root, prefix, min_old_builds=2):
 
 def run_git_command(*cmd, **kwargs):
     kwargs["env"] = dict(kwargs.get("env", os.environ), GIT_SSH_COMMAND="aegea-git-ssh-helper")
-    return subprocess.check_call(["git"] + cmd, **kwargs)
+    return subprocess.check_call(["git"] + list(cmd), **kwargs)
 
 def clone_and_build(branch, destination):
     if not os.path.exists(os.path.dirname(destination)):
