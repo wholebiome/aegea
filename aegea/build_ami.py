@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json, time
 from argparse import Namespace
+from collections import OrderedDict
 
 from . import register_parser, logger, config, __version__
 from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
@@ -10,7 +11,7 @@ from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_
 from .launch import launch
 
 def get_bootstrap_files(rootfs_skel_dirs):
-    manifest = []
+    manifest = OrderedDict()
     aegea_conf = os.getenv("AEGEA_CONFIG_FILE")
 
     for rootfs_skel_dir in rootfs_skel_dirs:
@@ -28,11 +29,12 @@ def get_bootstrap_files(rootfs_skel_dirs):
             raise Exception("rootfs_skel directory {} not found".format(fn))
         for root, dirs, files in os.walk(fn):
             for file_ in files:
+                path = os.path.join("/", os.path.relpath(root, fn), file_)
                 with open(os.path.join(root, file_)) as fh:
-                    manifest.append(dict(path=os.path.join("/", os.path.relpath(root, fn), file_),
-                                         content=fh.read(),
-                                         permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:]))
-    return manifest
+                    manifest[path] = dict(path=path,
+                                          content=fh.read(),
+                                          permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:])
+    return manifest.values()
 
 def build_ami(args):
     from .util.ssh import AegeaSSHClient
