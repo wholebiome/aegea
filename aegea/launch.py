@@ -184,7 +184,8 @@ parser.add_argument("--subnet")
 parser.add_argument("--availability-zone", "--az")
 parser.add_argument("--security-groups", nargs="+", metavar="SECURITY_GROUP")
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE")
-parser.add_argument("--wait-for-ssh", action="store_true")
+parser.add_argument("--wait-for-ssh", action="store_true",
+                    help="Wait for launched instance to begin accepting SSH connections. Security groups and NACLs must permit SSH from launching host.")  # noqa
 parser.add_argument("--essential-services", nargs="+")
 parser.add_argument("--iam-role", default=__name__)
 parser.add_argument("--iam-policies", nargs="+", metavar="IAM_POLICY_NAME",

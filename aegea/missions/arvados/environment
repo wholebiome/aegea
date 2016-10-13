@@ -15,6 +15,7 @@ export ARVADOS_SSO_WEBSOCKET_ADDRESS="wss://ws.$ARVADOS_HOSTNAME/websocket"
 export ARVADOS_SSO_GOOGLE_OAUTH2_CLIENT_ID=FIXME
 export ARVADOS_SSO_GOOGLE_OAUTH2_CLIENT_SECRET=FIXME
 
+#export ARVADOS_DB_HOST=arvados-1234567890.abcdefghijk.us-west-2.rds.amazonaws.com
 export ARVADOS_DB_NAME=arvados
 export ARVADOS_TEST_DB_NAME=arvadostest
 export ARVADOS_DB_USERNAME=arvados

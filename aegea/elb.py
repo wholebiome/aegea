@@ -161,9 +161,20 @@ parser_create.add_argument("--path-pattern")
 parser_create.add_argument("--ok-http-codes", default="200-399",
                            help="Comma or dash-separated HTTP response codes considered healthy by ELB health check")
 
-for parser in parser_register, parser_deregister, parser_replace, parser_create:
+def delete(args):
+    if args.type == "ELB":
+        clients.elb.delete_load_balancer(LoadBalancerName=args.elb_name)
+    elif args.type == "ALB":
+        elbs = clients.elbv2.describe_load_balancers(Names=[args.elb_name])["LoadBalancers"]
+        assert len(elbs) == 1
+        clients.elbv2.delete_load_balancer(LoadBalancerArn=elbs[0]["LoadBalancerArn"])
+
+parser_delete = register_parser(delete, parent=elb_parser, help="Delete an ELB")
+
+for parser in parser_register, parser_deregister, parser_replace, parser_create, parser_delete:
     parser.add_argument("elb_name")
-    parser.add_argument("instances", nargs="+", type=resolve_instance_id)
     parser.add_argument("--type", choices={"ELB", "ALB"}, default="ALB")
-    parser.add_argument("--target-group")
-    parser.add_argument("--instance-port", type=int, default=80)
+    if parser != parser_delete:
+        parser.add_argument("instances", nargs="+", type=resolve_instance_id)
+        parser.add_argument("--target-group")
+        parser.add_argument("--instance-port", type=int, default=80)
