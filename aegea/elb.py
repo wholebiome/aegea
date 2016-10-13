@@ -129,6 +129,7 @@ def create(args):
                                                 Protocol="HTTP",
                                                 Port=args.instance_port,
                                                 VpcId=vpc.id,
+                                                HealthCheckPath=args.health_check_path,
                                                 Matcher=dict(HttpCode=args.ok_http_codes))
         target_group = res["TargetGroups"][0]
         listener_params = dict(Protocol="HTTPS",
@@ -158,6 +159,7 @@ Security groups to assign the ELB. You must allow TCP traffic to flow between cl
 and allow TCP traffic to flow between the ELB and the instances on INSTANCE_PORT.""")
 parser_create.add_argument("--dns-alias", required=True, help="Fully qualified DNS name that will point to the ELB")
 parser_create.add_argument("--path-pattern")
+parser_create.add_argument("--health-check-path", default="/", help="Path to be queried by ELB health check")
 parser_create.add_argument("--ok-http-codes", default="200-399",
                            help="Comma or dash-separated HTTP response codes considered healthy by ELB health check")
 
