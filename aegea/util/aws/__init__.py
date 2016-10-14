@@ -121,7 +121,7 @@ def ensure_security_group(name, vpc):
     ensure_ingress_rule(security_group, IpProtocol="tcp", FromPort=22, ToPort=22, CidrIp="0.0.0.0/0")
     return security_group
 
-class DNSZone:
+class DNSZone(VerboseRepr):
     def __init__(self, zone_name=None, use_unique_private_zone=True):
         if zone_name:
             self.zone = clients.route53.list_hosted_zones_by_name(DNSName=zone_name)["HostedZones"][0]
