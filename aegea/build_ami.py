@@ -34,7 +34,7 @@ def get_bootstrap_files(rootfs_skel_dirs):
                     manifest[path] = dict(path=path,
                                           content=fh.read(),
                                           permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:])
-    return manifest.values()
+    return list(manifest.values())
 
 def build_ami(args):
     from .util.ssh import AegeaSSHClient
