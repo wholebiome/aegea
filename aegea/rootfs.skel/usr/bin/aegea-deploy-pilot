@@ -48,7 +48,7 @@ def clone_and_build(branch, destination):
         run_git_command("clone", "--recurse-submodules", "--branch", branch, destination, deploy_dir)
         run_git_command("remote", "set-url", "origin", args.github_url, cwd=deploy_dir)
         run_git_command("fetch", "origin", branch, cwd=deploy_dir)
-        run_git_command("checkout", "--force", "origin/" + branch, cwd=deploy_dir)
+        run_git_command("checkout", "-B", branch, "--track", "origin/" + branch, cwd=deploy_dir)
     else:
         run_git_command("clone", "--recurse-submodules", "--branch", branch, "--depth=1", args.github_url, deploy_dir)
     subprocess.check_call(["make", "-C", deploy_dir])
