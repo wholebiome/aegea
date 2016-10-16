@@ -24,10 +24,12 @@ def add_tags(resource, prefix, key):
     resource["tags"] = clients.rds.list_tags_for_resource(ResourceName=str(arn))["TagList"]
     return resource
 
-def ls(args):
+def list_rds_instances():
     paginator = clients.rds.get_paginator("describe_db_instances")
-    table = [add_tags(i, "db", "DBInstanceIdentifier") for i in paginate(paginator)]
-    page_output(tabulate(table, args))
+    return [add_tags(i, "db", "DBInstanceIdentifier") for i in paginate(paginator)]
+
+def ls(args):
+    page_output(tabulate(list_rds_instances(), args))
 
 parser = register_parser(ls, parent=rds_parser, help="List RDS instances")
 
@@ -76,7 +78,7 @@ def delete(args):
     clients.rds.delete_db_instance(DBInstanceIdentifier=args.name, SkipFinalSnapshot=True)
 
 parser = register_parser(delete, parent=rds_parser, help="Delete an RDS instance")
-parser.add_argument("name")
+parser.add_argument("name").completer = lambda **kw: [i["DBInstanceIdentifier"] for i in list_rds_instances()]
 
 def snapshot(args):
     raise NotImplementedError()
