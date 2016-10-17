@@ -1,5 +1,6 @@
 common:
+  arvados_workbench_url: https://workbench.$ARVADOS_HOSTNAME
   secret_token: $ARVADOS_SECRET_TOKEN
-  arvados_login_base: $ARVADOS_HOST_URL/login
-  arvados_v1_base: $ARVADOS_HOST_URL/arvados/v1
-  arvados_insecure_https: true
+  arvados_login_base: https://$ARVADOS_UUID_PREFIX.$ARVADOS_HOSTNAME/login
+  arvados_v1_base: https://$ARVADOS_UUID_PREFIX.$ARVADOS_HOSTNAME/arvados/v1
+  arvados_insecure_https: false
