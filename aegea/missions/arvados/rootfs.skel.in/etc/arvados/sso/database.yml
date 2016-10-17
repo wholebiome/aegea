@@ -1,7 +1,7 @@
 production:
   adapter: postgresql
   encoding: utf8
-  database: $ARVADOS_DB_NAME
+  database: $ARVADOS_SSO_DB_NAME
   username: $ARVADOS_DB_USERNAME
   password: $ARVADOS_DB_PASSWORD
   host: $ARVADOS_DB_HOST
@@ -14,7 +14,7 @@ production:
 development:
   adapter: postgresql
   encoding: utf8
-  database: $ARVADOS_DB_NAME
+  database: $ARVADOS_SSO_DB_NAME
   username: $ARVADOS_DB_USERNAME
   password: $ARVADOS_DB_PASSWORD
   host: $ARVADOS_DB_HOST
@@ -26,7 +26,7 @@ development:
 test:
   adapter: postgresql
   encoding: utf8
-  database: $ARVADOS_TEST_DB_NAME
+  database: $ARVADOS_SSO_TEST_DB_NAME
   username: $ARVADOS_DB_USERNAME
   password: $ARVADOS_DB_PASSWORD
   host: $ARVADOS_DB_HOST

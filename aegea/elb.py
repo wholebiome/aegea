@@ -28,7 +28,7 @@ def ls(args):
             continue
         instances = clients.elb.describe_instance_health(LoadBalancerName=row["LoadBalancerName"])["InstanceStates"]
         table.extend([dict(row, **instance) for instance in instances] if instances else [row])
-    for row in clients.elbv2.describe_load_balancers()["LoadBalancers"]:
+    for row in paginate(clients.elbv2.get_paginator("describe_load_balancers")):
         row.update(alias=dns_aliases.get(row["DNSName"]), type="ALB")
         if args.elbs and row["LoadBalancerName"] not in args.elbs and (row["alias"] or "").rstrip(".") not in args.elbs:
             continue
@@ -173,8 +173,13 @@ def delete(args):
 
 parser_delete = register_parser(delete, parent=elb_parser, help="Delete an ELB")
 
+def list_load_balancers():
+    elbs = paginate(clients.elb.get_paginator("describe_load_balancers"))
+    albs = paginate(clients.elbv2.get_paginator("describe_load_balancers"))
+    return list(elbs) + list(albs)
+
 for parser in parser_register, parser_deregister, parser_replace, parser_create, parser_delete:
-    parser.add_argument("elb_name")
+    parser.add_argument("elb_name").completer = lambda **kw: [i["LoadBalancerName"] for i in list_load_balancers()]
     parser.add_argument("--type", choices={"ELB", "ALB"}, default="ALB")
     if parser != parser_delete:
         parser.add_argument("instances", nargs="+", type=resolve_instance_id)

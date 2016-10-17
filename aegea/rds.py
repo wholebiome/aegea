@@ -57,6 +57,8 @@ def create(args):
                        CopyTagsToSnapshot=True)
     if args.db_name:
         create_args.update(DBName=args.db_name)
+    if args.engine_version:
+        create_args.update(EngineVersion=args.engine_version)
     clients.rds.create_db_instance(**create_args)
     clients.rds.get_waiter("db_instance_available").wait(DBInstanceIdentifier=args.name)
     instance = clients.rds.describe_db_instances(DBInstanceIdentifier=args.name)["DBInstances"][0]
@@ -66,6 +68,7 @@ parser = register_parser(create, parent=rds_parser, help="Create an RDS instance
 parser.add_argument("name")
 parser.add_argument("--db-name")
 parser.add_argument("--engine")
+parser.add_argument("--engine-version")
 parser.add_argument("--storage", type=int)
 parser.add_argument("--storage-type")
 parser.add_argument("--master-username", "--username")
