@@ -1,0 +1,13 @@
+{
+  "Client": {
+    "APIHost": "$ARVADOS_UUID_PREFIX.$ARVADOS_HOSTNAME:443",
+    "AuthToken": "",
+    "Insecure": false
+  },
+  "Listen": ":80",
+  "AnonymousTokens": [
+    "xxxxxxxxxxxxxxxxxxxxxxx"
+  ],
+  "AttachmentOnlyHost": "",
+  "TrustAllContent": false
+}
