@@ -8,7 +8,6 @@ from . import register_parser
 from .util import Timestamp, paginate, describe_cidr, add_time_bound_args
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE
 from .util.aws import ARN, resolve_instance_id, resources, clients
-from .util.compat import lru_cache
 
 def register_listing_parser(function, **kwargs):
     col_def = dict(default=kwargs.pop("column_defaults")) if "column_defaults" in kwargs else {}
@@ -95,25 +94,6 @@ def policies(args):
 
 parser = register_listing_parser(policies, help="List IAM policies")
 parser.add_argument("--sort-by")
-
-def volumes(args):
-    @lru_cache()
-    def instance_id_to_name(i):
-        return add_name(resources.ec2.Instance(i)).name
-    table = [[get_cell(i, f) for f in args.columns] for i in filter_collection(resources.ec2.volumes, args)]
-    if "attachments" in args.columns:
-        for row in table:
-            att_col_idx = args.columns.index("attachments")
-            row[att_col_idx] = ", ".join(instance_id_to_name(a["InstanceId"]) for a in row[att_col_idx])
-    page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
-
-parser = register_filtering_parser(volumes, help="List EC2 EBS volumes")
-
-def snapshots(args):
-    account_id = ARN(resources.iam.CurrentUser().arn).account_id
-    page_output(filter_and_tabulate(resources.ec2.snapshots.filter(OwnerIds=[account_id]), args))
-
-parser = register_filtering_parser(snapshots, help="List EC2 EBS snapshots")
 
 def buckets(args):
     """

@@ -1,0 +1,97 @@
+"""
+Utilities to manage AWS Elastic Block Store volumes and snapshots.
+
+To delete EBS volumes or snapshots, use ``aegea rm``.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import os, sys, argparse, getpass
+from datetime import datetime
+
+from . import register_parser
+from .ls import add_name, filter_collection, filter_and_tabulate, register_filtering_parser
+from .util import Timestamp, paginate
+from .util.printing import format_table, page_output, get_field, get_cell, tabulate
+from .util.aws import ARN, resources, clients, ensure_vpc, ensure_subnet, resolve_instance_id
+from .util.compat import lru_cache
+
+def ebs(args):
+    ebs_parser.print_help()
+
+ebs_parser = register_parser(ebs, help="Manage EBS resources", description=__doc__,
+                             formatter_class=argparse.RawTextHelpFormatter)
+
+def ls(args):
+    @lru_cache()
+    def instance_id_to_name(i):
+        return add_name(resources.ec2.Instance(i)).name
+    table = [[get_cell(i, f) for f in args.columns] for i in filter_collection(resources.ec2.volumes, args)]
+    if "attachments" in args.columns:
+        for row in table:
+            att_col_idx = args.columns.index("attachments")
+            row[att_col_idx] = ", ".join(instance_id_to_name(a["InstanceId"]) for a in row[att_col_idx])
+    page_output(format_table(table, column_names=args.columns, max_col_width=args.max_col_width))
+
+parser = register_filtering_parser(ls, parent=ebs_parser, help="List EC2 EBS volumes")
+
+def snapshots(args):
+    account_id = ARN(resources.iam.CurrentUser().arn).account_id
+    page_output(filter_and_tabulate(resources.ec2.snapshots.filter(OwnerIds=[account_id]), args))
+
+parser = register_filtering_parser(snapshots, parent=ebs_parser, help="List EC2 EBS snapshots")
+
+def create(args):
+    create_args = dict(Size=args.size)
+    for arg in "dry_run snapshot_id availability_zone volume_type iops encrypted kms_key_id".split():
+        if getattr(args, arg) is not None:
+            create_args["".join(x.capitalize() for x in arg.split("_"))] = getattr(args, arg)
+    if "AvailabilityZone" not in create_args:
+        create_args["AvailabilityZone"] = ensure_subnet(ensure_vpc()).availability_zone
+    res = clients.ec2.create_volume(**create_args)
+    if args.wait:
+        clients.ec2.get_waiter('volume_available').wait(VolumeIds=[res["VolumeId"]])
+    return res
+
+parser = register_parser(create, parent=ebs_parser, help="Create an EBS volume")
+parser.add_argument("--size-gb", dest="size", type=int, help="Volume size in gigabytes", required=True)
+parser.add_argument("--dry-run", action="store_true")
+parser.add_argument("--snapshot-id")
+parser.add_argument("--availability-zone")
+parser.add_argument("--volume-type", choices={"standard", "io1", "gp2", "sc1", "st1"})
+parser.add_argument("--storage", type=int)
+parser.add_argument("--iops", type=int)
+parser.add_argument("--encrypted", action="store_true")
+parser.add_argument("--kms-key-id")
+parser.add_argument("--wait", action="store_true")
+
+def snapshot(args):
+    return clients.ec2.create_snapshot(DryRun=args.dry_run, VolumeId=args.volume_id)
+parser_snapshot = register_parser(snapshot, parent=ebs_parser, help="Create an EBS snapshot")
+
+def attach(args):
+    return clients.ec2.attach_volume(DryRun=args.dry_run,
+                                     VolumeId=args.volume_id,
+                                     InstanceId=args.instance,
+                                     Device=args.device)
+parser_attach = register_parser(attach, parent=ebs_parser, help="Attach an EBS volume to an EC2 instance")
+
+def detach(args):
+    return clients.ec2.detach_volume(DryRun=args.dry_run,
+                                     VolumeId=args.volume_id,
+                                     InstanceId=args.instance,
+                                     Device=args.device,
+                                     Force=args.force)
+parser_detach = register_parser(detach, parent=ebs_parser, help="Detach an EBS volume from an EC2 instance")
+
+def complete_volume_id(**kwargs):
+    return [i["VolumeId"] for i in clients.ec2.describe_volumes()["Volumes"]]
+
+for parser in parser_snapshot, parser_attach, parser_detach:
+    parser.add_argument("volume_id").completer = complete_volume_id
+    parser.add_argument("--dry-run", action="store_true")
+    if parser in (parser_attach, parser_detach):
+        parser.add_argument("instance", type=resolve_instance_id)
+        parser.add_argument("device", choices=["xvd" + chr(i + 1) for i in range(ord("a"), ord("z"))])
+
+parser_detach.add_argument("--force", action="store_true")

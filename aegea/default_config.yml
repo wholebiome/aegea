@@ -148,7 +148,7 @@ policies:
     - attachment_count
   sort_by: attachment_count
 
-volumes:
+ebs_ls:
   columns:
     - id
     - size
@@ -160,7 +160,7 @@ volumes:
     - attachments
     - availability_zone
 
-snapshots:
+ebs_snapshots:
   columns:
     - id
     - description
