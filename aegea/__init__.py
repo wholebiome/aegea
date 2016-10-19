@@ -91,6 +91,8 @@ def register_parser(function, parent=None, name=None, **add_parser_args):
         _subparsers[parent.prog] = parent.add_subparsers()
     subparser = _subparsers[parent.prog].add_parser(name or function.__name__, **add_parser_args)
     subparser.add_argument("--max-col-width", "-w", type=int, default=32)
+    subparser.add_argument("--auto-col-width", action="store_true",
+                           help="Adjust column width to fit to terminal")
     subparser.add_argument("--json", action="store_true",
                            help="Output tabular data as a JSON-formatted list of objects")
     subparser.add_argument("--log-level", type=logger.setLevel,

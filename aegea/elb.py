@@ -10,6 +10,7 @@ from .ls import register_parser, register_listing_parser
 from .util import Timestamp, paginate, hashabledict
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
 from .util.exceptions import AegeaException
+from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, resolve_instance_id, resolve_security_group, get_elb_dns_aliases,
                        DNSZone, ensure_vpc)
 
@@ -20,6 +21,9 @@ elb_parser = register_parser(elb, help="Manage Elastic Load Balancers", descript
                              formatter_class=argparse.RawTextHelpFormatter)
 
 def ls(args):
+    @lru_cache()
+    def sgid_to_name(i):
+        return resources.ec2.SecurityGroup(i).group_name
     table = []
     dns_aliases = get_elb_dns_aliases()
     for row in paginate(clients.elb.get_paginator("describe_load_balancers")):
@@ -36,7 +40,7 @@ def ls(args):
         for tg in target_groups:
             targets = get_targets(tg)
             table.extend([dict(row, **target) for target in targets] if targets else [row])
-    page_output(tabulate(table, args))
+    page_output(tabulate(table, args, cell_transforms={"SecurityGroups": lambda x, r: ", ".join(map(sgid_to_name, x))}))
 
 parser = register_listing_parser(ls, parent=elb_parser, help="List ELBs")
 parser.add_argument("elbs", nargs="*")

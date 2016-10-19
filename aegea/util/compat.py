@@ -10,9 +10,11 @@ if USING_PYTHON2:
     str = unicode # noqa
     from backports.statistics import median
     from backports.functools_lru_cache import lru_cache
+    from backports.shutil_get_terminal_size import get_terminal_size
 else:
     from io import StringIO
     from reprlib import Repr
     str = str
     from statistics import median
     from functools import lru_cache
+    from shutil import get_terminal_size

@@ -3,8 +3,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json, shutil, subprocess, re
 from datetime import datetime, timedelta
-from .exceptions import GetFieldError
-from .compat import str
+from .exceptions import GetFieldError, AegeaException
+from .compat import str, get_terminal_size
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 
@@ -75,12 +75,13 @@ def ansi_truncate(s, max_len):
         return s[:max_len + ansi_total_len - 1] + "…"
     return s
 
-def format_table(table, column_names=None, column_specs=None, max_col_width=32, report_dimensions=False):
+def format_table(table, column_names=None, column_specs=None, max_col_width=32, auto_col_width=False):
     """
     Table pretty printer. Expects tables to be given as arrays of arrays::
 
         print(format_table([[1, "2"], [3, "456"]], column_names=['A', 'B']))
     """
+    orig_col_args = dict(column_names=column_names, column_specs=column_specs)
     if len(table) > 0:
         col_widths = [0] * len(table[0])
     elif column_specs is not None:
@@ -134,10 +135,14 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
         formatted_table.append(border("│") + border("│").join(padded_row) + border("│"))
     formatted_table.append(border("└") + border("┴").join(border("─")*i for i in col_widths) + border("┘"))
 
-    if report_dimensions:
-        return "\n".join(formatted_table), len(formatted_table), sum(col_widths) + len(col_widths) + 1
-    else:
-        return "\n".join(formatted_table)
+    if auto_col_width:
+        if not sys.stdout.isatty():
+            raise AegeaException("Cannot auto-format table, output is not a terminal")
+        table_width = len(strip_ansi_codes(formatted_table[0]))
+        tty_cols, tty_rows = get_terminal_size()
+        if table_width > max(tty_cols, 80):
+            return format_table(table, max_col_width=max_col_width-1, auto_col_width=True, **orig_col_args)
+    return "\n".join(formatted_table)
 
 def page_output(content, pager=None, file=None):
     if file is None:
@@ -148,28 +153,27 @@ def page_output(content, pager=None, file=None):
     pager_process = None
     try:
         if file != sys.stdout or not file.isatty():
-            raise Exception()
+            raise AegeaException()
         content_lines = content.splitlines()
         content_rows = len(content_lines)
 
-        tty_rows, tty_cols = shutil.get_terminal_size()
+        tty_cols, tty_rows = get_terminal_size()
 
         naive_content_cols = max(len(i) for i in content_lines)
         if tty_rows > content_rows and tty_cols > naive_content_cols:
-            raise Exception()
+            raise AegeaException()
 
         content_cols = max(len(strip_ansi_codes(i)) for i in content_lines)
         if tty_rows > content_rows and tty_cols > content_cols:
-            raise Exception()
-        # FIXME
-        raise Exception()
+            raise AegeaException()
+
         pager_process = subprocess.Popen(pager or os.environ.get("PAGER", "less -RS"), shell=True,
                                          stdin=subprocess.PIPE, stdout=file)
         pager_process.stdin.write(content.encode("utf-8"))
         pager_process.stdin.close()
         pager_process.wait()
         if pager_process.returncode != os.EX_OK:
-            raise Exception()
+            raise AegeaException()
     except Exception:
         file.write(content.encode("utf-8") if USING_PYTHON2 else content)
     finally:
@@ -243,4 +247,5 @@ def tabulate(collection, args, cell_transforms=None):
         args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
         return format_table(table,
                             column_names=getattr(args, "display_column_names", args.columns),
-                            max_col_width=args.max_col_width)
+                            max_col_width=args.max_col_width,
+                            auto_col_width=args.auto_col_width)

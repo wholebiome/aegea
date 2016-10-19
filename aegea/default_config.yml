@@ -371,6 +371,7 @@ elb_ls:
     - TargetHealth
     - State
     - Description
+    - SecurityGroups
 
 flow_logs_ls:
   columns:
