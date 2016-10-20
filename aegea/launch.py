@@ -193,5 +193,5 @@ parser.add_argument("--iam-policies", nargs="+", metavar="IAM_POLICY_NAME",
                              "AmazonElasticFileSystemFullAccess",
                              "service-role/AmazonAPIGatewayPushToCloudWatchLogs"],
                     help="Ensure the default or specified IAM role has the listed IAM managed policies attached")
-parser.add_argument("--cloud-config-data", type=json.loads, default={})
+parser.add_argument("--cloud-config-data", type=json.loads)
 parser.add_argument("--dry-run", "--dryrun", action="store_true")

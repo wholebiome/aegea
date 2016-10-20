@@ -100,4 +100,4 @@ parser.add_argument("--base-ami-product",
                     help="Ubuntu cloud image manifest product to use, e.g. com.ubuntu.cloud:server:16.04:amd64")
 parser.add_argument("--dry-run", "--dryrun", action="store_true")
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help="Tag the resulting AMI with these tags")
-parser.add_argument("--cloud-config-data", type=json.loads, default={})
+parser.add_argument("--cloud-config-data", type=json.loads)

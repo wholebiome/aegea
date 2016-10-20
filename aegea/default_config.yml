@@ -392,6 +392,7 @@ certificates:
 launch:
   commands: []
   packages: []
+  cloud_config_data: {}
 
 log_level: "INFO"
 
