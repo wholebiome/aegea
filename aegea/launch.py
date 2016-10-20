@@ -75,7 +75,7 @@ def launch(args):
     user_data_args = dict(host_key=ssh_host_key,
                           commands=get_startup_commands(args, iam_username),
                           packages=args.packages)
-    user_data_args.update(**args.cloud_config_data)
+    user_data_args.update(dict(args.cloud_config_data))
     launch_spec = dict(ImageId=args.ami,
                        KeyName=args.ssh_key_name,
                        SecurityGroupIds=[sg.id for sg in security_groups],
