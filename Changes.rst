@@ -1,3 +1,26 @@
+Changes for v1.3.0 (2016-10-20)
+===============================
+
+-  Support running core aegea on Ubuntu 14.04 vendored Python
+
+-  Improve freeform cloud-config-data passing
+
+-  Fix pager; introduce --auto-col-width table formatter
+
+-  List security groups in elb listing
+
+-  Break out and begin buildout of aegea ebs subcommand
+
+-  Begin improving rds listings
+
+-  Improve DNS zone repr
+
+-  New protocol to check out local tracking branch in aegea deploy
+
+-  aegea elb create: configurable health check path
+
+-  Key cloud-init files manifest by file path to avoid duplicates
+
 Changes for v1.2.2 (2016-10-08)
 ===============================
 
