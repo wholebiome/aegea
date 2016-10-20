@@ -67,7 +67,8 @@ def get_user_data(host_key=None, commands=None, packages=None, files=None, **kwa
         host_key.write_private_key(buf)
         cloud_config_data["ssh_keys"] = dict(rsa_private=buf.getvalue(),
                                              rsa_public=get_public_key_from_pair(host_key))
-    payload = "#cloud-config\n" + json.dumps(cloud_config_data)
+    # TODO: default=dict is for handling tweak.Config objects in the hierarchy. Should subclass dict, not MutableMapping
+    payload = "#cloud-config\n" + json.dumps(cloud_config_data, default=dict)
     buf = io.BytesIO()
     with gzip.GzipFile(fileobj=buf, mode="w") as gzfh:
         gzfh.write(payload.encode())

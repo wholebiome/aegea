@@ -154,6 +154,12 @@ class TestAegea(unittest.TestCase):
             DNSZone(use_unique_private_zone=False)
         get_user_data(commands=["ls"], packages=["foo"], files=["bar"])
 
+        # Test serialization of tweak.Config objects
+        from tweak import Config
+        d = dict(x={}, y=[1, 2])
+        c = Config(save_on_exit=False, _parent=self, _data=d)
+        self.assertEquals(get_user_data(foo=c, bar=2), get_user_data(bar=2, foo=c))
+
     def test_locate_ubuntu_ami(self):
         self.assertTrue(locate_ubuntu_ami("com.ubuntu.cloud:server:16.04:amd64", "us-east-1").startswith("ami-"))
         ami = locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="releases", stream="released",
