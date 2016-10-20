@@ -42,7 +42,7 @@ def get_startup_commands(args, username):
         "ssh -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no {}@localhost -N".format(username)
     ] + args.commands
 
-def launch(args, **cloud_config_data):
+def launch(args):
     if args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
         args.spot = True
     if args.use_dns:
@@ -75,7 +75,7 @@ def launch(args, **cloud_config_data):
     user_data_args = dict(host_key=ssh_host_key,
                           commands=get_startup_commands(args, iam_username),
                           packages=args.packages)
-    user_data_args.update(**cloud_config_data)
+    user_data_args.update(**args.cloud_config_data)
     launch_spec = dict(ImageId=args.ami,
                        KeyName=args.ssh_key_name,
                        SecurityGroupIds=[sg.id for sg in security_groups],
@@ -193,4 +193,5 @@ parser.add_argument("--iam-policies", nargs="+", metavar="IAM_POLICY_NAME",
                              "AmazonElasticFileSystemFullAccess",
                              "service-role/AmazonAPIGatewayPushToCloudWatchLogs"],
                     help="Ensure the default or specified IAM role has the listed IAM managed policies attached")
+parser.add_argument("--cloud-config-data", type=json.loads, default={})
 parser.add_argument("--dry-run", "--dryrun", action="store_true")

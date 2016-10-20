@@ -53,7 +53,8 @@ def build_ami(args):
         fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb client_token essential_services ami_tags"  # noqa
         for field in fields.split():
             setattr(args, field, None)
-        instance = resources.ec2.Instance(launch(args, files=get_bootstrap_files(args.rootfs_skel_dirs))["instance_id"])
+        args.cloud_config_data.update(files=get_bootstrap_files(args.rootfs_skel_dirs))
+        instance = resources.ec2.Instance(launch(args)["instance_id"])
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
@@ -99,4 +100,4 @@ parser.add_argument("--base-ami-product",
                     help="Ubuntu cloud image manifest product to use, e.g. com.ubuntu.cloud:server:16.04:amd64")
 parser.add_argument("--dry-run", "--dryrun", action="store_true")
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help="Tag the resulting AMI with these tags")
-parser.add_argument("--cloud-config-data", type=json.loads)
+parser.add_argument("--cloud-config-data", type=json.loads, default={})
