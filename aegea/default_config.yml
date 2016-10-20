@@ -85,7 +85,7 @@ build_ami:
     - "apt-get clean --yes"
     - "find /etc/cron.* -type f -not -name .placeholder -and -not -name logrotate -and -not -name fstrim -delete"
   cloud_config_data:
-    - apt_sources:
+    apt_sources:
       - source: "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/"
         filename: rstudio.list
         keyid: E084DAB9
