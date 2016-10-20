@@ -19,6 +19,12 @@ try:
 except Exception:
     __version__ = "0.0.0"
 
+if sys.version_info < (2, 7, 9): # See https://urllib3.readthedocs.io/en/latest/advanced-usage.html#sni-warning
+    import botocore.vendored.requests.packages.urllib3.contrib.pyopenssl as p
+    p.inject_into_urllib3()
+    import requests.packages.urllib3.contrib.pyopenssl as p
+    p.inject_into_urllib3()
+
 logger = logging.getLogger(__name__)
 
 config, parser = None, None
@@ -99,6 +105,8 @@ def register_parser(function, parent=None, name=None, **add_parser_args):
                            help=str([logging.getLevelName(i) for i in range(0, 60, 10)]),
                            default=config.get("log_level"))
     subparser.set_defaults(entry_point=function)
+    if parent and sys.version_info < (2, 7, 9): # See https://bugs.python.org/issue9351
+        parent._defaults.pop("entry_point", None)
     command = subparser.prog[len(parser.prog)+1:].replace(" ", "_")
     subparser.set_defaults(**config.get(command, {}))
     if subparser.description is None:

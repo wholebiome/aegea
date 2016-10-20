@@ -40,6 +40,10 @@ setup(
             "backports.statistics >= 0.1.0, < 1",
             "backports.shutil_get_terminal_size >= 1.0.0, < 2",
             "backports.functools_lru_cache >= 1.2.1, < 2"
+        ],
+        ':python_version < "2.7.9"': [
+            "pyopenssl >= 16.2.0",
+            "ndg-httpsclient >= 0.4.2, < 1"
         ]
     },
     tests_require=[
