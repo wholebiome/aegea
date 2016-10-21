@@ -8,7 +8,7 @@ from . import register_parser, logger, config, __version__
 from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
                        ensure_security_group, add_tags, get_bdm, resolve_instance_id, resources, clients)
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
-from .launch import launch
+from .launch import launch, parser as launch_parser
 
 def get_bootstrap_files(rootfs_skel_dirs):
     manifest = OrderedDict()
@@ -47,14 +47,12 @@ def build_ami(args):
             args.ami = locate_ubuntu_ami(product=args.base_ami_product, region=clients.ec2.meta.region_name)
         else:
             args.ami = args.base_ami
-        hostname = "{}-{}-{}".format(__name__, args.name, int(time.time()))
-        args.hostname = hostname.replace(".", "-").replace("_", "-")
-        args.wait_for_ssh = True
-        fields = "spot spot_price duration_hours iam_role subnet availability_zone use_dns cores min_mem_per_core_gb client_token essential_services ami_tags"  # noqa
-        for field in fields.split():
-            setattr(args, field, None)
-        args.cloud_config_data.update(files=get_bootstrap_files(args.rootfs_skel_dirs))
-        instance = resources.ec2.Instance(launch(args)["instance_id"])
+        hostname = "{}-{}-{}".format(__name__, args.name, int(time.time())).replace(".", "-").replace("_", "-")
+        launch_args = launch_parser.parse_args(args=[hostname], namespace=args)
+        launch_args.wait_for_ssh = True
+        launch_args.iam_role = None
+        launch_args.cloud_config_data.update(files=get_bootstrap_files(args.rootfs_skel_dirs))
+        instance = resources.ec2.Instance(launch(launch_args)["instance_id"])
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
