@@ -6,13 +6,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, argparse
 
+from botocore.exceptions import ClientError
+
 from .ls import register_parser, register_listing_parser
 from .util import Timestamp, paginate, hashabledict
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
 from .util.exceptions import AegeaException
 from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, resolve_instance_id, resolve_security_group, get_elb_dns_aliases,
-                       DNSZone, ensure_vpc)
+                       DNSZone, ensure_vpc, expect_error_codes)
 
 def elb(args):
     elb_parser.print_help()
@@ -103,6 +105,16 @@ def find_acm_cert(dns_name):
                 return cert
     raise AegeaException("Unable to find ACM certificate for {}".format(dns_name))
 
+def ensure_target_group(name, **kwargs):
+    # TODO: delete and re-create action and TG if settings don't match
+    try:
+        for tg in paginate(clients.elbv2.get_paginator("describe_target_groups"), Names=[name]):
+            return tg
+    except ClientError as e:
+        expect_error_codes(e, "TargetGroupNotFound")
+        res = clients.elbv2.create_target_group(Name=name, **kwargs)
+        return res["TargetGroups"][0]
+
 def create(args):
     for zone in paginate(clients.route53.get_paginator("list_hosted_zones")):
         if args.dns_alias.endswith("." + zone["Name"].rstrip(".")):
@@ -129,18 +141,16 @@ def create(args):
                                                  Subnets=[subnet.id for subnet in vpc.subnets.all()],
                                                  SecurityGroups=[sg.id for sg in args.security_groups])
         elb = res["LoadBalancers"][0]
-        res = clients.elbv2.create_target_group(Name=args.target_group,
-                                                Protocol="HTTP",
-                                                Port=args.instance_port,
-                                                VpcId=vpc.id,
-                                                HealthCheckPath=args.health_check_path,
-                                                Matcher=dict(HttpCode=args.ok_http_codes))
-        target_group = res["TargetGroups"][0]
+        target_group = ensure_target_group(args.target_group,
+                                           Protocol="HTTP",
+                                           Port=args.instance_port,
+                                           VpcId=vpc.id,
+                                           HealthCheckPath=args.health_check_path,
+                                           Matcher=dict(HttpCode=args.ok_http_codes))
         listener_params = dict(Protocol="HTTPS",
                                Port=443,
                                Certificates=[dict(CertificateArn=cert["CertificateArn"])],
-                               DefaultActions=[dict(Type="forward",
-                                                    TargetGroupArn=target_group["TargetGroupArn"])])
+                               DefaultActions=[dict(Type="forward", TargetGroupArn=target_group["TargetGroupArn"])])
         res = clients.elbv2.describe_listeners(LoadBalancerArn=elb["LoadBalancerArn"])
         if res["Listeners"]:
             res = clients.elbv2.modify_listener(ListenerArn=res["Listeners"][0]["ListenerArn"], **listener_params)
