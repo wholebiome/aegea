@@ -39,7 +39,7 @@ def get_startup_commands(args, username):
         "hostnamectl set-hostname " + hostname,
         "service awslogs restart",
         "echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource",
-        "ssh -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no {}@localhost -N".format(username)
+        "ssh -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no {}@localhost -N || true".format(username)
     ] + args.commands
 
 def launch(args):
