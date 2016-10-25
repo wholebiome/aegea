@@ -163,7 +163,7 @@ def create(args):
                                       Conditions=[dict(Field="path-pattern", Values=[args.path_pattern])],
                                       Actions=[dict(Type="forward", TargetGroupArn=target_group["TargetGroupArn"])],
                                       Priority=len(rules))
-    register(args)
+    replace(args)
     DNSZone(zone["Name"]).update(args.dns_alias.replace("." + zone["Name"].rstrip("."), ""), elb["DNSName"])
     return dict(elb_name=args.elb_name, dns_name=elb["DNSName"], dns_alias=args.dns_alias)
 
