@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys
 
 from .. import logger
+from .compat import subprocess
 
 def new_ssh_key(bits=2048):
     from paramiko import RSAKey
@@ -37,6 +38,10 @@ def ensure_ssh_key(name, verify_pem_file=True):
         ec2.import_key_pair(KeyName=name,
                             PublicKeyMaterial=get_public_key_from_pair(ssh_key))
         logger.info("Imported SSH key %s", get_ssh_key_path(name))
+    try:
+        subprocess.check_call(["ssh-add", get_ssh_key_path(name)], timeout=5)
+    except Exception as e:
+        logger.warn("Failed to add %s to SSH keychain: %s. Connections may fail", get_ssh_key_path(name), e)
     return get_ssh_key_path(name)
 
 def hostkey_line(hostnames, key):

@@ -37,6 +37,7 @@ setup(
         ':python_version == "2.7"': [
             "enum34 >= 1.1.6, < 2",
             "ipaddress >= 1.0.16, < 2",
+            "subprocess32 >= 3.2.7, < 4",
             "backports.statistics >= 0.1.0, < 1",
             "backports.shutil_get_terminal_size >= 1.0.0, < 2",
             "backports.functools_lru_cache >= 1.2.1, < 2"
