@@ -289,6 +289,8 @@ def resolve_ami(ami=None, **tags):
         if tags:
             amis = filter_by_tags(amis, **tags)
         amis = sorted(amis, key=lambda x: x.creation_date)
+        if not amis:
+            raise AegeaException("Could not resolve AMI {}".format(dict(tags, ami=ami)))
         ami = amis[-1].id
     return ami
 
