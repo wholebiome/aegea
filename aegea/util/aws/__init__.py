@@ -54,6 +54,12 @@ def locate_ubuntu_ami(product, region, channel="releases", stream="released", ro
                 return ami["id"]
     raise AegeaException("No AMI found for {} {} {} {} {}".format(product, version, region, root_store, virt))
 
+def gzip_compress_bytes(payload):
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode="w") as gzfh:
+        gzfh.write(payload)
+    return buf.getvalue()
+
 def get_user_data(host_key=None, commands=None, packages=None, files=None, **kwargs):
     if packages is None:
         packages = []
@@ -69,10 +75,7 @@ def get_user_data(host_key=None, commands=None, packages=None, files=None, **kwa
                                              rsa_public=get_public_key_from_pair(host_key))
     # TODO: default=dict is for handling tweak.Config objects in the hierarchy. Should subclass dict, not MutableMapping
     payload = "#cloud-config\n" + json.dumps(cloud_config_data, default=dict)
-    buf = io.BytesIO()
-    with gzip.GzipFile(fileobj=buf, mode="w") as gzfh:
-        gzfh.write(payload.encode())
-    return buf.getvalue()
+    return gzip_compress_bytes(payload.encode())
 
 def ensure_vpc():
     for vpc in resources.ec2.vpcs.filter(Filters=[dict(Name="isDefault", Values=["true"])]):
