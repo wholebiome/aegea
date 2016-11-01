@@ -1,0 +1,5 @@
+{
+  "Verbose": 0,
+  "Quota": "100G",
+  "RemoveStoppedContainers": "always"
+}

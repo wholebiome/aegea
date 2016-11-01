@@ -1,0 +1,18 @@
+[Service]
+# Most deployments will want a quota that's at least 10G.  From there,
+# a larger quota can help reduce compute overhead by preventing reloading
+# the same Docker image repeatedly, but will leave less space for other
+# files on the same storage (usually Docker volumes).  Make sure the quota
+# is less than the total space available for Docker images.
+# If your deployment uses a Python 3 Software Collection, uncomment the
+# ExecStart line below, and delete the following one:
+# ExecStart=scl enable python33 "python3 -m arvados_docker.cleaner --quota 20G"
+ExecStart=python3 -m arvados_docker.cleaner --quota 20G
+Restart=always
+RestartPreventExitStatus=2
+
+[Install]
+WantedBy=default.target
+
+[Unit]
+After=docker.service

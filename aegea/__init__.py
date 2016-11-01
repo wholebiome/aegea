@@ -9,7 +9,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, argparse, logging, shutil, json, datetime, traceback, errno
 from textwrap import fill
-from tweak import Config
+import tweak
 from botocore.exceptions import NoRegionError
 from io import open
 
@@ -30,20 +30,30 @@ logger = logging.getLogger(__name__)
 config, parser = None, None
 _subparsers = {}
 
+class AegeaConfig(tweak.Config):
+    base_config_file = os.path.join(os.path.dirname(__file__), "base_config.yml")
+    @property
+    def config_files(self):
+        return [self.base_config_file] + tweak.Config.config_files.fget(self)
+
+    @property
+    def user_config_dir(self):
+        return os.path.join(self._user_config_home, self._name)
+
 def initialize():
     global config, parser
     from .util.printing import BOLD, RED, ENDC
-    config = Config(__name__, use_yaml=True, save_on_exit=False)
-    if not os.path.exists(config.config_files[1]):
-        config_dir = os.path.dirname(os.path.abspath(config.config_files[1]))
+    config = AegeaConfig(__name__, use_yaml=True, save_on_exit=False)
+    if not os.path.exists(config.config_files[2]):
+        config_dir = os.path.dirname(os.path.abspath(config.config_files[2]))
         try:
             os.makedirs(config_dir)
         except OSError as e:
             if not (e.errno == errno.EEXIST and os.path.isdir(config_dir)):
                 raise
-        shutil.copy(os.path.join(os.path.dirname(__file__), "default_config.yml"), config.config_files[1])
-        logger.info("Wrote new config file %s with default values", config.config_files[1])
-        config = Config(__name__, use_yaml=True, save_on_exit=False)
+        shutil.copy(os.path.join(os.path.dirname(__file__), "user_config.yml"), config.config_files[2])
+        logger.info("Wrote new config file %s with default values", config.config_files[2])
+        config = AegeaConfig(__name__, use_yaml=True, save_on_exit=False)
 
     parser = argparse.ArgumentParser(
         description="{}: {}".format(BOLD() + RED() + __name__.capitalize() + ENDC(), fill(__doc__.strip())),
@@ -73,7 +83,7 @@ def main(args=None):
         else:
             err_msg = traceback.format_exc()
             try:
-                err_log_filename = os.path.join(os.path.dirname(config.config_files[1]), "error.log")
+                err_log_filename = os.path.join(config.user_config_dir, "error.log")
                 with open(err_log_filename, "ab") as fh:
                     print(datetime.datetime.now().isoformat(), file=fh)
                     print(err_msg, file=fh)
