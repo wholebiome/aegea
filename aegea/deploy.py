@@ -41,14 +41,15 @@ You can also manually trigger a rebuild with a service reload:
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, json, argparse
-from datetime import datetime
-
+from datetime import datetime, timedelta
+from dateutil.tz import tzutc
 from botocore.exceptions import ClientError
 
 from . import register_parser, logger, secrets
 from .util.git import parse_repo_name, get_repo, private_submodules
 from .util.crypto import key_fingerprint
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, BOLD
+from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, IAMPolicyBuilder, resolve_instance_id, get_iam_role_for_instance,
                        expect_error_codes, ensure_iam_policy)
 
@@ -89,28 +90,34 @@ parser = register_parser(configure, parent=deploy_parser)
 parser.add_argument("repo", help="URL of GitHub repo, e.g. git@github.com:kislyuk/aegea.git")
 parser.add_argument("iam_role_or_instance")
 
-def get_status_for_queue(queue):
-    bucket_name = "deploy-status-{}".format(ARN(queue.attributes["QueueArn"]).account_id)
-    bucket = resources.s3.Bucket(bucket_name)
-    status_object = bucket.Object(os.path.join(os.path.basename(queue.url), "status"))
-    status = json.loads(status_object.get()["Body"].read().decode("utf-8"))
-    status.update(Updated=status_object.last_modified)
-    return status
-
 def ls(args):
     """
     List status of all configured SNS-SQS message buses and instances subscribed to them.
     """
     table = []
     queues = list(resources.sqs.queues.filter(QueueNamePrefix="github"))
+    max_age = datetime.now(tzutc()) - timedelta(days=15)
     for topic in resources.sns.topics.all():
+        account_id = ARN(topic.arn).account_id
+        try:
+            bucket = resources.s3.Bucket("deploy-statuzs-{}".format(account_id))
+            status_objects = bucket.objects.filter(Prefix=ARN(topic.arn).resource)
+            recent_status_objects = {o.key: o for o in status_objects if o.last_modified > max_age}
+        except ClientError:
+            continue
         if ARN(topic.arn).resource.startswith("github"):
             for queue in queues:
-                if ARN(queue.attributes["QueueArn"]).resource.startswith(ARN(topic.arn).resource):
+                queue_name = os.path.basename(queue.url)
+                if queue_name.startswith(ARN(topic.arn).resource):
                     row = dict(Topic=topic, Queue=queue)
+                    status_object = bucket.Object(os.path.join(queue_name, "status"))
+                    if status_object.key not in recent_status_objects:
+                        continue
                     try:
-                        github, owner, repo, events, instance = os.path.basename(queue.url).split("-", 4)
-                        row.update(get_status_for_queue(queue), Owner=owner, Repo=repo, Instance=instance)
+                        github, owner, repo, events, instance = os.path.dirname(status_object.key).split("-", 4)
+                        status = json.loads(status_object.get()["Body"].read().decode("utf-8"))
+                        row.update(status, Owner=owner, Repo=repo, Instance=instance,
+                                   Updated=status_object.last_modified)
                     except Exception:
                         pass
                     table.append(row)

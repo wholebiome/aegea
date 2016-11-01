@@ -32,11 +32,11 @@ def get_bootstrap_files(rootfs_skel_dirs):
             for file_ in files:
                 path = os.path.join("/", os.path.relpath(root, fn), file_)
                 with open(os.path.join(root, file_)) as fh:
-                    content = fh.read().decode()
+                    content = fh.read()
                     manifest[path] = dict(path=path,
                                           permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:])
                     try:
-                        manifest[path].update(content=content.decode("utf-8"))
+                        manifest[path].update(content=content.decode())
                     except UnicodeDecodeError:
                         manifest[path].update(content=base64.b64encode(gzip_compress_bytes(content)), encoding="gz+b64")
     return list(manifest.values())
