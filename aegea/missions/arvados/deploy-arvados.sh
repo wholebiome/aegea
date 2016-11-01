@@ -12,7 +12,7 @@ fi
 
 aegea-build-ami-for-mission arvados arvados-$(date "+%Y-%m-%d-%H-%M")
 host=arvados-$(date "+%Y-%m-%d-%H-%M")
-aegea launch $host --wait-for-ssh
+aegea launch $host --ami-tags AegeaMission=arvados --wait-for-ssh
 
 export ARVADOS_ELB_INWARD_SG=aegea.launch
 export ARVADOS_ELB_OUTWARD_SG=http+https
