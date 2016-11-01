@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys, json, time, base64
 from argparse import Namespace
 from collections import OrderedDict
+from io import open
 
 from . import register_parser, logger, config, __version__
 from .util.aws import (locate_ubuntu_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
@@ -31,7 +32,7 @@ def get_bootstrap_files(rootfs_skel_dirs):
         for root, dirs, files in os.walk(fn):
             for file_ in files:
                 path = os.path.join("/", os.path.relpath(root, fn), file_)
-                with open(os.path.join(root, file_)) as fh:
+                with open(os.path.join(root, file_), "rb") as fh:
                     content = fh.read()
                     manifest[path] = dict(path=path,
                                           permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:])
