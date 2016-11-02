@@ -1,3 +1,15 @@
+Changes for v1.4.0 (2016-11-02)
+===============================
+
+-  aegea-build-ami-for-mission: skip make if no Makefile
+-  Begin FogDog mission
+-  Arvados config support; improve config file handling
+-  Don't fail cloud-init on account of expected ssh failure
+-  Run ssh-add from aegea launch
+-  aegea elb create bugfix
+-  Fix ELB behavior when TG is present
+-  Simplify arg forwarding in build\_ami
+
 Changes for v1.3.0 (2016-10-20)
 ===============================
 
