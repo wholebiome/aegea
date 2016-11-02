@@ -19,7 +19,9 @@ parser.add_argument("--mission-dir", default=default_missions_dir)
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
-subprocess.check_call(["make", "-C", os.path.join(args.mission_dir, args.mission)])
+if os.path.exists(os.path.join(args.mission_dir, args.mission, "Makefile")):
+    subprocess.check_call(["make", "-C", os.path.join(args.mission_dir, args.mission)])
+
 subprocess.check_call(
     ["aegea", "build_ami", args.ami_name, "--tags", "AegeaMission=" + args.mission],
     env=dict(os.environ, AEGEA_CONFIG_FILE=os.path.join(args.mission_dir, args.mission, "config.yml"))
