@@ -100,7 +100,7 @@ def ls(args):
     for topic in resources.sns.topics.all():
         account_id = ARN(topic.arn).account_id
         try:
-            bucket = resources.s3.Bucket("deploy-statuzs-{}".format(account_id))
+            bucket = resources.s3.Bucket("deploy-status-{}".format(account_id))
             status_objects = bucket.objects.filter(Prefix=ARN(topic.arn).resource)
             recent_status_objects = {o.key: o for o in status_objects if o.last_modified > max_age}
         except ClientError:
