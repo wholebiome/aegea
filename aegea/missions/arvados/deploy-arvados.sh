@@ -11,8 +11,12 @@ fi
 # Restore protocol: install from scratch, restore RDS snapshot, dpkg reconfigure arvados-...-server (for migrations)
 
 aegea-build-ami-for-mission arvados arvados-$(date "+%Y-%m-%d-%H-%M")
+aegea-build-ami-for-mission arvados-worker arvwrkr-$(date "+%Y-%m-%d-%H-%M")
+
 host=arvados-$(date "+%Y-%m-%d-%H-%M")
 aegea launch $host --ami-tags AegeaMission=arvados --wait-for-ssh
+
+aegea zones update $PRIVATE_DNS_ZONE arvados "$host"
 
 export ARVADOS_ELB_INWARD_SG=aegea.launch
 export ARVADOS_ELB_OUTWARD_SG=http+https

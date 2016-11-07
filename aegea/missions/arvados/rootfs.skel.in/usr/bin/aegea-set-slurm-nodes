@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+"""
+Helper utility to reset the SLURM node list and reload SLURM daemons.
+"""
+
+import os, sys, subprocess, argparse
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("nodes", nargs="+")
+parser.add_argument("--slurm-config-file", default="/etc/slurm-llnl/nodes.conf")
+parser.add_argument("--slurm-config-template", default="""
+NodeName={nodes}
+PartitionName=compute Nodes={nodes} Default=YES Shared=YES
+""")
+args = parser.parse_args()
+
+with open(args.slurm_config_file, "w") as fh:
+    fh.write(args.slurm_config_template.format(nodes=",".join(args.nodes)))
+
+subprocess.call("service slurm-llnl restart", shell=True)
+subprocess.check_call("service slurm-llnl status", shell=True)
