@@ -144,16 +144,17 @@ class DNSZone(VerboseRepr):
             raise AegeaException("Unable to determine DNS zone to use")
         self.zone_id = os.path.basename(self.zone["Id"])
 
-    def update(self, name, value, action="UPSERT", record_type="CNAME", ttl=60):
-        if not isinstance(value, list):
-            value = [{"Value": value}]
-        dns_update = dict(Action=action,
-                          ResourceRecordSet=dict(Name=name + "." + self.zone["Name"],
-                                                 Type=record_type,
-                                                 TTL=ttl,
-                                                 ResourceRecords=value))
+    def update(self, names, values, action="UPSERT", record_type="CNAME", ttl=60):
+        def format_rrs(name, value):
+            return dict(Name=name + "." + self.zone["Name"],
+                        Type=record_type,
+                        TTL=ttl,
+                        ResourceRecords=value if isinstance(value, (list, tuple)) else [{"Value": value}])
+        if not isinstance(names, (list, tuple)):
+            names, values = [names], [values]
+        updates = [dict(Action=action, ResourceRecordSet=format_rrs(k, v)) for k, v in zip(names, values)]
         return clients.route53.change_resource_record_sets(HostedZoneId=self.zone_id,
-                                                           ChangeBatch=dict(Changes=[dns_update]))
+                                                           ChangeBatch=dict(Changes=updates))
 
     def delete(self, name, value=None, record_type="CNAME", missing_ok=True):
         if value is None:

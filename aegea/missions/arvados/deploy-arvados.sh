@@ -18,7 +18,7 @@ aegea-build-ami-for-mission arvados-worker arvwrkr-$(date "+%Y-%m-%d-%H-%M")
 
 aegea launch $ARVADOS_INSTANCE --ami-tags AegeaMission=arvados --wait-for-ssh
 
-aegea zones update $PRIVATE_DNS_ZONE arvados "$ARVADOS_INSTANCE.$PRIVATE_DNS_ZONE"
+aegea zones update $PRIVATE_DNS_ZONE "arvados=$ARVADOS_INSTANCE.$PRIVATE_DNS_ZONE"
 
 export ARVADOS_ELB_INWARD_SG=aegea.launch
 export ARVADOS_ELB_OUTWARD_SG=http+https
@@ -33,7 +33,7 @@ aegea elb create arvados-keepproxy $ARVADOS_INSTANCE --dns-alias keep.$ARVADOS_H
 #*.collections.uuid_prefix.your.domain
 #aegea elb create arvados-keepweb $ARVADOS_INSTANCE --dns-alias keep.$ARVADOS_UUID_PREFIX.$ARVADOS_HOSTNAME --security-groups $ARVADOS_ELB_INWARD_SG $ARVADOS_ELB_OUTWARD_SG  --instance-port 
 
-aegea zones update $PUBLIC_DNS_ZONE "*.$ARVADOS_UUID_PREFIX.arvados" "$ARVADOS_UUID_PREFIX.arvados.$PUBLIC_DNS_ZONE"
+aegea zones update $PUBLIC_DNS_ZONE "*.$ARVADOS_UUID_PREFIX.arvados=$ARVADOS_UUID_PREFIX.arvados.$PUBLIC_DNS_ZONE"
 
 ARVADOS_SUPERUSER_TOKEN=$(aegea ssh ubuntu@$ARVADOS_INSTANCE "cd /var/www/arvados-api/current; sudo -u www-data RAILS_ENV=production bundle exec script/create_superuser_token.rb")
 aegea ssh ubuntu@$ARVADOS_INSTANCE "export PGUSER=$ARVADOS_DB_USERNAME PGPASSWORD=$ARVADOS_DB_PASSWORD PGHOST=$ARVADOS_DB_HOST; createuser --no-superuser --no-createrole --createdb --encrypted --no-password arvados_sso; createdb arvados_production -T template0 -E UTF8 -O $ARVADOS_DB_USERNAME; psql -c \"ALTER USER arvados_sso WITH UNENCRYPTED PASSWORD '$ARVADOS_DB_PASSWORD'\""
