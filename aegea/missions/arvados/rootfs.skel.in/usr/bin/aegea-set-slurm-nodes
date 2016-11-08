@@ -18,5 +18,6 @@ args = parser.parse_args()
 with open(args.slurm_config_file, "w") as fh:
     fh.write(args.slurm_config_template.format(nodes=",".join(args.nodes)))
 
-subprocess.call("service slurm-llnl restart", shell=True)
+subprocess.call("service slurm-llnl start", shell=True)
+subprocess.call("scontrol reconfigure", shell=True)
 subprocess.check_call("service slurm-llnl status", shell=True)

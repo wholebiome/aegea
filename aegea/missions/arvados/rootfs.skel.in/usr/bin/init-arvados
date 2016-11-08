@@ -1,0 +1,30 @@
+#!/bin/bash -ex
+
+source /etc/profile
+
+set -u
+
+export ARVADOS_API_TOKEN=$(cd /var/www/arvados-api/current; sudo -u www-data RAILS_ENV=production bundle exec script/create_superuser_token.rb)
+
+export CRUNCH_DISPATCH_TOKEN=$ARVADOS_API_TOKEN
+
+cat /etc/arvados/crunch-dispatch-slurm/crunch-dispatch-slurm.yml | envsubst | sponge /etc/arvados/crunch-dispatch-slurm/crunch-dispatch-slurm.yml
+
+arv keep_service create --keep-service "$(cat /etc/keep.conf.json)"
+
+prefix=$(arv --format=uuid user current | cut -d- -f1)
+all_users_group_uuid="$prefix-j7d0g-fffffffffffffff"
+
+set +e
+
+repo_uuid=$(arv --format=uuid repository create --repository "{\"owner_uuid\":\"$prefix-tpzed-000000000000000\", \"name\":\"arvados\"}")
+
+arv link create --link "{\"tail_uuid\":\"$all_users_group_uuid\",\"head_uuid\":\"$repo_uuid\",\"link_class\":\"permission\",\"name\":\"can_read\"}"
+
+project_uuid=$(arv --format=uuid group create --group "{\"owner_uuid\":\"$prefix-tpzed-000000000000000\", \"name\":\"Arvados Standard Docker Images\"}")
+
+arv link create --link "{\"tail_uuid\":\"$all_users_group_uuid\",\"head_uuid\":\"$project_uuid\",\"link_class\":\"permission\",\"name\":\"can_read\"}"
+
+set -e
+
+arv-keepdocker --pull arvados/jobs latest

@@ -10,7 +10,7 @@ build_ami:
       - "echo deb https://apt.dockerproject.org/repo ubuntu-trusty main > /etc/apt/sources.list.d/docker.list"
       - "apt-get update"
       - "apt-get install --yes ruby2.1 ruby2.1-dev libgmp3-dev"
-      - "apt-get install --yes docker-engine python-arvados-python-client crunch-run arvados-docker-cleaner python-arvados-fuse slurm-llnl munge"
+      - "apt-get install --yes python-arvados-python-client crunch-run arvados-docker-cleaner python-arvados-fuse slurm-llnl munge"
       - "gem install arvados-cli"
       - "chown munge:munge /etc/munge/munge.key"
       - "chmod 0400 /etc/munge/munge.key"
