@@ -9,8 +9,8 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, pkg_root)
 import aegea
 from aegea.util import Timestamp
-from aegea.util.aws import (resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ubuntu_ami, locate_amazon_linux_ami,
-                            get_ondemand_price_usd, ARN, DNSZone, get_user_data)
+from aegea.util.aws import (resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ami, get_ondemand_price_usd, ARN,
+                            DNSZone, get_user_data)
 from aegea.util.exceptions import AegeaException
 from aegea.util.compat import USING_PYTHON2, str
 from aegea.util.git import private_submodules
@@ -160,12 +160,12 @@ class TestAegea(unittest.TestCase):
         c = Config(save_on_exit=False, _parent=self, _data=d)
         self.assertEquals(get_user_data(foo=c, bar=2), get_user_data(bar=2, foo=c))
 
-    def test_locate_ubuntu_ami(self):
-        self.assertTrue(locate_ubuntu_ami("com.ubuntu.cloud:server:16.04:amd64", "us-east-1").startswith("ami-"))
-        ami = locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="releases", stream="released",
-                                region="us-west-2")
+    def test_locate_ami(self):
+        self.assertTrue(locate_ami("com.ubuntu.cloud:server:16.04:amd64", "us-east-1").startswith("ami-"))
+        ami = locate_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="releases", stream="released",
+                         region="us-west-2")
         self.assertTrue(ami.startswith("ami-"))
-        self.assertTrue(locate_amazon_linux_ami().startswith("ami-"))
+        self.assertTrue(locate_ami("Amazon Linux AMI 2016.09").startswith("ami-"))
 
     def test_date_utils(self):
         with self.assertRaises(TypeError):
