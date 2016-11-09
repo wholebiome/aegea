@@ -245,7 +245,5 @@ def tabulate(collection, args, cell_transforms=None):
             table = sorted(table, key=lambda x: x[args.columns.index(args.sort_by)], reverse=reverse)
         table = [[format_cell(c) for c in row] for row in table]
         args.columns = list(trim_names(args.columns, *getattr(args, "trim_col_names", [])))
-        return format_table(table,
-                            column_names=getattr(args, "display_column_names", args.columns),
-                            max_col_width=args.max_col_width,
-                            auto_col_width=args.auto_col_width)
+        format_args = dict(auto_col_width=True) if args.max_col_width == 0 else dict(max_col_width=args.max_col_width)
+        return format_table(table, column_names=getattr(args, "display_column_names", args.columns), **format_args)

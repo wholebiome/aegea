@@ -29,6 +29,17 @@ def get_assume_role_policy_doc(*principals):
             p.add_statement(principal={"Service": principal + ".amazonaws.com"}, action="sts:AssumeRole")
     return json.dumps(p.policy)
 
+def locate_amazon_linux_ami(root_store="ebs", virt="hvm"):
+    filters = {"architecture": "x86_64", "root-device-type": root_store, "virtualization-type": virt,
+               "owner-alias": "amazon", "state": "available"}
+    images = resources.ec2.images.filter(Filters=[dict(Name=k, Values=[v]) for k, v in filters.items()])
+    for image in sorted(images, key=lambda i: i.creation_date, reverse=True):
+        if root_store == "ebs" and not image.name.endswith("x86_64-gp2"):
+            continue
+        if image.name.startswith("amzn-ami-" + virt):
+            return image.image_id
+    raise AegeaException("No AMI found for Amazon Linux {} {}".format(root_store, virt))
+
 def locate_ubuntu_ami(product, region, channel="releases", stream="released", root_store="ssd", virt="hvm"):
     """
     Example: locate_ubuntu_ami(product="com.ubuntu.cloud:server:16.04:amd64", channel="daily", stream="daily",
