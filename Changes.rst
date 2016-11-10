@@ -1,3 +1,18 @@
+Changes for v1.5.0 (2016-11-10)
+===============================
+
+-  Implement aegea rds snapshot
+
+-  Only use pager with pretty-printed tables
+
+-  Add Amazon Linux AMI locator
+
+-  Use -w0 for auto col width table formatter
+
+-  aegea zones update: support multiple updates
+
+-  Cosmetic and documentation fixes
+
 Changes for v1.4.0 (2016-11-02)
 ===============================
 
