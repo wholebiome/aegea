@@ -79,8 +79,9 @@ def build_ami(args):
     description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     tags = dict(tag.split("=", 1) for tag in args.tags)
-    # FIXME: add base AMI name
-    tags.update(Owner=resources.iam.CurrentUser().user.name, Base=args.ami, AegeaVersion=__version__)
+    base_ami = resources.ec2.Image(args.ami)
+    tags.update(Owner=resources.iam.CurrentUser().user.name, AegeaVersion=__version__,
+                Base=base_ami.id, BaseName=base_ami.name, BaseDescription=base_ami.description or "")
     add_tags(image, **tags)
     logger.info("Waiting for %s to become available...", image.id)
     clients.ec2.get_waiter("image_available").wait(ImageIds=[image.id])
