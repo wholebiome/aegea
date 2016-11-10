@@ -12,14 +12,25 @@ fi
 
 export ARVADOS_INSTANCE=arvados-$(date "+%Y-%m-%d-%H-%M")
 export ARVADOS_SLURMCTL_HOST=$ARVADOS_INSTANCE
-
+skip(){
 aegea-build-ami-for-mission arvados arvados-$(date "+%Y-%m-%d-%H-%M")
 aegea-build-ami-for-mission arvados-worker arvwrkr-$(date "+%Y-%m-%d-%H-%M")
 
-aegea launch $ARVADOS_INSTANCE --instance-type m3.large --ami-tags AegeaMission=arvados --wait-for-ssh
+aegea launch $ARVADOS_INSTANCE --instance-type m3.large --ami-tags AegeaMission=arvados --wait-for-ssh --commands "echo manual > /etc/init/arvados-keep.override"
 
-aegea zones update $PRIVATE_DNS_ZONE "arvados=$ARVADOS_INSTANCE.$PRIVATE_DNS_ZONE"
-aegea zones update $PRIVATE_DNS_ZONE $(for i in {001..256}; do echo arv-worker-${i}=192.0.2.1; done)
+for service in keep0 keep1; do
+    aegea launch ${ARVADOS_INSTANCE}-$service --instance-type c4.xlarge --ami-tags AegeaMission=arvados --wait-for-ssh --commands "echo manual > /etc/init/arvados-api.override"
+    aegea zones update $ARVADOS_PRIVATE_DNS_ZONE "arvados-$service=${ARVADOS_INSTANCE}-${service}.$ARVADOS_PRIVATE_DNS_ZONE"
+    EBS_VOLUME=$(aegea ebs create --size-gb 40 --volume-type gp2 --tags Name=${ARVADOS_INSTANCE}-$service | jq --raw-output .VolumeId)
+    aegea ebs attach $EBS_VOLUME ${ARVADOS_INSTANCE}-$service xvdz
+    aegea ssh ubuntu@${ARVADOS_INSTANCE}-$service "sudo mkfs.ext4 /dev/xvdz && sudo mount /dev/xvdz /mnt/keep && sudo service arvados-keep restart"
+done
+}
+export ARVADOS_INSTANCE=arvados-2016-11-09-16-25
+export ARVADOS_SLURMCTL_HOST=$ARVADOS_INSTANCE
+
+aegea zones update $ARVADOS_PRIVATE_DNS_ZONE "arvados=$ARVADOS_INSTANCE.$ARVADOS_PRIVATE_DNS_ZONE"
+aegea zones update $ARVADOS_PRIVATE_DNS_ZONE $(for i in {001..256}; do echo arv-worker-${i}=192.0.2.1; done)
 
 export ARVADOS_ELB_INWARD_SG=aegea.launch
 export ARVADOS_ELB_OUTWARD_SG=http+https
@@ -52,3 +63,5 @@ aegea ssh ubuntu@$ARVADOS_INSTANCE "sudo init-arvados"
 #:004 > c.app_secret = rand(2**400).to_s(36)
 #=> "save this string for your API server's sso_app_secret"
 #:005 > c.save!
+
+#for i in $(arv keep_service list|jq .items[].uuid --raw-output); do arv keep_service destroy --uuid $i; done

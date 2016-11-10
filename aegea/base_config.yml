@@ -161,6 +161,7 @@ ebs_ls:
     - create_time
     - attachments
     - availability_zone
+    - tags
 
 ebs_snapshots:
   columns:

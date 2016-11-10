@@ -74,7 +74,7 @@ parser.add_argument("--storage-type")
 parser.add_argument("--master-username", "--username")
 parser.add_argument("--master-user-password", "--password", required=True)
 parser.add_argument("--db-instance-class")
-parser.add_argument("--tags", nargs="+", default=[])
+parser.add_argument("--tags", nargs="+", default=[], metavar="TAG_NAME=VALUE")
 parser.add_argument("--security-groups", nargs="+", default=[])
 
 def delete(args):

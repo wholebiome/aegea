@@ -1,6 +1,14 @@
-{
-  "service_host": "keep.$ARVADOS_HOSTNAME",
-  "service_port": 443,
-  "service_ssl_flag": true,
-  "service_type": "disk"
-}
+[
+  {
+    "service_host": "arvados-keep0.$ARVADOS_PRIVATE_DNS_ZONE",
+    "service_port": 25107,
+    "service_ssl_flag": false,
+    "service_type": "disk"
+  },
+  {
+    "service_host": "arvados-keep1.$ARVADOS_PRIVATE_DNS_ZONE",
+    "service_port": 25107,
+    "service_ssl_flag": false,
+    "service_type": "disk"
+  }
+]

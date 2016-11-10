@@ -13,7 +13,7 @@ from . import register_parser
 from .ls import add_name, filter_collection, filter_and_tabulate, register_filtering_parser
 from .util import Timestamp, paginate
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
-from .util.aws import ARN, resources, clients, ensure_vpc, ensure_subnet, resolve_instance_id
+from .util.aws import ARN, resources, clients, ensure_vpc, ensure_subnet, resolve_instance_id, add_tags
 from .util.compat import lru_cache
 
 def ebs(args):
@@ -42,6 +42,7 @@ def snapshots(args):
 parser = register_filtering_parser(snapshots, parent=ebs_parser, help="List EC2 EBS snapshots")
 
 def create(args):
+    tags = dict(tag.split("=", 1) for tag in args.tags)
     create_args = dict(Size=args.size)
     for arg in "dry_run snapshot_id availability_zone volume_type iops encrypted kms_key_id".split():
         if getattr(args, arg) is not None:
@@ -49,8 +50,9 @@ def create(args):
     if "AvailabilityZone" not in create_args:
         create_args["AvailabilityZone"] = ensure_subnet(ensure_vpc()).availability_zone
     res = clients.ec2.create_volume(**create_args)
-    if args.wait:
-        clients.ec2.get_waiter('volume_available').wait(VolumeIds=[res["VolumeId"]])
+    clients.ec2.get_waiter('volume_available').wait(VolumeIds=[res["VolumeId"]])
+    if tags:
+        add_tags(resources.ec2.Volume(res["VolumeId"]), **tags)
     return res
 
 parser = register_parser(create, parent=ebs_parser, help="Create an EBS volume")
@@ -58,30 +60,35 @@ parser.add_argument("--size-gb", dest="size", type=int, help="Volume size in gig
 parser.add_argument("--dry-run", action="store_true")
 parser.add_argument("--snapshot-id")
 parser.add_argument("--availability-zone")
-parser.add_argument("--volume-type", choices={"standard", "io1", "gp2", "sc1", "st1"})
+parser.add_argument("--volume-type", choices={"standard", "io1", "gp2", "sc1", "st1"},
+                    help="io1, PIOPS SSD; gp2, general purpose SSD; sc1, cold HDD; st1, throughput optimized HDD")
 parser.add_argument("--storage", type=int)
 parser.add_argument("--iops", type=int)
 parser.add_argument("--encrypted", action="store_true")
 parser.add_argument("--kms-key-id")
-parser.add_argument("--wait", action="store_true")
+parser.add_argument("--tags", nargs="+", default=[], metavar="TAG_NAME=VALUE")
 
 def snapshot(args):
     return clients.ec2.create_snapshot(DryRun=args.dry_run, VolumeId=args.volume_id)
 parser_snapshot = register_parser(snapshot, parent=ebs_parser, help="Create an EBS snapshot")
 
 def attach(args):
-    return clients.ec2.attach_volume(DryRun=args.dry_run,
-                                     VolumeId=args.volume_id,
-                                     InstanceId=args.instance,
-                                     Device=args.device)
+    res = clients.ec2.attach_volume(DryRun=args.dry_run,
+                                    VolumeId=args.volume_id,
+                                    InstanceId=args.instance,
+                                    Device=args.device)
+    clients.ec2.get_waiter('volume_in_use').wait(VolumeIds=[res["VolumeId"]])
+    return res
 parser_attach = register_parser(attach, parent=ebs_parser, help="Attach an EBS volume to an EC2 instance")
 
 def detach(args):
-    return clients.ec2.detach_volume(DryRun=args.dry_run,
-                                     VolumeId=args.volume_id,
-                                     InstanceId=args.instance,
-                                     Device=args.device,
-                                     Force=args.force)
+    res = clients.ec2.detach_volume(DryRun=args.dry_run,
+                                    VolumeId=args.volume_id,
+                                    InstanceId=args.instance,
+                                    Device=args.device,
+                                    Force=args.force)
+    clients.ec2.get_waiter('volume_available').wait(VolumeIds=[res["VolumeId"]])
+    return res
 parser_detach = register_parser(detach, parent=ebs_parser, help="Detach an EBS volume from an EC2 instance")
 
 def complete_volume_id(**kwargs):
