@@ -59,6 +59,9 @@ def BOLD(message=None):
 def ENDC():
     return "\033[0m" if sys.stdout.isatty() else ""
 
+def border(i):
+    return WHITE() + i + ENDC()
+
 ansi_pattern = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
 
 def strip_ansi_codes(i):
@@ -107,9 +110,6 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
             col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_item)))
         my_table.append(my_row)
 
-    def border(i):
-        return WHITE() + i + ENDC()
-
     type_colormap = {"boolean": BLUE(),
                      "integer": YELLOW(),
                      "float": WHITE(),
@@ -152,7 +152,7 @@ def page_output(content, pager=None, file=None):
 
     pager_process = None
     try:
-        if file != sys.stdout or not file.isatty():
+        if file != sys.stdout or not file.isatty() or not content.startswith(border("┌")):
             raise AegeaException()
         content_lines = content.splitlines()
         content_rows = len(content_lines)
