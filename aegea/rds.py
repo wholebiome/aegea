@@ -10,7 +10,7 @@ from datetime import datetime
 from . import register_parser
 from .util import Timestamp, paginate
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
-from .util.aws import ARN, resources, clients
+from .util.aws import ARN, resources, clients, encode_tags
 
 def rds(args):
     rds_parser.print_help()
@@ -41,7 +41,6 @@ def snapshots(args):
 parser = register_parser(snapshots, parent=rds_parser, help="List RDS snapshots")
 
 def create(args):
-    tags = dict(tag.split("=", 1) for tag in args.tags)
     create_args = dict(DBInstanceIdentifier=args.name,
                        AllocatedStorage=args.storage,
                        Engine=args.engine,
@@ -53,7 +52,7 @@ def create(args):
                        MasterUserPassword=args.master_user_password,
                        VpcSecurityGroupIds=args.security_groups,
                        DBInstanceClass=args.db_instance_class,
-                       Tags=[dict(Key=k, Value=v) for k, v in tags.items()],
+                       Tags=encode_tags(args.tags),
                        CopyTagsToSnapshot=True)
     if args.db_name:
         create_args.update(DBName=args.db_name)
@@ -84,9 +83,14 @@ parser = register_parser(delete, parent=rds_parser, help="Delete an RDS instance
 parser.add_argument("name").completer = lambda **kw: [i["DBInstanceIdentifier"] for i in list_rds_instances()]
 
 def snapshot(args):
-    raise NotImplementedError()
+    return clients.rds.create_db_snapshot(DBInstanceIdentifier=args.instance_name,
+                                          DBSnapshotIdentifier=args.snapshot_name,
+                                          Tags=encode_tags(args.tags))
 
 parser = register_parser(snapshot, parent=rds_parser, help="Create an RDS snapshot")
+parser.add_argument("instance_name")
+parser.add_argument("snapshot_name")
+parser.add_argument("--tags", nargs="+", default=[])
 
 def restore(args):
     tags = dict(tag.split("=", 1) for tag in args.tags)

@@ -101,7 +101,7 @@ parser.add_argument("--instance-type", default="c3.xlarge", help="Instance type 
 parser.add_argument("--security-groups", nargs="+")
 parser.add_argument("--base-ami")
 parser.add_argument("--base-ami-product",
-                    help="Ubuntu cloud image manifest product to use, e.g. com.ubuntu.cloud:server:16.04:amd64")
+                    help='Locate AMI for product, e.g. com.ubuntu.cloud:server:16.04:amd64, "Amazon Linux AMI 2016.09"')
 parser.add_argument("--dry-run", "--dryrun", action="store_true")
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help="Tag the resulting AMI with these tags")
 parser.add_argument("--cloud-config-data", type=json.loads)

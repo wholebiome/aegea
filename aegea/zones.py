@@ -40,7 +40,7 @@ def update(args):
 
 parser = register_parser(update, parent=zones_parser, help="Update Route53 DNS records")
 parser.add_argument("zone")
-parser.add_argument("updates", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("="))
+parser.add_argument("updates", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1))
 parser.add_argument("--record-type", default="CNAME")
 
 def delete(args):

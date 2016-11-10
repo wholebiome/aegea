@@ -269,8 +269,16 @@ def ensure_instance_profile(iam_role_name, policies=frozenset()):
         instance_profile.add_role(RoleName=role.name)
     return instance_profile
 
+def encode_tags(tags):
+    if isinstance(tags, (list, tuple)):
+        tags = dict(tag.split("=", 1) for tag in tags)
+    return [dict(Key=k, Value=v) for k, v in tags.items()]
+
+def decode_tags(tags):
+    return {tag["Key"]: tag["Value"] for tag in tags}
+
 def add_tags(resource, dry_run=False, **tags):
-    return resource.create_tags(Tags=[dict(Key=k, Value=v) for k, v in tags.items()], DryRun=dry_run)
+    return resource.create_tags(Tags=encode_tags(tags), DryRun=dry_run)
 
 def filter_by_tags(collection, **tags):
     return collection.filter(Filters=[dict(Name="tag:"+k, Values=[v]) for k, v in tags.items()])
