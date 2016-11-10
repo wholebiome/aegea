@@ -57,8 +57,8 @@ def locate_ami(product, region=None, channel="releases", stream="released", root
                     logger.info("Found %s for %s", ami["id"], ":".join([product, version, region, root_store, virt]))
                     return ami["id"]
     elif product.startswith("Amazon Linux"):
-        filters = {"architecture": "x86_64", "root-device-type": root_store, "virtualization-type": virt,
-                   "owner-alias": "amazon", "state": "available"}
+        filters = {"root-device-type": "ebs" if root_store == "ssd" else root_store, "virtualization-type": virt,
+                   "architecture": "x86_64", "owner-alias": "amazon", "state": "available"}
         images = resources.ec2.images.filter(Filters=[dict(Name=k, Values=[v]) for k, v in filters.items()])
         for image in sorted(images, key=lambda i: i.creation_date, reverse=True):
             if root_store == "ebs" and not image.name.endswith("x86_64-gp2"):
