@@ -8,6 +8,7 @@ from . import register_parser
 from .util import Timestamp, paginate, describe_cidr, add_time_bound_args
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE
 from .util.aws import ARN, resolve_instance_id, resources, clients
+from .util.compat import timestamp
 
 def register_listing_parser(function, **kwargs):
     col_def = dict(default=kwargs.pop("column_defaults")) if "column_defaults" in kwargs else {}
@@ -186,9 +187,9 @@ def grep(args):
     if args.pattern:
         filter_args.update(filterPattern=args.pattern)
     if args.start_time:
-        filter_args.update(startTime=int(args.start_time.timestamp() * 1000))
+        filter_args.update(startTime=int(timestamp(args.start_time) * 1000))
     if args.end_time:
-        filter_args.update(endTime=int(args.end_time.timestamp() * 1000))
+        filter_args.update(endTime=int(timestamp(args.end_time) * 1000))
     num_results = 0
     while True:
         for event in paginate(clients.logs.get_paginator("filter_log_events"), **filter_args):
