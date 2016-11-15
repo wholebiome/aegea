@@ -70,6 +70,7 @@ def get_policies_for_principal(cell, row):
 
 def users(args):
     current_user = resources.iam.CurrentUser()
+
     def mark_cur_user(cell, row):
         return ">>>" if row.user_id == current_user.user_id else ""
     users = list(resources.iam.users.all())

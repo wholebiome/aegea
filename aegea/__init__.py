@@ -60,6 +60,7 @@ def initialize():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument("--version", action="version", version="%(prog)s {version}".format(version=__version__))
+
     def help(args):
         parser.print_help()
     register_parser(help)
