@@ -1,3 +1,12 @@
+Changes for v1.5.1 (2016-11-14)
+===============================
+
+-  Fogdog mission: add environment placeholder
+
+-  Begin timestamp backport
+
+-  Propagate base AMI metadata in build\_image
+
 Changes for v1.5.0 (2016-11-10)
 ===============================
 
