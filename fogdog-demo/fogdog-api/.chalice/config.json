@@ -1,0 +1,5 @@
+{
+  "lambda_arn": "arn:aws:lambda:us-west-2:597578330584:function:fogdog-api", 
+  "app_name": "fogdog-api", 
+  "stage": "dev"
+}
