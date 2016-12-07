@@ -97,14 +97,6 @@ def policies(args):
 parser = register_listing_parser(policies, help="List IAM policies")
 parser.add_argument("--sort-by")
 
-def buckets(args):
-    """
-    List S3 buckets. See also "aws s3 ls". Use "aws s3 ls NAME" to list bucket contents.
-    """
-    page_output(filter_and_tabulate(resources.s3.buckets, args))
-
-parser = register_filtering_parser(buckets)
-
 def console(args):
     instance_id = resolve_instance_id(args.instance)
     err = "[No console output received for {}. Console output may lag by several minutes.]".format(instance_id)
