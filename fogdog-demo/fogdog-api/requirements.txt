@@ -1,1 +1,4 @@
--e git://github.com/kislyuk/aegea.git
+#pynamodb
+sqlalchemy
+#mysql-python
+pymysql
