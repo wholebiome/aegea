@@ -176,7 +176,7 @@ ebs_snapshots:
     - start_time
     - tags
 
-buckets:
+buckets_ls:
   columns:
     - name
     - creation_date
