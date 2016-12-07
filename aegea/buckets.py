@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from botocore.exceptions import ClientError
 
-from . import register_parser
+from . import register_parser, logger
 from .ls import filter_and_tabulate, register_filtering_parser
 from .util.aws import ARN, resolve_instance_id, resources, clients, expect_error_codes
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE
@@ -44,7 +44,7 @@ def lifecycle(args):
             print(json.dumps(rule))
     except ClientError as e:
         expect_error_codes(e, "NoSuchLifecycleConfiguration")
-        print("No lifecycle configuration for bucket", args.bucket_name)
+        logger.error("No lifecycle configuration for bucket %s", args.bucket_name)
 
 parser = register_parser(lifecycle, parent=buckets_parser)
 parser.add_argument("bucket_name")
