@@ -464,3 +464,11 @@ def get_elb_dns_aliases():
                 if value.endswith("elb.amazonaws.com") or value.endswith("elb.amazonaws.com."):
                     dns_aliases[value.rstrip(".").replace("dualstack.", "")] = rrs["Name"]
     return dns_aliases
+
+ip_ranges_api = "https://ip-ranges.amazonaws.com/ip-ranges.json"
+
+def get_public_ip_ranges(service="AMAZON", region=None):
+    if region is None:
+        region = ARN.get_region()
+    ranges = requests.get(ip_ranges_api).json()["prefixes"]
+    return [r for r in ranges if r["service"] == service and r["region"] == region]
