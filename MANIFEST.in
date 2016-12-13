@@ -3,3 +3,4 @@ include aegea/*.yml
 include aegea/*.json
 recursive-include aegea/rootfs.skel *
 recursive-include aegea/missions *
+recursive-include aegea/lambdas *

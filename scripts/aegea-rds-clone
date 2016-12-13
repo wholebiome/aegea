@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""
+Restore the most recent RDS snapshot of a specified instance into a new RDS instance.
+"""
+
+import os, sys, json, argparse, logging, datetime
+import boto3
+
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("db_instance")
+parser.add_argument("--clone-name", default="{dbi}-clone-{date}")
+args = parser.parse_args()
+
+rds = boto3.client("rds")
+
+snapshots = []
+for page in rds.get_paginator("describe_db_snapshots").paginate():
+    for snapshot in page["DBSnapshots"]:
+        if snapshot["Status"] == "available" and snapshot["DBInstanceIdentifier"] == args.db_instance:
+            snapshots.append(snapshot)
+if len(snapshots) == 0:
+    parser.exit('No snapshot found for DB instance identifier "{}"'.format(args.db_instance))
+snapshot = sorted(snapshots, key=lambda s: s["SnapshotCreateTime"])[-1]
+now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+clone_name = args.clone_name.format(dbi=args.db_instance, date=now)
+rds.restore_db_instance_from_db_snapshot(DBInstanceIdentifier=clone_name,
+                                         DBSnapshotIdentifier=snapshot["DBSnapshotIdentifier"])
+rds.get_waiter("db_instance_available").wait(DBInstanceIdentifier=clone_name)
+instance = rds.describe_db_instances(DBInstanceIdentifier=clone_name)["DBInstances"][0]
+print(json.dumps({k: instance[k] for k in ("Endpoint", "DbiResourceId")}))

@@ -41,7 +41,7 @@ def update(args):
 parser = register_parser(update, parent=zones_parser, help="Update Route53 DNS records")
 parser.add_argument("zone")
 parser.add_argument("updates", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1))
-parser.add_argument("--record-type", default="CNAME")
+parser.add_argument("--record-type", default="CNAME", help="Examples: CNAME, A, TXT")
 
 def delete(args):
     return DNSZone(args.zone).delete(name=args.name, record_type=args.record_type, missing_ok=False)
@@ -49,4 +49,4 @@ def delete(args):
 parser = register_parser(delete, parent=zones_parser, help="Delete Route53 DNS records")
 parser.add_argument("zone")
 parser.add_argument("name", help=r'Enter a "\052" literal to represent a wildcard.')
-parser.add_argument("--record-type", default="CNAME")
+parser.add_argument("--record-type", default="CNAME", help="Examples: CNAME, A, TXT")
