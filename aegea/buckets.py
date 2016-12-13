@@ -54,3 +54,9 @@ parser.add_argument("--transition-to-infrequent-access", type=int, metavar="DAYS
 parser.add_argument("--transition-to-glacier", type=int, metavar="DAYS")
 parser.add_argument("--expire", type=int, metavar="DAYS")
 parser.add_argument("--abort-incomplete-multipart-upload", type=int, metavar="DAYS")
+
+def cors(args):
+    raise NotImplementedError()
+
+parser = register_parser(cors, parent=buckets_parser)
+parser.add_argument("bucket_name")
