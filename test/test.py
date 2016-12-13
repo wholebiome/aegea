@@ -10,7 +10,7 @@ sys.path.insert(0, pkg_root)
 import aegea
 from aegea.util import Timestamp
 from aegea.util.aws import (resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ami, get_ondemand_price_usd, ARN,
-                            DNSZone, get_user_data)
+                            DNSZone, get_user_data, get_public_ip_ranges)
 from aegea.util.exceptions import AegeaException
 from aegea.util.compat import USING_PYTHON2, str
 from aegea.util.git import private_submodules
@@ -166,6 +166,10 @@ class TestAegea(unittest.TestCase):
                          region="us-west-2")
         self.assertTrue(ami.startswith("ami-"))
         self.assertTrue(locate_ami("Amazon Linux AMI 2016.09").startswith("ami-"))
+
+    def test_ip_ranges(self):
+        get_public_ip_ranges()
+        get_public_ip_ranges(region="us-east-1", service="ROUTE53_HEALTHCHECKS")
 
     def test_date_utils(self):
         with self.assertRaises(TypeError):
