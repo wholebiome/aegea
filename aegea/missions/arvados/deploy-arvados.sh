@@ -12,7 +12,7 @@ fi
 
 export ARVADOS_INSTANCE=arvados-$(date "+%Y-%m-%d-%H-%M")
 export ARVADOS_SLURMCTL_HOST=$ARVADOS_INSTANCE
-skip(){
+
 aegea-build-ami-for-mission arvados arvados-$(date "+%Y-%m-%d-%H-%M")
 aegea-build-ami-for-mission arvados-worker arvwrkr-$(date "+%Y-%m-%d-%H-%M")
 
@@ -25,7 +25,7 @@ for service in keep0 keep1; do
     aegea ebs attach $EBS_VOLUME ${ARVADOS_INSTANCE}-$service xvdz
     aegea ssh ubuntu@${ARVADOS_INSTANCE}-$service "sudo mkfs.ext4 /dev/xvdz && sudo mount /dev/xvdz /mnt/keep && sudo service arvados-keep restart"
 done
-}
+
 export ARVADOS_INSTANCE=arvados-2016-11-09-16-25
 export ARVADOS_SLURMCTL_HOST=$ARVADOS_INSTANCE
 
