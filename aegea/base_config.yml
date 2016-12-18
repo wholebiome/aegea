@@ -391,6 +391,29 @@ certificates:
     - CertificateArn
     - DomainName
 
+batch_queues:
+  columns:
+    - jobQueueName
+    - jobQueueArn
+    - priority
+    - state
+    - status
+    - statusReason
+
+batch_compute_environments:
+  columns:
+    - computeEnvironmentName
+    - computeEnvironmentArn
+    - type
+    - state
+    - status
+    - statusReason
+    - computeResources.type
+    - computeResources.minvCpus
+    - computeResources.desiredvCpus
+    - computeResources.maxvCpus
+    - computeResources.instanceTypes
+
 launch:
   commands: []
   packages: []

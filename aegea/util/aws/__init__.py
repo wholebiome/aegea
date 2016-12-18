@@ -472,3 +472,9 @@ def get_public_ip_ranges(service="AMAZON", region=None):
         region = ARN.get_region()
     ranges = requests.get(ip_ranges_api).json()["prefixes"]
     return [r for r in ranges if r["service"] == service and r["region"] == region]
+
+def make_waiter(op, path, expected, matcher="path", delay=1, max_attempts=30):
+    from botocore.waiter import Waiter, SingleWaiterConfig
+    acceptor = dict(matcher=matcher, argument=path, expected=expected, state="success")
+    waiter_cfg = dict(operation=op.__name__, delay=delay, maxAttempts=max_attempts, acceptors=[acceptor])
+    return Waiter(op.__name__, SingleWaiterConfig(waiter_cfg), op)
