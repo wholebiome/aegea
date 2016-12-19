@@ -385,9 +385,7 @@ class SpotFleetBuilder(VerboseRepr):
         self.min_mem_per_core_gb = min_mem_per_core_gb
         self.gpus_per_instance = gpus_per_instance
         self.dry_run = dry_run
-        self.iam_fleet_role = ensure_iam_role("SpotFleet",
-                                              policies=["service-role/AmazonEC2SpotFleetRole"],
-                                              trust=["spotfleet"])
+        self.iam_fleet_role = self.get_iam_fleet_role()
         self.spot_fleet_request_config = dict(SpotPrice=str(spot_price),
                                               TargetCapacity=cores,
                                               IamFleetRole=self.iam_fleet_role.arn)
@@ -397,6 +395,12 @@ class SpotFleetBuilder(VerboseRepr):
             deadline = datetime.utcnow().replace(microsecond=0) + timedelta(hours=duration_hours)
             self.spot_fleet_request_config.update(ValidUntil=deadline,
                                                   TerminateInstancesWithExpiration=True)
+
+    @classmethod
+    def get_iam_fleet_role(cls):
+        return ensure_iam_role("SpotFleet",
+                               policies=["service-role/AmazonEC2SpotFleetRole"],
+                               trust=["spotfleet"])
 
     def instance_types(self, max_overprovision=3, restrict_to_families=None):
         def compute_ephemeral_storage_gb(instance_data):

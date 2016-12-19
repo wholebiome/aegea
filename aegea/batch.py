@@ -13,7 +13,8 @@ from .util import Timestamp, paginate, hashabledict
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate
 from .util.exceptions import AegeaException
 from .util.compat import lru_cache
-from .util.aws import ARN, resources, clients, expect_error_codes, ensure_iam_role, make_waiter
+from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_role, make_waiter, ensure_subnet,
+                       ensure_vpc, ensure_security_group, SpotFleetBuilder)
 
 def batch(args):
     batch_parser.print_help()
@@ -54,13 +55,24 @@ parser = register_listing_parser(compute_environments, parent=batch_parser, help
 
 def create_compute_environment(args):
     batch_iam_role = ARN(service="iam", region="", resource="role/service-role/AWSBatchServiceRole")
+    vpc = ensure_vpc()
+    compute_resources = dict(type=args.compute_type,
+                             minvCpus=0, maxvCpus=256,
+                             instanceTypes=["optimal"],
+                             subnets=[subnet.id for subnet in vpc.subnets.all()],
+                             securityGroupIds=[ensure_security_group("aegea.launch", vpc).id],
+                             instanceRole="aegea.launch",
+                             bidPercentage=100,
+                             spotIamFleetRole=SpotFleetBuilder.get_iam_fleet_role().name)
     return clients.batch.create_compute_environment(computeEnvironmentName=args.name,
                                                     type=args.type,
+                                                    computeResources=compute_resources,
                                                     serviceRole=str(batch_iam_role))
 
 parser = register_parser(create_compute_environment, parent=batch_parser, help="Create a Batch compute environment")
 parser.add_argument("name")
 parser.add_argument("--type", required=True, choices={"MANAGED", "UNMANAGED"})
+parser.add_argument("--compute-type", required=True, choices={"EC2", "SPOT"})
 
 def delete_compute_environment(args):
     clients.batch.update_compute_environment(computeEnvironment=args.name, state="DISABLED")
