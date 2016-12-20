@@ -414,6 +414,20 @@ batch_compute_environments:
     - computeResources.maxvCpus
     - computeResources.instanceTypes
 
+batch_ls:
+  columns:
+    - jobId
+    - jobName
+    - status
+    - jobDefinition
+    - parameters
+    - container.image
+    - container.environment
+    - container.vcpus
+    - container.memory
+    - createdAt
+    - dependsOn
+
 launch:
   commands: []
   packages: []
