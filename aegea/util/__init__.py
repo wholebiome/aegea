@@ -64,7 +64,8 @@ class Timestamp(datetime):
         if isinstance(t, (str, bytes)) and t.isdigit():
             t = int(t)
         if not isinstance(t, (str, bytes)):
-            return datetime.utcfromtimestamp(t//1000)
+            from dateutil.tz import tzutc
+            return datetime.fromtimestamp(t//1000, tz=tzutc())
         try:
             units = {"weeks", "days", "hours", "minutes", "seconds"}
             diffs = {u: float(t[:-1]) for u in units if u.startswith(t[-1])}
