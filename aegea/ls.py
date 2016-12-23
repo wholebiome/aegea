@@ -195,13 +195,14 @@ def grep(args):
         else:
             return SystemExit(os.EX_OK if num_results > 0 else os.EX_DATAERR)
 
-parser = register_parser(grep, help="Filter and print events in a CloudWatch Logs stream or group of streams")
-parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-sensitive. See
+grep_parser = register_parser(grep, help="Filter and print events in a CloudWatch Logs stream or group of streams")
+grep_parser.add_argument("pattern", help="""CloudWatch filter pattern to use. Case-sensitive. See
 http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html""")
-parser.add_argument("log_group", help="CloudWatch log group")
-parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
-parser.add_argument("--follow", "-f", help="Repeat search continuously instead of running once", action="store_true")
-add_time_bound_args(parser)
+grep_parser.add_argument("log_group", help="CloudWatch log group")
+grep_parser.add_argument("log_stream", nargs="?", help="CloudWatch log stream")
+grep_parser.add_argument("--follow", "-f", help="Repeat search continuously instead of running once",
+                         action="store_true")
+add_time_bound_args(grep_parser)
 
 def clusters(args):
     cluster_arns = sum([p["clusterArns"] for p in clients.ecs.get_paginator("list_clusters").paginate()], [])

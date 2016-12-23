@@ -56,8 +56,8 @@ def paginate(boto3_paginator, *args, **kwargs):
 
 class Timestamp(datetime):
     """
-    Integer inputs are interpreted as milliseconds since the epoch. Sub-second precision is discared. Suffixes (s, m, h,
-    d, w) are supported. Negative inputs (e.g. -5m) are interpreted as relative to the current date. Other inputs
+    Integer inputs are interpreted as milliseconds since the epoch. Sub-second precision is discarded. Suffixes (s, m,
+    h, d, w) are supported. Negative inputs (e.g. -5m) are interpreted as relative to the current date. Other inputs
     (e.g. 2020-01-01, 15:20) are parsed using the dateutil parser.
     """
     def __new__(cls, t):
