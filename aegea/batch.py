@@ -101,7 +101,15 @@ parser = register_parser(delete_compute_environment, parent=batch_parser, help="
 parser.add_argument("name")
 
 def ensure_job_definition(args):
-    container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory", "command")}
+    container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory")}
+    shellcode = ";".join(['set -a',
+                          'source /etc/environment',
+                          'source /etc/default/locale',
+                          'set +a',
+                          'set -eo pipefail',
+                          'source /etc/profile',
+                          'for cmd in "$@"; do /bin/bash -c "$cmd"; done'])
+    container_props["command"] = ["/bin/bash", "-c", shellcode, __name__] + args.command
     return clients.batch.register_job_definition(jobDefinitionName=__name__.replace(".", "_"),
                                                  type="container",
                                                  containerProperties=container_props)
