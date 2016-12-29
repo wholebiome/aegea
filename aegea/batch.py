@@ -104,7 +104,7 @@ def ensure_job_definition(args):
     container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory")}
     shellcode = ";".join(['set -a',
                           'source /etc/environment',
-                          'source /etc/default/locale',
+                          'if [ -f /etc/default/locale ]; then source /etc/default/locale; fi',
                           'set +a',
                           'set -eo pipefail',
                           'source /etc/profile',

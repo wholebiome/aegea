@@ -275,7 +275,7 @@ tables:
     - table_size_bytes
     - table_status
 
-filesystems:
+efs_ls:
   columns:
     - Name
     - FileSystemId

@@ -267,19 +267,6 @@ def subscriptions(args):
 parser = register_listing_parser(subscriptions, help="List SNS subscriptions",
                                  column_defaults=["SubscriptionArn", "Protocol", "Endpoint"])
 
-def filesystems(args):
-    table = []
-    for filesystem in clients.efs.describe_file_systems()["FileSystems"]:
-        filesystem["tags"] = clients.efs.describe_tags(FileSystemId=filesystem["FileSystemId"])["Tags"]
-        for mount_target in clients.efs.describe_mount_targets(FileSystemId=filesystem["FileSystemId"])["MountTargets"]:
-            mount_target.update(filesystem)
-            table.append(mount_target)
-    args.columns += args.mount_target_columns
-    page_output(tabulate(table, args, cell_transforms={"SizeInBytes": lambda x, r: x.get("Value") if x else None}))
-
-parser = register_listing_parser(filesystems, help="List EFS filesystems")
-parser.add_argument("--mount-target-columns", nargs="+")
-
 def limits(args):
     """
     Describe limits in effect on your AWS account. See also https://console.aws.amazon.com/ec2/v2/home#Limits:
