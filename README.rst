@@ -21,7 +21,7 @@ library dependencies:
 +--------------+---------+-----------------------------------------------------------------------------------------+
 | Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel                                    |
 +--------------+---------+-----------------------------------------------------------------------------------------+
-| OS X         |         | Install Xcode or Xcode Command Line Tools. Install Homebrew. Run                        |
+| OS X         |         | `Install Homebrew <http://brew.sh/>`_. Run                                              |
 |              |         | ``brew install openssl && brew link --force openssl``.                                  |
 +--------------+---------+-----------------------------------------------------------------------------------------+
 
