@@ -8,9 +8,9 @@ arn:aws:iam::123456789012:user/foo.
 EC2 key pairs have no ARNs and no distingiushing ID prefix. To delete them by name, use the --key-pair option.
 """
 
-import os, sys, argparse, subprocess
+import os, sys, argparse, subprocess, time
 from . import register_parser, logger
-from .util.aws import expect_error_codes, resources, clients
+from .util.aws import expect_error_codes, resources, clients, make_waiter
 from botocore.exceptions import ClientError
 
 def rm(args):
@@ -47,6 +47,17 @@ def rm(args):
                 clients.ec2.cancel_spot_fleet_requests(SpotFleetRequestIds=[name],
                                                        TerminateInstances=False,
                                                        DryRun=not args.force)
+            elif name.startswith("fs-"):
+                efs = clients.efs
+                for mount_target in efs.describe_mount_targets(FileSystemId=name)["MountTargets"]:
+                    if args.force:
+                        efs.delete_mount_target(MountTargetId=mount_target["MountTargetId"])
+                        try:
+                            while efs.describe_mount_targets(MountTargetId=mount_target["MountTargetId"]):
+                                time.sleep(1)
+                        except ClientError as e:
+                            expect_error_codes(e, "MountTargetNotFound")
+                efs.delete_file_system(FileSystemId=name) if args.force else True
             elif name.startswith("AKIA") and len(name) == 20 and name.upper() == name:
                 clients.iam.delete_access_key(AccessKeyId=name) if args.force else True
             elif name.startswith("AROA") and len(name) == 21 and name.upper() == name:
