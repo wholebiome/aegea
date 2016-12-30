@@ -1,3 +1,18 @@
+Changes for v1.6.0 (2016-12-30)
+===============================
+
+-  Aegea EFS refactor
+
+-  Aegea batch
+
+-  Add IP Ranges API
+
+-  Add aegea buckets cors placeholder
+
+-  Aegea bucket lifecycle
+
+-  Test and release infrastructure improvements
+
 Changes for v1.5.1 (2016-11-14)
 ===============================
 
