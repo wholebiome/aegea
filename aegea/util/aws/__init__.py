@@ -80,7 +80,9 @@ def get_user_data(host_key=None, commands=None, packages=None, files=None, **kwa
         commands = []
     if files is None:
         files = []
-    cloud_config_data = OrderedDict(packages=packages, write_files=files, runcmd=commands, **kwargs)
+    cloud_config_data = OrderedDict(packages=packages, write_files=files, runcmd=commands)
+    for key in sorted(kwargs):
+        cloud_config_data[key] = kwargs[key]
     if host_key is not None:
         buf = StringIO()
         host_key.write_private_key(buf)
