@@ -19,7 +19,7 @@ from .util.compat import lru_cache
 def ebs(args):
     ebs_parser.print_help()
 
-ebs_parser = register_parser(ebs, help="Manage EBS resources", description=__doc__,
+ebs_parser = register_parser(ebs, help="Manage Elastic Block Store resources", description=__doc__,
                              formatter_class=argparse.RawTextHelpFormatter)
 
 def ls(args):

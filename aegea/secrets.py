@@ -110,7 +110,7 @@ def secrets(args):
     secrets_parser.print_help()
 
 secrets_parser = register_parser(secrets,
-                                 help="Manage credentials (secrets)",
+                                 help="Manage application credentials (secrets)",
                                  description=__doc__,
                                  formatter_class=argparse.RawTextHelpFormatter)
 

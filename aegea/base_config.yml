@@ -230,6 +230,14 @@ tasks:
     - createdAt
     - overrides
 
+ecr_ls:
+  columns:
+    - repositoryName
+    - repositoryUri
+    - registryId
+    - imageTags
+    - imagePushedAt
+
 sirs:
   columns:
     - SpotInstanceRequestId

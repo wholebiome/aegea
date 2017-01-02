@@ -183,18 +183,18 @@ def watch(args):
     log_stream_args = dict(logGroupName="/aws/batch/job", logStreamNamePrefix="{}/{}".format(job_name, args.job_id))
     logger.info("Watching job %s", args.job_id)
     last_status = None
-    while True:
-        status = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["status"]
-        if status != last_status:
-            logger.info("Job %s %s", args.job_id, format_job_status(status))
-            last_status = status
-        if status in {"RUNNING", "SUCCEEDED", "FAILED"}:
+    while last_status not in {"SUCCEEDED", "FAILED"}:
+        job_desc = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
+        if job_desc["status"] != last_status:
+            logger.info("Job %s %s", args.job_id, format_job_status(job_desc["status"]))
+            last_status = job_desc["status"]
+        if job_desc["status"] in {"RUNNING", "SUCCEEDED", "FAILED"}:
             for log_stream in paginate(clients.logs.get_paginator("describe_log_streams"), **log_stream_args):
                 grep_args = grep_parser.parse_args(["", "/aws/batch/job", log_stream["logStreamName"]])
                 grep_args.pattern = None
                 grep(grep_args)
-        if status in {"SUCCEEDED", "FAILED"}:
-            break
+        if "reason" in job_desc.get("container", {}):
+            logger.info("Job %s: %s", args.job_id, job_desc["container"]["reason"])
 
 watch_parser = register_parser(watch, parent=batch_parser, help="Retrieve logs for a Batch job")
 watch_parser.add_argument("job_id")
