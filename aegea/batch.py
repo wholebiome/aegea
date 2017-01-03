@@ -4,7 +4,7 @@ Manage AWS Batch jobs, queues, and compute environments.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse
+import os, sys, argparse, base64
 
 from botocore.exceptions import ClientError
 
@@ -101,15 +101,23 @@ parser = register_parser(delete_compute_environment, parent=batch_parser, help="
 parser.add_argument("name")
 
 def ensure_job_definition(args):
-    container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory")}
-    shellcode = ";".join(['set -a',
-                          'source /etc/environment',
-                          'if [ -f /etc/default/locale ]; then source /etc/default/locale; fi',
-                          'set +a',
-                          'set -eo pipefail',
-                          'source /etc/profile',
-                          'for cmd in "$@"; do /bin/bash -c "$cmd"; done'])
-    container_props["command"] = ["/bin/bash", "-c", shellcode, __name__] + args.command
+    container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory", "privileged", "environment")}
+    # FIXME: pass through volumes and mount points
+    container_props.update(volumes=[{"host": {"sourcePath": "/var/run/docker.sock"}, "name": "ds"}],
+                           mountPoints=[{"sourceVolume": "ds", "containerPath": "/var/run/docker.sock"}])
+    shellcode = ['set -a', 'source /etc/environment',
+                 'if [ -f /etc/default/locale ]; then source /etc/default/locale; fi',
+                 'set +a', 'set -eo pipefail', 'source /etc/profile']
+    if args.execute:
+        args.command = []
+        payload = base64.b64encode(args.execute.read()).decode()
+        shellcode += ['BATCH_SCRIPT="$(mktemp --tmpdir $AWS_BATCH_CE_NAME.$AWS_BATCH_JQ_NAME.$AWS_BATCH_JOB_ID.XXXXX)"',
+                      'echo "{}" | base64 --decode > "$BATCH_SCRIPT"'.format(payload),
+                      'chmod +x "$BATCH_SCRIPT"',
+                      '"$BATCH_SCRIPT"']
+    else:
+        shellcode += ['for cmd in "$@"; do /bin/bash -c "$cmd"; done']
+    container_props["command"] = ["/bin/bash", "-c", ";".join(shellcode), __name__] + args.command
     return clients.batch.register_job_definition(jobDefinitionName=__name__.replace(".", "_"),
                                                  type="container",
                                                  containerProperties=container_props)
@@ -134,6 +142,7 @@ def submit(args):
     try:
         job = clients.batch.submit_job(**submit_args)
     except ClientError:
+        # FIXME: only catch "no queue" error
         ensure_queue(args.queue)
         job = clients.batch.submit_job(**submit_args)
     if args.watch:
@@ -141,16 +150,22 @@ def submit(args):
     return job
 
 parser = register_parser(submit, parent=batch_parser, help="Submit a job to a Batch queue")
-parser.add_argument("name")
+parser.add_argument("--name", default=__name__.replace(".", "_"))
 parser.add_argument("--queue", default=__name__.replace(".", "_"))
 parser.add_argument("--depends-on", nargs="+", default=[])
 parser.add_argument("--image", default="ubuntu")
 parser.add_argument("--vcpus", type=int, default=1)
 parser.add_argument("--memory", type=int, default=1024)
-parser.add_argument("--command", required=True, nargs="+")
+parser.add_argument("--privileged", action="store_true", default=False)
+# FIXME: pass through volumes and mount points
 parser.add_argument("--job-definition-arn")
+parser.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
+                    type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
 parser.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default={})
 parser.add_argument("--watch", action="store_true")
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("--command", nargs="+")
+group.add_argument("--execute", type=argparse.FileType("rb"))
 
 def terminate(args):
     return clients.batch.terminate_job(jobId=args.job_id, reason="Terminated by {}".format(__name__))
@@ -178,10 +193,25 @@ def format_job_status(status):
                   SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
     return colors[status] + status + ENDC()
 
+def get_logs(args):
+    log_stream_args = dict(logGroupName="/aws/batch/job",
+                           logStreamNamePrefix="{}/{}".format(args.job_name, args.job_id))
+    for log_stream in paginate(clients.logs.get_paginator("describe_log_streams"), **log_stream_args):
+        filter_args = dict(logGroupName="/aws/batch/job", logStreamNames=[log_stream["logStreamName"]],
+                           startTime=getattr(args, "start_time", 0))
+        for event in paginate(clients.logs.get_paginator("filter_log_events"), **filter_args):
+            if "timestamp" in event and "message" in event:
+                print(str(Timestamp(event["timestamp"])), event["message"])
+                args.start_time = event["timestamp"]
+
+get_logs_parser = register_parser(get_logs, parent=batch_parser, help="Retrieve logs for a Batch job")
+get_logs_parser.add_argument("job_id")
+get_logs_parser.add_argument("job_name", nargs="?", default=__name__.replace(".", "_"))
+get_logs_parser.add_argument("--start-time", type=int, help=argparse.SUPPRESS)
+
 def watch(args):
-    job_name = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["jobName"]
-    log_stream_args = dict(logGroupName="/aws/batch/job", logStreamNamePrefix="{}/{}".format(job_name, args.job_id))
-    logger.info("Watching job %s", args.job_id)
+    args.job_name = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["jobName"]
+    logger.info("Watching job %s (%s)", args.job_id, args.job_name)
     last_status = None
     while last_status not in {"SUCCEEDED", "FAILED"}:
         job_desc = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
@@ -189,12 +219,9 @@ def watch(args):
             logger.info("Job %s %s", args.job_id, format_job_status(job_desc["status"]))
             last_status = job_desc["status"]
         if job_desc["status"] in {"RUNNING", "SUCCEEDED", "FAILED"}:
-            for log_stream in paginate(clients.logs.get_paginator("describe_log_streams"), **log_stream_args):
-                grep_args = grep_parser.parse_args(["", "/aws/batch/job", log_stream["logStreamName"]])
-                grep_args.pattern = None
-                grep(grep_args)
+            get_logs(args)
         if "reason" in job_desc.get("container", {}):
             logger.info("Job %s: %s", args.job_id, job_desc["container"]["reason"])
 
-watch_parser = register_parser(watch, parent=batch_parser, help="Retrieve logs for a Batch job")
+watch_parser = register_parser(watch, parent=batch_parser, help="Monitor a running Batch job and stream its logs")
 watch_parser.add_argument("job_id")
