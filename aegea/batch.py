@@ -149,6 +149,8 @@ def submit(args):
         job = clients.batch.submit_job(**submit_args)
     if args.watch:
         watch(watch_parser.parse_args([job["jobId"]]))
+    elif args.wait:
+        raise NotImplementedError()
     return job
 
 parser = register_parser(submit, parent=batch_parser, help="Submit a job to a Batch queue")
@@ -156,18 +158,23 @@ parser.add_argument("--name", default=__name__.replace(".", "_"))
 parser.add_argument("--queue", default=__name__.replace(".", "_"))
 parser.add_argument("--depends-on", nargs="+", default=[])
 parser.add_argument("--job-definition-arn")
-parser.add_argument("--image", default="ubuntu")
-parser.add_argument("--vcpus", type=int, default=1)
-parser.add_argument("--memory", type=int, default=1024)
-parser.add_argument("--privileged", action="store_true", default=False)
-parser.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=lambda x: x.split("=", 1), default=[])
-parser.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
-                    type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
-parser.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default={})
-parser.add_argument("--watch", action="store_true")
+group = parser.add_mutually_exclusive_group()
+group.add_argument("--watch", action="store_true", help="Monitor submitted job, stream log until job completes")
+group.add_argument("--wait", action="store_true", help="Block on job. Exit with code 0 if job succeeded, 1 if failed")
 group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument("--command", nargs="+")
-group.add_argument("--execute", type=argparse.FileType("rb"))
+group.add_argument("--command", nargs="+", help="Run these commands as the job (using " + BOLD("bash -c") + ")")
+group.add_argument("--execute", type=argparse.FileType("rb"), metavar="EXECUTABLE",
+                   help="Read this executable file and run it as the job",)
+group = parser.add_argument_group(title="job definition parameters", description="""
+See http://docs.aws.amazon.com/batch/latest/userguide/job_definition_parameters.html""")
+group.add_argument("--image", default="ubuntu", help="Docker image URL to use for running Batch job")
+group.add_argument("--vcpus", type=int, default=1)
+group.add_argument("--memory", type=int, default=1024)
+group.add_argument("--privileged", action="store_true", default=False)
+group.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=lambda x: x.split("=", 1), default=[])
+group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
+                   type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
+group.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default={})
 
 def terminate(args):
     return clients.batch.terminate_job(jobId=args.job_id, reason="Terminated by {}".format(__name__))
