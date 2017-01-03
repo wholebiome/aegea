@@ -100,7 +100,12 @@ def delete_compute_environment(args):
 parser = register_parser(delete_compute_environment, parent=batch_parser, help="Delete a Batch compute environment")
 parser.add_argument("name")
 
+def get_ecr_image_uri(tag):
+    return "{}.dkr.ecr.{}.amazonaws.com/{}".format(ARN.get_account_id(), ARN.get_region(), tag)
+
 def ensure_job_definition(args):
+    if args.ecs_image:
+        args.image = get_ecr_image_uri(args.ecs_image)
     container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory", "privileged", "environment")}
     if args.volumes:
         container_props.update(volumes=[], mountPoints=[])
@@ -166,8 +171,10 @@ group.add_argument("--command", nargs="+", help="Run these commands as the job (
 group.add_argument("--execute", type=argparse.FileType("rb"), metavar="EXECUTABLE",
                    help="Read this executable file and run it as the job",)
 group = parser.add_argument_group(title="job definition parameters", description="""
-See http://docs.aws.amazon.com/batch/latest/userguide/job_definition_parameters.html""")
-group.add_argument("--image", default="ubuntu", help="Docker image URL to use for running Batch job")
+See http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html""")
+img_group = group.add_mutually_exclusive_group()
+img_group.add_argument("--image", default="ubuntu", help="Docker image URL to use for running Batch job")
+img_group.add_argument("--ecs-image", metavar="IMAGE", help="Name of Docker image residing in this account's ECR")
 group.add_argument("--vcpus", type=int, default=1)
 group.add_argument("--memory", type=int, default=1024)
 group.add_argument("--privileged", action="store_true", default=False)

@@ -236,6 +236,7 @@ ecr_ls:
     - repositoryUri
     - registryId
     - imageTags
+    - imageDigest
     - imagePushedAt
 
 sirs:
