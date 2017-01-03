@@ -102,16 +102,18 @@ parser.add_argument("name")
 
 def ensure_job_definition(args):
     container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory", "privileged", "environment")}
-    # FIXME: pass through volumes and mount points
-    container_props.update(volumes=[{"host": {"sourcePath": "/var/run/docker.sock"}, "name": "ds"}],
-                           mountPoints=[{"sourceVolume": "ds", "containerPath": "/var/run/docker.sock"}])
+    if args.volumes:
+        container_props.update(volumes=[], mountPoints=[])
+        for i, (host_path, guest_path) in enumerate(args.volumes):
+            container_props["volumes"].append({"host": {"sourcePath": host_path}, "name": "vol%d" % i})
+            container_props["mountPoints"].append({"sourceVolume": "vol%d" % i, "containerPath": guest_path})
     shellcode = ['set -a', 'source /etc/environment',
                  'if [ -f /etc/default/locale ]; then source /etc/default/locale; fi',
                  'set +a', 'set -eo pipefail', 'source /etc/profile']
     if args.execute:
         args.command = []
         payload = base64.b64encode(args.execute.read()).decode()
-        shellcode += ['BATCH_SCRIPT="$(mktemp --tmpdir $AWS_BATCH_CE_NAME.$AWS_BATCH_JQ_NAME.$AWS_BATCH_JOB_ID.XXXXX)"',
+        shellcode += ['BATCH_SCRIPT=$(mktemp --tmpdir "$AWS_BATCH_CE_NAME.$AWS_BATCH_JQ_NAME.$AWS_BATCH_JOB_ID.XXXXX")',
                       'echo "{}" | base64 --decode > "$BATCH_SCRIPT"'.format(payload),
                       'chmod +x "$BATCH_SCRIPT"',
                       '"$BATCH_SCRIPT"']
@@ -153,12 +155,12 @@ parser = register_parser(submit, parent=batch_parser, help="Submit a job to a Ba
 parser.add_argument("--name", default=__name__.replace(".", "_"))
 parser.add_argument("--queue", default=__name__.replace(".", "_"))
 parser.add_argument("--depends-on", nargs="+", default=[])
+parser.add_argument("--job-definition-arn")
 parser.add_argument("--image", default="ubuntu")
 parser.add_argument("--vcpus", type=int, default=1)
 parser.add_argument("--memory", type=int, default=1024)
 parser.add_argument("--privileged", action="store_true", default=False)
-# FIXME: pass through volumes and mount points
-parser.add_argument("--job-definition-arn")
+parser.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=lambda x: x.split("=", 1), default=[])
 parser.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
                     type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
 parser.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default={})

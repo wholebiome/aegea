@@ -27,10 +27,11 @@ if os.path.exists(os.path.join(args.mission_dir, args.mission, "Makefile")):
 if args.image_type == "docker":
     subprocess.check_call([
         "aegea", "batch", "submit", "--watch", "--image", "ubuntu:14.04", "--privileged",
+        "--volumes", "/var/run/docker.sock=/var/run/docker.sock",
         "--environment",
         "TAG=latest",
         "REPO=" + args.image_name,
-        "DOCKERFILE=" + base64.b64encode(open("FIXME", "rb").read()).decode(),
+        "DOCKERFILE=" + base64.b64encode(open("Dockerfile", "rb").read()).decode(),
         "AWS_DEFAULT_REGION=" + ARN.get_region(),
         "AWS_ACCOUNT_ID=" + ARN.get_account_id(),
         "--command", ";".join(["set -euxo pipefail",
