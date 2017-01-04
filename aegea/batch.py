@@ -4,7 +4,7 @@ Manage AWS Batch jobs, queues, and compute environments.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, base64
+import os, sys, argparse, base64, collections
 
 from botocore.exceptions import ClientError
 
@@ -209,33 +209,44 @@ def format_job_status(status):
                   SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
     return colors[status] + status + ENDC()
 
+def find_log_event_duplicate_from_last_batch(event, args):
+    if args.skip_events and event == args.skip_events[0]:
+        return args.skip_events.popleft()
+    if event["timestamp"] != args.start_time:
+        args.skip_events.clear()
+    args.skip_events.append(event)
+
 def get_logs(args):
     log_stream_args = dict(logGroupName="/aws/batch/job",
                            logStreamNamePrefix="{}/{}".format(args.job_name, args.job_id))
     for log_stream in paginate(clients.logs.get_paginator("describe_log_streams"), **log_stream_args):
         filter_args = dict(logGroupName="/aws/batch/job", logStreamNames=[log_stream["logStreamName"]],
-                           startTime=getattr(args, "start_time", 0))
+                           startTime=args.start_time)
         for event in paginate(clients.logs.get_paginator("filter_log_events"), **filter_args):
             if "timestamp" in event and "message" in event:
+                if find_log_event_duplicate_from_last_batch(event, args):
+                    continue
                 print(str(Timestamp(event["timestamp"])), event["message"])
                 args.start_time = event["timestamp"]
 
 get_logs_parser = register_parser(get_logs, parent=batch_parser, help="Retrieve logs for a Batch job")
 get_logs_parser.add_argument("job_id")
 get_logs_parser.add_argument("job_name", nargs="?", default=__name__.replace(".", "_"))
-get_logs_parser.add_argument("--start-time", type=int, help=argparse.SUPPRESS)
+get_logs_parser.add_argument("--start-time", type=int, default=0, help=argparse.SUPPRESS)
+get_logs_parser.add_argument("--skip-events", default=collections.deque(), help=argparse.SUPPRESS)
 
 def watch(args):
-    args.job_name = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["jobName"]
-    logger.info("Watching job %s (%s)", args.job_id, args.job_name)
+    job_name = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["jobName"]
+    logger.info("Watching job %s (%s)", args.job_id, job_name)
     last_status = None
+    get_logs_args = get_logs_parser.parse_args([args.job_id, job_name])
     while last_status not in {"SUCCEEDED", "FAILED"}:
         job_desc = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
         if job_desc["status"] != last_status:
             logger.info("Job %s %s", args.job_id, format_job_status(job_desc["status"]))
             last_status = job_desc["status"]
         if job_desc["status"] in {"RUNNING", "SUCCEEDED", "FAILED"}:
-            get_logs(args)
+            get_logs(get_logs_args)
         if "reason" in job_desc.get("container", {}):
             logger.info("Job %s: %s", args.job_id, job_desc["container"]["reason"])
 
