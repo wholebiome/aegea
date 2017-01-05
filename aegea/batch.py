@@ -103,6 +103,9 @@ parser.add_argument("name")
 def get_ecr_image_uri(tag):
     return "{}.dkr.ecr.{}.amazonaws.com/{}".format(ARN.get_account_id(), ARN.get_region(), tag)
 
+def ensure_ecr_image(tag):
+    pass
+
 def ensure_job_definition(args):
     if args.ecs_image:
         args.image = get_ecr_image_uri(args.ecs_image)
@@ -116,15 +119,27 @@ def ensure_job_definition(args):
                  'if [ -f /etc/default/locale ]; then source /etc/default/locale; fi',
                  'set +a', 'set -eo pipefail', 'source /etc/profile']
     if args.execute:
-        args.command = []
         payload = base64.b64encode(args.execute.read()).decode()
+        container_props["environment"].append(dict(name="BATCH_SCRIPT_B64", value=payload))
         shellcode += ['BATCH_SCRIPT=$(mktemp --tmpdir "$AWS_BATCH_CE_NAME.$AWS_BATCH_JQ_NAME.$AWS_BATCH_JOB_ID.XXXXX")',
-                      'echo "{}" | base64 --decode > "$BATCH_SCRIPT"'.format(payload),
-                      'chmod +x "$BATCH_SCRIPT"',
-                      '"$BATCH_SCRIPT"']
+                      'echo $BATCH_SCRIPT_B64 | base64 --decode > $BATCH_SCRIPT',
+                      'chmod +x $BATCH_SCRIPT',
+                      '$BATCH_SCRIPT']
+    elif args.cwl:
+        payload = base64.b64encode(args.cwl.read()).decode()
+        container_props["environment"].append(dict(name="CWL_WF_DEF_B64", value=payload))
+        payload = base64.b64encode(args.cwl_input.read()).decode()
+        container_props["environment"].append(dict(name="CWL_JOB_ORDER_B64", value=payload))
+        shellcode += [
+            'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
+            'apt-get update',
+            'apt-get install --yes curl python-pip python-requests python-yaml python-lockfile python-pyparsing',
+            'pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419',
+            'cwltool <(echo $CWL_WF_DEF_B64 | base64 --decode) <(echo $CWL_JOB_ORDER_B64 | base64 --decode)'
+        ]
     else:
-        shellcode += ['for cmd in "$@"; do /bin/bash -c "$cmd"; done']
-    container_props["command"] = ["/bin/bash", "-c", ";".join(shellcode), __name__] + args.command
+        shellcode += ['echo will evaluate $@', 'for cmd in "$@"; do echo evaluating "$cmd"; eval "$cmd"; done']
+    container_props["command"] = ["/bin/bash", "-c", ";".join(shellcode), __name__] + (args.command or [])
     return clients.batch.register_job_definition(jobDefinitionName=__name__.replace(".", "_"),
                                                  type="container",
                                                  containerProperties=container_props)
@@ -144,7 +159,7 @@ def submit(args):
                        jobQueue=args.queue,
                        dependsOn=args.depends_on,
                        jobDefinition=args.job_definition_arn,
-                       parameters=args.parameters,
+                       parameters={k: v for k, v in args.parameters},
                        containerOverrides={})
     try:
         job = clients.batch.submit_job(**submit_args)
@@ -169,7 +184,11 @@ group.add_argument("--wait", action="store_true", help="Block on job. Exit with 
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--command", nargs="+", help="Run these commands as the job (using " + BOLD("bash -c") + ")")
 group.add_argument("--execute", type=argparse.FileType("rb"), metavar="EXECUTABLE",
-                   help="Read this executable file and run it as the job",)
+                   help="Read this executable file and run it as the job")
+group.add_argument("--cwl", type=argparse.FileType("rb"), metavar="CWL_DEFINITION",
+                   help="Read this Common Workflow Language definition file and run it as the job")
+parser.add_argument("--cwl-input", type=argparse.FileType("rb"), metavar="CWLINPUT", default=sys.stdin,
+                    help="With --cwl, use this file as the CWL job input (default: stdin)")
 group = parser.add_argument_group(title="job definition parameters", description="""
 See http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html""")
 img_group = group.add_mutually_exclusive_group()
@@ -181,7 +200,7 @@ group.add_argument("--privileged", action="store_true", default=False)
 group.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=lambda x: x.split("=", 1), default=[])
 group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
                    type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
-group.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default={})
+group.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default=[])
 
 def terminate(args):
     return clients.batch.terminate_job(jobId=args.job_id, reason="Terminated by {}".format(__name__))
@@ -209,31 +228,39 @@ def format_job_status(status):
                   SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
     return colors[status] + status + ENDC()
 
-def find_log_event_duplicate_from_last_batch(event, args):
-    if args.skip_events and event == args.skip_events[0]:
-        return args.skip_events.popleft()
-    if event["timestamp"] != args.start_time:
-        args.skip_events.clear()
-    args.skip_events.append(event)
+class LogReader:
+    log_group_name, start_time = "/aws/batch/job", 0
+    seen_events, next_seen_events = collections.deque(), collections.deque()
+    def __init__(self, job_name, job_id):
+        self.log_stream_name_prefix = "{}/{}".format(job_name, job_id)
+        self.describe_log_streams = clients.logs.get_paginator("describe_log_streams")
+        self.filter_log_events = clients.logs.get_paginator("filter_log_events")
+
+    def __iter__(self):
+        log_stream_args = dict(logGroupName=self.log_group_name, logStreamNamePrefix=self.log_stream_name_prefix)
+        for log_stream in paginate(self.describe_log_streams, **log_stream_args):
+            filter_args = dict(logGroupName=self.log_group_name, logStreamNames=[log_stream["logStreamName"]],
+                               startTime=self.start_time)
+            for event in paginate(self.filter_log_events, **filter_args):
+                if "timestamp" in event and "message" in event:
+                    if event["timestamp"] != self.start_time:
+                        self.next_seen_events.clear()
+                        LogReader.start_time = event["timestamp"]
+                    self.next_seen_events.append(event)
+                    if self.seen_events and event == self.seen_events[0]:
+                        self.seen_events.popleft()
+                        continue
+                    yield event
+        self.seen_events.clear()
+        LogReader.next_seen_events, LogReader.seen_events = LogReader.seen_events, LogReader.next_seen_events
 
 def get_logs(args):
-    log_stream_args = dict(logGroupName="/aws/batch/job",
-                           logStreamNamePrefix="{}/{}".format(args.job_name, args.job_id))
-    for log_stream in paginate(clients.logs.get_paginator("describe_log_streams"), **log_stream_args):
-        filter_args = dict(logGroupName="/aws/batch/job", logStreamNames=[log_stream["logStreamName"]],
-                           startTime=args.start_time)
-        for event in paginate(clients.logs.get_paginator("filter_log_events"), **filter_args):
-            if "timestamp" in event and "message" in event:
-                if find_log_event_duplicate_from_last_batch(event, args):
-                    continue
-                print(str(Timestamp(event["timestamp"])), event["message"])
-                args.start_time = event["timestamp"]
+    for event in LogReader(args.job_name, args.job_id):
+        print(str(Timestamp(event["timestamp"])), event["message"])
 
 get_logs_parser = register_parser(get_logs, parent=batch_parser, help="Retrieve logs for a Batch job")
 get_logs_parser.add_argument("job_id")
 get_logs_parser.add_argument("job_name", nargs="?", default=__name__.replace(".", "_"))
-get_logs_parser.add_argument("--start-time", type=int, default=0, help=argparse.SUPPRESS)
-get_logs_parser.add_argument("--skip-events", default=collections.deque(), help=argparse.SUPPRESS)
 
 def watch(args):
     job_name = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["jobName"]
