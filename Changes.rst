@@ -1,3 +1,14 @@
+Changes for v1.6.2 (2017-01-06)
+===============================
+
+-  ELB deploy: set default target group name properly
+
+-  Make sure wheel is installed before attempting setup
+
+-  Aegea batch submit: Begin CWL support
+
+-  Aegea batch watch: amend log line dup fix
+
 Changes for v1.6.1 (2017-01-03)
 ===============================
 
