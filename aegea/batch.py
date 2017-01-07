@@ -4,9 +4,10 @@ Manage AWS Batch jobs, queues, and compute environments.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, base64, collections
+import os, sys, argparse, base64, collections, io
 
 from botocore.exceptions import ClientError
+import yaml
 
 from . import logger
 from .ls import register_parser, register_listing_parser, grep, grep_parser
@@ -122,20 +123,31 @@ def ensure_job_definition(args):
         payload = base64.b64encode(args.execute.read()).decode()
         container_props["environment"].append(dict(name="BATCH_SCRIPT_B64", value=payload))
         shellcode += ['BATCH_SCRIPT=$(mktemp --tmpdir "$AWS_BATCH_CE_NAME.$AWS_BATCH_JQ_NAME.$AWS_BATCH_JOB_ID.XXXXX")',
-                      'echo $BATCH_SCRIPT_B64 | base64 --decode > $BATCH_SCRIPT',
+                      'echo $BATCH_SCRIPT_B64 | base64 -d > $BATCH_SCRIPT',
                       'chmod +x $BATCH_SCRIPT',
                       '$BATCH_SCRIPT']
     elif args.cwl:
-        payload = base64.b64encode(args.cwl.read()).decode()
-        container_props["environment"].append(dict(name="CWL_WF_DEF_B64", value=payload))
-        payload = base64.b64encode(args.cwl_input.read()).decode()
-        container_props["environment"].append(dict(name="CWL_JOB_ORDER_B64", value=payload))
+        from cwltool.main import main as cwltool_main
+        with io.BytesIO() as preprocessed_cwl:
+            if cwltool_main(["--print-pre", args.cwl], stdout=preprocessed_cwl) != 0:
+                raise AegeaException("Error while running cwltool")
+            cwl_spec = yaml.load(preprocessed_cwl.getvalue())
+            payload = base64.b64encode(preprocessed_cwl.getvalue()).decode()
+            container_props["environment"].append(dict(name="CWL_WF_DEF_B64", value=payload))
+            payload = base64.b64encode(args.cwl_input.read()).decode()
+            container_props["environment"].append(dict(name="CWL_JOB_ORDER_B64", value=payload))
+
+        for requirement in cwl_spec.get("requirements", []):
+            if requirement["class"] == "DockerRequirement":
+                # FIXME: dockerFile support
+                container_props["image"] = requirement["dockerPull"]
+
         shellcode += [
             'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
             'apt-get update',
             'apt-get install --yes curl python-pip python-requests python-yaml python-lockfile python-pyparsing',
             'pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419',
-            'cwltool <(echo $CWL_WF_DEF_B64 | base64 --decode) <(echo $CWL_JOB_ORDER_B64 | base64 --decode)'
+            'cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)'
         ]
     else:
         shellcode += ['echo will evaluate $@', 'for cmd in "$@"; do echo evaluating "$cmd"; eval "$cmd"; done']
@@ -185,7 +197,7 @@ group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--command", nargs="+", help="Run these commands as the job (using " + BOLD("bash -c") + ")")
 group.add_argument("--execute", type=argparse.FileType("rb"), metavar="EXECUTABLE",
                    help="Read this executable file and run it as the job")
-group.add_argument("--cwl", type=argparse.FileType("rb"), metavar="CWL_DEFINITION",
+group.add_argument("--cwl", metavar="CWL_DEFINITION",
                    help="Read this Common Workflow Language definition file and run it as the job")
 parser.add_argument("--cwl-input", type=argparse.FileType("rb"), metavar="CWLINPUT", default=sys.stdin,
                     help="With --cwl, use this file as the CWL job input (default: stdin)")
