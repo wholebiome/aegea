@@ -31,7 +31,8 @@ setup(
         "python-dateutil >= 2.5.3, < 3",
         "babel >= 2.3.4, < 3",
         "ipwhois >= 0.13.0, < 1",
-        "github3.py >= 0.9.6, < 1"
+        "github3.py >= 0.9.6, < 1",
+        "awscli"
     ],
     extras_require={
         ':python_version == "2.7"': [
