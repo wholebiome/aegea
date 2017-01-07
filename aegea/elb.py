@@ -66,7 +66,7 @@ def register(args):
         res = clients.elb.register_instances_with_load_balancer(LoadBalancerName=args.elb_name, Instances=instances)
         return dict(registered=instances, current=res["Instances"])
     elif args.type == "ALB":
-        target_group = get_target_group(args.elb_name, args.target_group)
+        target_group = get_target_group(args.elb_name, args.target_group.format(elb_name=args.elb_name))
         instances = [dict(Id=i, Port=target_group.get("Port", args.instance_port)) for i in args.instances]
         clients.elbv2.register_targets(TargetGroupArn=target_group["TargetGroupArn"], Targets=instances)
         return dict(registered=instances, current=[t["Target"] for t in get_targets(target_group)])
@@ -79,7 +79,7 @@ def deregister(args):
         res = clients.elb.deregister_instances_from_load_balancer(LoadBalancerName=args.elb_name, Instances=instances)
         return dict(deregistered=instances, current=res["Instances"])
     elif args.type == "ALB":
-        target_group = get_target_group(args.elb_name, args.target_group)
+        target_group = get_target_group(args.elb_name, args.target_group.format(elb_name=args.elb_name))
         instances = [dict(Id=i, Port=target_group.get("Port", args.instance_port)) for i in args.instances]
         clients.elbv2.deregister_targets(TargetGroupArn=target_group["TargetGroupArn"], Targets=instances)
         return dict(deregistered=instances, current=[t["Target"] for t in get_targets(target_group)])
@@ -134,14 +134,12 @@ def create(args):
                                                AvailabilityZones=azs,
                                                SecurityGroups=[sg.id for sg in args.security_groups])
     elif args.type == "ALB":
-        if args.target_group is None:
-            args.target_group = args.elb_name + "-default-tg"
         vpc = ensure_vpc()
         res = clients.elbv2.create_load_balancer(Name=args.elb_name,
                                                  Subnets=[subnet.id for subnet in vpc.subnets.all()],
                                                  SecurityGroups=[sg.id for sg in args.security_groups])
         elb = res["LoadBalancers"][0]
-        target_group = ensure_target_group(args.target_group,
+        target_group = ensure_target_group(args.target_group.format(elb_name=args.elb_name),
                                            Protocol="HTTP",
                                            Port=args.instance_port,
                                            VpcId=vpc.id,
@@ -201,5 +199,5 @@ for parser in parser_register, parser_deregister, parser_replace, parser_create,
     parser.add_argument("--type", choices={"ELB", "ALB"}, default="ALB")
     if parser != parser_delete:
         parser.add_argument("instances", nargs="+", type=resolve_instance_id)
-        parser.add_argument("--target-group")
+        parser.add_argument("--target-group", default="{elb_name}-default-tg")
         parser.add_argument("--instance-port", type=int, default=80)
