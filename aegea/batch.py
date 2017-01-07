@@ -147,7 +147,7 @@ def ensure_job_definition(args):
             'apt-get update',
             'apt-get install --yes curl python-pip python-requests python-yaml python-lockfile python-pyparsing',
             'pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419',
-            'cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)'
+            'cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)' # noqa
         ]
     else:
         shellcode += ['echo will evaluate $@', 'for cmd in "$@"; do echo evaluating "$cmd"; eval "$cmd"; done']
