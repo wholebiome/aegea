@@ -131,13 +131,15 @@ def resolve_security_group(name, vpc=None):
         return security_group
     raise KeyError(name)
 
-def ensure_security_group(name, vpc):
+def ensure_security_group(name, vpc, tcp_ingress=[dict(port=22, cidr="0.0.0.0/0")]):
     try:
         security_group = resolve_security_group(name, vpc)
     except (ClientError, KeyError):
         logger.info("Creating security group %s for %s", name, vpc)
         security_group = vpc.create_security_group(GroupName=name, Description=name)
-    ensure_ingress_rule(security_group, IpProtocol="tcp", FromPort=22, ToPort=22, CidrIp="0.0.0.0/0")
+    for rule in tcp_ingress:
+        ensure_ingress_rule(security_group, IpProtocol="tcp", FromPort=rule["port"], ToPort=rule["port"],
+                            CidrIp=rule["cidr"])
     return security_group
 
 class DNSZone(VerboseRepr):
