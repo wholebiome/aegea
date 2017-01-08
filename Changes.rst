@@ -1,3 +1,10 @@
+Changes for v1.6.3 (2017-01-08)
+===============================
+
+-  Add ELB SG configurator, aegea-rebuild-public-elb-sg
+
+-  Add awscli to deps
+
 Changes for v1.6.2 (2017-01-06)
 ===============================
 
