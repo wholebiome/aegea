@@ -21,7 +21,7 @@ import os, sys, time, datetime, base64, json
 from . import register_parser, logger, config
 
 from .util import wait_for_port, validate_hostname, paginate
-from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule, ensure_security_group, DNSZone,
+from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_security_group, DNSZone,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder, resources, clients)
 from .util.crypto import (new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line,
@@ -70,8 +70,11 @@ def launch(args):
     else:
         security_groups = [ensure_security_group(__name__, vpc)]
 
-    ssh_host_key = new_ssh_key()
-    iam_username = resources.iam.CurrentUser().user.name
+    ssh_host_key, iam_username = new_ssh_key(), None
+    try:
+        iam_username = resources.iam.CurrentUser().user.name
+    except ClientError:
+        logger.warn("Unable to retrieve IAM username for current user")
     user_data_args = dict(host_key=ssh_host_key,
                           commands=get_startup_commands(args, iam_username),
                           packages=args.packages)

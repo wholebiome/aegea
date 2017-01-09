@@ -6,9 +6,8 @@ from collections import OrderedDict
 from io import open
 
 from . import register_parser, logger, config, __version__
-from .util.aws import (locate_ami, get_user_data, ensure_vpc, ensure_subnet, ensure_ingress_rule,
-                       ensure_security_group, add_tags, get_bdm, resolve_instance_id, resources, clients,
-                       gzip_compress_bytes)
+from .util.aws import (locate_ami, get_user_data, ensure_vpc, ensure_subnet, gzip_compress_bytes,
+                       ensure_security_group, add_tags, get_bdm, resolve_instance_id, resources, clients)
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
 from .launch import launch, parser as launch_parser
 
