@@ -48,6 +48,6 @@ if args.image_type == "docker":
     ])
 else:
     subprocess.check_call(
-        ["aegea", "build_ami", args.ami_name, "--tags", "AegeaMission=" + args.mission],
+        ["aegea", "build_ami", args.image_name, "--tags", "AegeaMission=" + args.mission],
         env=dict(os.environ, AEGEA_CONFIG_FILE=os.path.join(args.mission_dir, args.mission, "config.yml"))
     )
