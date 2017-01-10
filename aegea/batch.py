@@ -19,6 +19,8 @@ from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_instance_profile, make_waiter, ensure_subnet,
                        ensure_vpc, ensure_security_group, SpotFleetBuilder)
 
+bash_cmd_preamble = ["/bin/bash", "-euo", "pipefail", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
+
 def batch(args):
     batch_parser.print_help()
 
@@ -137,14 +139,12 @@ def get_command_and_env(args):
 
         shellcode += [
             'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
-            'apt-get update',
-            'apt-get install --yes curl cloud-init net-tools python-pip python-requests python-yaml python-lockfile python-pyparsing',
+            'apt-get update -qq',
+            'apt-get install -qqy curl cloud-init net-tools python-pip python-requests python-yaml python-lockfile python-pyparsing',
             'pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419',
             'cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)' # noqa
         ]
-    else:
-        shellcode += ['echo will evaluate $@', 'for cmd in "$@"; do echo evaluating "$cmd"; eval "$cmd"; done']
-    args.command = ["/bin/bash", "-c", ";".join(shellcode), __name__] + (args.command or [])
+    args.command = bash_cmd_preamble + (args.command or [])
     return args.command, args.environment
 
 def ensure_job_definition(args):

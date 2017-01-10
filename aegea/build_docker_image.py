@@ -9,7 +9,7 @@ from . import register_parser, logger, config, __version__
 from .util.aws import ARN, clients, resources, expect_error_codes
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
 from .build_ami import get_bootstrap_files
-from .batch import submit, submit_parser
+from .batch import submit, submit_parser, bash_cmd_preamble
 
 dockerfile = """
 FROM {base_image}
@@ -23,10 +23,13 @@ def get_dockerfile(args):
     if args.dockerfile:
         return io.open(args.dockerfile, "rb").read()
     else:
-        cmd = ["/bin/bash", "-c", ";".join([
-            "apt-get update --quiet",
-            "apt-get install --quiet --yes cloud-init net-tools",
-            "echo $CLOUD_CONFIG_B64 | base64 --decode > /etc/cloud/cloud.cfg.d/99_aegea.cfg"])
+        cmd = bash_cmd_preamble + [
+            "apt-get update -qq",
+            "apt-get install -qqy cloud-init net-tools",
+            "echo $CLOUD_CONFIG_B64 | base64 --decode > /etc/cloud/cloud.cfg.d/99_aegea.cfg",
+            "cloud-init init",
+            "cloud-init modules --mode=config",
+            "cloud-init modules --mode=final"
         ]
         return dockerfile.format(base_image=args.base_image,
                                  maintainer=resources.iam.CurrentUser().user.name,
