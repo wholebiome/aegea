@@ -107,21 +107,13 @@ def get_ecr_image_uri(tag):
 def ensure_ecr_image(tag):
     pass
 
-def ensure_job_definition(args):
-    if args.ecs_image:
-        args.image = get_ecr_image_uri(args.ecs_image)
-    container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory", "privileged", "environment")}
-    if args.volumes:
-        container_props.update(volumes=[], mountPoints=[])
-        for i, (host_path, guest_path) in enumerate(args.volumes):
-            container_props["volumes"].append({"host": {"sourcePath": host_path}, "name": "vol%d" % i})
-            container_props["mountPoints"].append({"sourceVolume": "vol%d" % i, "containerPath": guest_path})
+def get_command_and_env(args):
     shellcode = ['set -a', 'source /etc/environment',
                  'if [ -f /etc/default/locale ]; then source /etc/default/locale; fi',
                  'set +a', 'set -eo pipefail', 'source /etc/profile']
     if args.execute:
         payload = base64.b64encode(args.execute.read()).decode()
-        container_props["environment"].append(dict(name="BATCH_SCRIPT_B64", value=payload))
+        args.environment.append(dict(name="BATCH_SCRIPT_B64", value=payload))
         shellcode += ['BATCH_SCRIPT=$(mktemp --tmpdir "$AWS_BATCH_CE_NAME.$AWS_BATCH_JQ_NAME.$AWS_BATCH_JOB_ID.XXXXX")',
                       'echo $BATCH_SCRIPT_B64 | base64 -d > $BATCH_SCRIPT',
                       'chmod +x $BATCH_SCRIPT',
@@ -133,25 +125,37 @@ def ensure_job_definition(args):
                 raise AegeaException("Error while running cwltool")
             cwl_spec = yaml.load(preprocessed_cwl.getvalue())
             payload = base64.b64encode(preprocessed_cwl.getvalue()).decode()
-            container_props["environment"].append(dict(name="CWL_WF_DEF_B64", value=payload))
+            args.environment.append(dict(name="CWL_WF_DEF_B64", value=payload))
             payload = base64.b64encode(args.cwl_input.read()).decode()
-            container_props["environment"].append(dict(name="CWL_JOB_ORDER_B64", value=payload))
+            args.environment.append(dict(name="CWL_JOB_ORDER_B64", value=payload))
 
         for requirement in cwl_spec.get("requirements", []):
             if requirement["class"] == "DockerRequirement":
                 # FIXME: dockerFile support
-                container_props["image"] = requirement["dockerPull"]
+                # container_props["image"] = requirement["dockerPull"]
+                pass
 
         shellcode += [
             'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
             'apt-get update',
-            'apt-get install --yes curl python-pip python-requests python-yaml python-lockfile python-pyparsing',
+            'apt-get install --yes curl cloud-init net-tools python-pip python-requests python-yaml python-lockfile python-pyparsing',
             'pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419',
             'cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)' # noqa
         ]
     else:
         shellcode += ['echo will evaluate $@', 'for cmd in "$@"; do echo evaluating "$cmd"; eval "$cmd"; done']
-    container_props["command"] = ["/bin/bash", "-c", ";".join(shellcode), __name__] + (args.command or [])
+    args.command = ["/bin/bash", "-c", ";".join(shellcode), __name__] + (args.command or [])
+    return args.command, args.environment
+
+def ensure_job_definition(args):
+    if args.ecs_image:
+        args.image = get_ecr_image_uri(args.ecs_image)
+    container_props = {k: vars(args)[k] for k in ("image", "vcpus", "memory", "privileged")}
+    if args.volumes:
+        container_props.update(volumes=[], mountPoints=[])
+        for i, (host_path, guest_path) in enumerate(args.volumes):
+            container_props["volumes"].append({"host": {"sourcePath": host_path}, "name": "vol%d" % i})
+            container_props["mountPoints"].append({"sourceVolume": "vol%d" % i, "containerPath": guest_path})
     return clients.batch.register_job_definition(jobDefinitionName=__name__.replace(".", "_"),
                                                  type="container",
                                                  containerProperties=container_props)
@@ -167,12 +171,13 @@ def ensure_queue(name):
 def submit(args):
     if args.job_definition_arn is None:
         args.job_definition_arn = ensure_job_definition(args)["jobDefinitionArn"]
+    command, environment = get_command_and_env(args)
     submit_args = dict(jobName=args.name,
                        jobQueue=args.queue,
                        dependsOn=args.depends_on,
                        jobDefinition=args.job_definition_arn,
                        parameters={k: v for k, v in args.parameters},
-                       containerOverrides={})
+                       containerOverrides=dict(command=command, environment=environment))
     try:
         job = clients.batch.submit_job(**submit_args)
     except ClientError:
@@ -185,23 +190,23 @@ def submit(args):
         raise NotImplementedError()
     return job
 
-parser = register_parser(submit, parent=batch_parser, help="Submit a job to a Batch queue")
-parser.add_argument("--name", default=__name__.replace(".", "_"))
-parser.add_argument("--queue", default=__name__.replace(".", "_"))
-parser.add_argument("--depends-on", nargs="+", default=[])
-parser.add_argument("--job-definition-arn")
-group = parser.add_mutually_exclusive_group()
+submit_parser = register_parser(submit, parent=batch_parser, help="Submit a job to a Batch queue")
+submit_parser.add_argument("--name", default=__name__.replace(".", "_"))
+submit_parser.add_argument("--queue", default=__name__.replace(".", "_"))
+submit_parser.add_argument("--depends-on", nargs="+", default=[])
+submit_parser.add_argument("--job-definition-arn")
+group = submit_parser.add_mutually_exclusive_group()
 group.add_argument("--watch", action="store_true", help="Monitor submitted job, stream log until job completes")
 group.add_argument("--wait", action="store_true", help="Block on job. Exit with code 0 if job succeeded, 1 if failed")
-group = parser.add_mutually_exclusive_group(required=True)
+group = submit_parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--command", nargs="+", help="Run these commands as the job (using " + BOLD("bash -c") + ")")
 group.add_argument("--execute", type=argparse.FileType("rb"), metavar="EXECUTABLE",
                    help="Read this executable file and run it as the job")
 group.add_argument("--cwl", metavar="CWL_DEFINITION",
                    help="Read this Common Workflow Language definition file and run it as the job")
-parser.add_argument("--cwl-input", type=argparse.FileType("rb"), metavar="CWLINPUT", default=sys.stdin,
-                    help="With --cwl, use this file as the CWL job input (default: stdin)")
-group = parser.add_argument_group(title="job definition parameters", description="""
+submit_parser.add_argument("--cwl-input", type=argparse.FileType("rb"), metavar="CWLINPUT", default=sys.stdin,
+                           help="With --cwl, use this file as the CWL job input (default: stdin)")
+group = submit_parser.add_argument_group(title="job definition parameters", description="""
 See http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html""")
 img_group = group.add_mutually_exclusive_group()
 img_group.add_argument("--image", default="ubuntu", help="Docker image URL to use for running Batch job")

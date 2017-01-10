@@ -3,6 +3,16 @@
 # that path is not present. Run any aegea command to cause this to
 # happen.  Once the file is written, you can modify it with your site
 # or user-specific settings.
+build_docker_image:
+  base_image: ubuntu:16.04
+  rootfs_skel_dirs:
+    - auto
+  commands:
+    - echo foo > /bar
+  packages:
+    - jq
+  cloud_config_data: {}
+
 build_ami:
   base_ami: auto
   base_ami_product: com.ubuntu.cloud:server:16.04:amd64
