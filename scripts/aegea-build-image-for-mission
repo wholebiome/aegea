@@ -18,6 +18,7 @@ parser.add_argument("mission").completer = get_missions
 parser.add_argument("image_name")
 parser.add_argument("--image-type", choices={"ami", "docker"}, default="docker")
 parser.add_argument("--mission-dir", default=default_missions_dir)
+parser.add_argument("build_args", nargs=argparse.REMAINDER, default=[])
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
@@ -30,6 +31,6 @@ else:
     command = "build_ami"
 
 subprocess.check_call(
-    ["aegea", command, args.image_name, "--tags", "AegeaMission=" + args.mission],
+    ["aegea", command, args.image_name, "--tags", "AegeaMission=" + args.mission] + args.build_args,
     env=dict(os.environ, AEGEA_CONFIG_FILE=os.path.join(args.mission_dir, args.mission, "config.yml"))
 )

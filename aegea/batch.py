@@ -19,7 +19,7 @@ from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_instance_profile, make_waiter, ensure_subnet,
                        ensure_vpc, ensure_security_group, SpotFleetBuilder)
 
-bash_cmd_preamble = ["/bin/bash", "-euo", "pipefail", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
+bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
 
 def batch(args):
     batch_parser.print_help()
@@ -110,16 +110,19 @@ def ensure_ecr_image(tag):
     pass
 
 def get_command_and_env(args):
-    shellcode = ['set -a', 'source /etc/environment',
-                 'if [ -f /etc/default/locale ]; then source /etc/default/locale; fi',
-                 'set +a', 'set -eo pipefail', 'source /etc/profile']
+    shellcode = ["set -a",
+                 "if [ -f /etc/environment ]; then source /etc/environment; fi",
+                 "if [ -f /etc/default/locale ]; then source /etc/default/locale; fi",
+                 "set +a",
+                 "if [ -f /etc/profile ]; then source /etc/profile; fi",
+                 "set -euo pipefail"]
     if args.execute:
         payload = base64.b64encode(args.execute.read()).decode()
         args.environment.append(dict(name="BATCH_SCRIPT_B64", value=payload))
         shellcode += ['BATCH_SCRIPT=$(mktemp --tmpdir "$AWS_BATCH_CE_NAME.$AWS_BATCH_JQ_NAME.$AWS_BATCH_JOB_ID.XXXXX")',
-                      'echo $BATCH_SCRIPT_B64 | base64 -d > $BATCH_SCRIPT',
-                      'chmod +x $BATCH_SCRIPT',
-                      '$BATCH_SCRIPT']
+                      "echo $BATCH_SCRIPT_B64 | base64 -d > $BATCH_SCRIPT",
+                      "chmod +x $BATCH_SCRIPT",
+                      "$BATCH_SCRIPT"]
     elif args.cwl:
         from cwltool.main import main as cwltool_main
         with io.BytesIO() as preprocessed_cwl:
@@ -144,7 +147,7 @@ def get_command_and_env(args):
             'pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419',
             'cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)' # noqa
         ]
-    args.command = bash_cmd_preamble + (args.command or [])
+    args.command = bash_cmd_preamble + shellcode + (args.command or [])
     return args.command, args.environment
 
 def ensure_job_definition(args):

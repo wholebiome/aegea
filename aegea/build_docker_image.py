@@ -71,9 +71,9 @@ def build_docker_image(args):
     submit_args = submit_parser.parse_args([
         "--command",
         "set -euxo pipefail",
-        "apt-get update --quiet",
-        "apt-get install --quiet --yes docker.io python-pip",
-        "pip install awscli",
+        "apt-get update -qq",
+        "apt-get install -qqy docker.io python-pip",
+        "pip install -q awscli",
         "cd $(mktemp -d)",
         "aws configure set default.region $AWS_DEFAULT_REGION",
         "$(aws ecr get-login)",
