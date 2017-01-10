@@ -85,6 +85,7 @@ def build_docker_image(args):
     submit_args.volumes = [["/var/run/docker.sock", "/var/run/docker.sock"]]
     submit_args.privileged = True
     submit_args.watch = True
+    submit_args.dry_run = args.dry_run
     submit_args.image = args.builder_image
     submit_args.environment = [
         dict(name="TAG", value="latest"),
@@ -105,3 +106,4 @@ parser.add_argument("--builder-image", default="ubuntu:14.04", help=argparse.SUP
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help="Tag resulting image with these tags")
 parser.add_argument("--cloud-config-data", type=json.loads)
 parser.add_argument("--dockerfile")
+parser.add_argument("--dry-run", action="store_true", help="Gather arguments and stop short of building the image")

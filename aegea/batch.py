@@ -181,6 +181,8 @@ def submit(args):
                        jobDefinition=args.job_definition_arn,
                        parameters={k: v for k, v in args.parameters},
                        containerOverrides=dict(command=command, environment=environment))
+    if args.dry_run:
+        return {"Dry run succeeded": True}
     try:
         job = clients.batch.submit_job(**submit_args)
     except ClientError:
@@ -221,6 +223,7 @@ group.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=
 group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
                    type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
 group.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default=[])
+submit_parser.add_argument("--dry-run", action="store_true", help="Gather arguments and stop short of submitting job")
 
 def terminate(args):
     return clients.batch.terminate_job(jobId=args.job_id, reason="Terminated by {}".format(__name__))

@@ -58,8 +58,10 @@ class TestAegea(unittest.TestCase):
                       dict(return_codes=[1, os.EX_SOFTWARE],
                            stderr="(UnauthorizedOperation|AccessDenied|DryRunOperation)")]
             args = []
-            if subcommand in ("ssh", "put_alarm", "batch", "build_docker_image"):
+            if subcommand in ("ssh", "put_alarm", "batch"):
                 args += ["--help"]
+            elif subcommand == "build_docker_image":
+                args += ["--dry-run", "docker-example", "docker-example"]
             elif subcommand == "console":
                 args += [instance_id]
             elif subcommand in ("start", "stop", "reboot", "terminate", "rename"):
