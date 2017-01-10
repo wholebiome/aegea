@@ -16,6 +16,7 @@ def get_missions(**kwargs):
 parser = argparse.ArgumentParser(description="Build an AMI using a mission pack")
 parser.add_argument("mission").completer = get_missions
 parser.add_argument("image_name")
+parser.add_argument("--image-type", choices={"ami", "docker"}, default="docker")
 parser.add_argument("--mission-dir", default=default_missions_dir)
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
@@ -23,7 +24,12 @@ args = parser.parse_args()
 if os.path.exists(os.path.join(args.mission_dir, args.mission, "Makefile")):
     subprocess.check_call(["make", "-C", os.path.join(args.mission_dir, args.mission)])
 
+if args.image_type == "docker":
+    command = "build_docker_image"
+else:
+    command = "build_ami"
+
 subprocess.check_call(
-    ["aegea", "build_ami", args.image_name, "--tags", "AegeaMission=" + args.mission],
+    ["aegea", command, args.image_name, "--tags", "AegeaMission=" + args.mission],
     env=dict(os.environ, AEGEA_CONFIG_FILE=os.path.join(args.mission_dir, args.mission, "config.yml"))
 )

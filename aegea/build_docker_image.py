@@ -67,7 +67,7 @@ def ensure_ecr_repo(name):
 
 def build_docker_image(args):
     args.tags += ["AegeaVersion={}".format(__version__)]
-    ensure_ecr_repo(args.mission)
+    ensure_ecr_repo(args.name)
     submit_args = submit_parser.parse_args([
         "--command",
         "set -euxo pipefail",
@@ -88,7 +88,7 @@ def build_docker_image(args):
     submit_args.image = args.builder_image
     submit_args.environment = [
         dict(name="TAG", value="latest"),
-        dict(name="REPO", value=args.mission),
+        dict(name="REPO", value=args.name),
         dict(name="DOCKERFILE_B64GZ", value=encode_dockerfile(args)),
         dict(name="AWS_DEFAULT_REGION", value=ARN.get_region()),
         dict(name="AWS_ACCOUNT_ID", value=ARN.get_account_id())
@@ -99,7 +99,7 @@ def build_docker_image(args):
     return dict(job=job)
 
 parser = register_parser(build_docker_image, help="Build an Elastic Container Registry Docker image")
-parser.add_argument("mission")
+parser.add_argument("name")
 # Using 14.04 here to prevent "client version exceeds server version" error because ECS host docker is too old
 parser.add_argument("--builder-image", default="ubuntu:14.04", help=argparse.SUPPRESS)
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help="Tag resulting image with these tags")

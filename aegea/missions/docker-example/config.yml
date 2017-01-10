@@ -1,0 +1,10 @@
+build_docker_image:
+  base_image: ubuntu:16.04
+  rootfs_skel_dirs:
+    $append: rootfs.skel
+  packages:
+    $extend:
+      - bwa
+  commands:
+    $extend:
+      - "echo"

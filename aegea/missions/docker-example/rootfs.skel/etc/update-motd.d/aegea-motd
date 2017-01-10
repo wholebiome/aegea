@@ -1,0 +1,14 @@
+#!/bin/bash
+
+GREEN=$'\e[32;01m'
+YELLOW=$'\e[33;01m'
+RED=$'\e[31;01m'
+CYAN=$'\e[36;01m'
+WHITE=$'\e[37;01m'
+UNDERLINE=$'\e[4;01m'
+BOLD=$'\e[1;01m'
+NORMAL=$'\e[0m'
+
+echo
+echo "${BOLD}Aegea Docker Image${NORMAL}"
+echo
