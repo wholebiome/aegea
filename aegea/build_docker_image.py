@@ -1,8 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, json, time, base64, argparse
+import os, sys, json, time, base64, argparse, io, gzip
 from collections import OrderedDict
-from io import open
 
 from botocore.exceptions import ClientError
 
@@ -22,7 +21,7 @@ RUN {run}
 
 def get_dockerfile(args):
     if args.dockerfile:
-        return open(args.dockerfile, "rb").read()
+        return io.open(args.dockerfile, "rb").read()
     else:
         cmd = ["/bin/bash", "-c", ";".join([
             "apt-get update --quiet",
@@ -34,6 +33,13 @@ def get_dockerfile(args):
                                  label=" ".join(args.tags),
                                  cloud_config_b64=base64.b64encode(get_cloud_config(args)).decode(),
                                  run=json.dumps(cmd)).encode()
+
+def encode_dockerfile(args):
+    with io.BytesIO() as buf:
+        with gzip.GzipFile(fileobj=buf, mode="wb") as gz:
+            gz.write(get_dockerfile(args))
+            gz.close()
+        return base64.b64encode(buf.getvalue()).decode()
 
 def get_cloud_config(args):
     cloud_config_data = OrderedDict(packages=args.packages,
@@ -68,7 +74,7 @@ def build_docker_image(args):
         "cd $(mktemp -d)",
         "aws configure set default.region $AWS_DEFAULT_REGION",
         "$(aws ecr get-login)",
-        'echo "$DOCKERFILE_B64" | base64 --decode > Dockerfile',
+        'echo "$DOCKERFILE_B64GZ" | base64 --decode | gunzip > Dockerfile',
         'TAG="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${REPO}:${TAG}"',
         'docker build -t "$TAG" .',
         'docker push "$TAG"'
@@ -80,7 +86,7 @@ def build_docker_image(args):
     submit_args.environment = [
         dict(name="TAG", value="latest"),
         dict(name="REPO", value=args.mission),
-        dict(name="DOCKERFILE_B64", value=base64.b64encode(get_dockerfile(args)).decode()),
+        dict(name="DOCKERFILE_B64GZ", value=encode_dockerfile(args)),
         dict(name="AWS_DEFAULT_REGION", value=ARN.get_region()),
         dict(name="AWS_ACCOUNT_ID", value=ARN.get_account_id())
     ]
