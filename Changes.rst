@@ -1,3 +1,10 @@
+Changes for v1.7.0 (2017-01-10)
+===============================
+
+-  aegea-build-image-for-mission now builds ECR images by default
+
+-  Integration work for Batch
+
 Changes for v1.6.3 (2017-01-08)
 ===============================
 
