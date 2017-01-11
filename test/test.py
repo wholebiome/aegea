@@ -61,7 +61,7 @@ class TestAegea(unittest.TestCase):
             if subcommand in ("ssh", "put_alarm", "batch"):
                 args += ["--help"]
             elif subcommand == "build_docker_image":
-                args += ["--dry-run", "docker-example", "docker-example"]
+                args += ["--dry-run", "docker-example"]
             elif subcommand == "console":
                 args += [instance_id]
             elif subcommand in ("start", "stop", "reboot", "terminate", "rename"):
