@@ -17,7 +17,7 @@ lint: test_deps
 
 test: test_deps lint
 	mkdir -p "$${CIRCLE_TEST_REPORTS:-.}/pytest"
-	pytest --cov=aegea test/test.py --junit-xml "$${CIRCLE_TEST_REPORTS:-.}/pytest/junit.xml"
+	pytest --capture=no --cov=aegea test/test.py --junit-xml "$${CIRCLE_TEST_REPORTS:-.}/pytest/junit.xml"
 
 init_docs:
 	cd docs; sphinx-quickstart
