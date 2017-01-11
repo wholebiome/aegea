@@ -142,10 +142,10 @@ def get_command_and_env(args):
 
         shellcode += [
             'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
-            'apt-get update -qq',
-            'apt-get install -qqy curl cloud-init net-tools python-pip python-requests python-yaml python-lockfile python-pyparsing', # noqa
-            'pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419',
-            'cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)' # noqa
+            "apt-get update -qq",
+            "apt-get install -qqy curl cloud-init net-tools python-pip python-requests python-yaml python-lockfile python-pyparsing", # noqa
+            "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419",
+            "cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)" # noqa
         ]
     args.command = bash_cmd_preamble + shellcode + (args.command or [])
     return args.command, args.environment

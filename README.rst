@@ -25,6 +25,9 @@ library dependencies:
 |              |         | ``brew install openssl && brew link --force openssl``.                                  |
 +--------------+---------+-----------------------------------------------------------------------------------------+
 
+Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access credentials that will be used by the
+``aws`` and ``aegea`` commands. You can create a new IAM key at https://console.aws.amazon.com/iam/home#/users.
+
 Configuration management
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Aegea supports ingesting configuration from a configurable array of sources. Each source is a JSON or YAML file.
@@ -36,7 +39,36 @@ enumerated in the following order (i.e., in order of increasing priority):
 - Any sources listed in the colon-delimited variable ``NAME_CONFIG_FILE``
 - Command line options
 
-**Array merge operators**: When loading a chain of configuration sources, Aegea uses recursive dictionary merging to combine the sources. Additionally, when the original config value is a list, Aegea supports array manipulation operators, which let you extend and modify arrays defined in underlying configurations. See https://github.com/kislyuk/tweak#array-merge-operators for a list of these operators.
+**Array merge operators**: When loading a chain of configuration sources, Aegea uses recursive dictionary merging to
+combine the sources. Additionally, when the original config value is a list, Aegea supports array manipulation
+operators, which let you extend and modify arrays defined in underlying configurations. See
+https://github.com/kislyuk/tweak#array-merge-operators for a list of these operators.
+
+Aegea Batch
+~~~~~~~~~~~
+The `AWS Batch <https://aws.amazon.com/batch>`_ API currently requires you to use the us-east-1 region. You can use
+``aws configure`` to select this region.
+
+https://github.com/kislyuk/aegea/tree/master/aegea/missions/docker-example is a root directory of an **aegea mission** -
+a configuration management role. It has a rootfs.skel and a config.yml, which has directives to install packages,
+etc. The example just installs the bwa APT package.
+
+Run ``aegea-build-image-for-mission docker-example dex`` to build an ECR image called dex from the "docker-example"
+mission. You can list ECR images with ``aegea ecr ls``.
+
+Run ``aegea batch submit --ecs-image dex --command "bwa aln || true" "bwa mem || true" --memory 2048 --vcpus 4 --watch``
+to run a Batch job that requires 2 GB RAM and 4 cores to be allocated to the Docker container, using the "dex" image,
+and executes two commands as listed after --command, using "bash -euo pipefail -c".
+
+You can also use ``aegea batch submit --execute FILE``. This will slurp up FILE (any type of shell script or ELF
+executable) and execute it in the job's Docker container.
+
+The concurrency and cost of your Batch jobs is governed by the "Max vCPUs" setting in your compute environment. To
+To change the capacity or other settings of your compute environment, go to
+https://console.aws.amazon.com/batch/home?region=us-east-1#/compute-environments, select "aegea_batch", and click "Edit".
+
+AWS Batch launches and manages `ECS <https://aws.amazon.com/ecs/>`_ host instances to execute your jobs. You can see the
+host instances by running ``aegea ls``.
 
 .. image:: https://circleci.com/gh/kislyuk/aegea.svg?style=svg&circle-token=70d22b84025fad5d484ac5f3df1fc0a183c0f516
    :target: https://circleci.com/gh/kislyuk/aegea
