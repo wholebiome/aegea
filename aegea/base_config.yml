@@ -8,7 +8,7 @@ build_docker_image:
   rootfs_skel_dirs:
     - auto
   commands:
-    - "pip install boto3==1.3.1 awscli==1.10.34 dynamoq tractorbeam"
+    - "pip install boto3==1.4.3 awscli==1.11.36 dynamoq tractorbeam"
   packages:
     - language-pack-en
     - iptables-persistent
@@ -63,6 +63,10 @@ build_docker_image:
     - sqlite3
     - stunnel
     - moreutils
+    - python-requests
+    - python-yaml
+    - python-lockfile
+    - python-pyparsing
   cloud_config_data: {}
 
 build_ami:
@@ -137,7 +141,7 @@ build_ami:
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
     - "update-grub"
     - "grub-install /dev/xvda"
-    - "pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.3.1 awscli==1.10.34"
+    - "pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.4.3 awscli==1.11.36"
     - "keymaker install"
     - "activate-global-python-argcomplete"
     - "dpkg-reconfigure debconf -f noninteractive -p critical"

@@ -165,10 +165,10 @@ def get_command_and_env(args):
                 pass
 
         shellcode += [
-            'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
-            "apt-get update -qq",
-            "apt-get install -qqy python-pip python-requests python-yaml python-lockfile python-pyparsing awscli", # noqa
-            "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419 boto3 awscli dynamoq tractorbeam",
+            # 'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
+            # "apt-get update -qq",
+            # "apt-get install -qqy python-pip python-requests python-yaml python-lockfile python-pyparsing awscli", # noqa
+            # "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419 dynamoq tractorbeam",
             "cwltool --no-container --preserve-entire-environment <(echo $AEGEA_BATCH_CWL_DEF_B64 | base64 -d) <(echo $AEGEA_BATCH_CWL_JOB_B64 | base64 -d | tractor pull) | tractor push $AEGEA_BATCH_S3_BASE_URL/$AWS_BATCH_JOB_ID | dynamoq update aegea-batch-jobs $AWS_BATCH_JOB_ID" # noqa
         ]
     args.command = bash_cmd_preamble + shellcode + (args.command or [])
