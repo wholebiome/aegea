@@ -15,14 +15,13 @@ MITM vulnerability.
 import os, sys, argparse, subprocess
 
 from . import register_parser
-from .util.aws import resolve_instance_id
+from .util.aws import resolve_instance_id, resources
 from .util.crypto import add_ssh_host_key_to_known_hosts
 from .util.printing import BOLD
 
 def ssh(args):
-    from .util.aws.resources import ec2
     prefix, at, name = args.name.rpartition("@")
-    instance = ec2.Instance(resolve_instance_id(name))
+    instance = resources.ec2.Instance(resolve_instance_id(name))
     tags = {tag["Key"]: tag["Value"] for tag in instance.tags or []}
     ssh_host_key = tags.get("SSHHostPublicKeyPart1", "") + tags.get("SSHHostPublicKeyPart2", "")
     if ssh_host_key:
