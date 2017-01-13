@@ -109,6 +109,26 @@ def get_ecr_image_uri(tag):
 def ensure_ecr_image(tag):
     pass
 
+def ensure_dynamodb_table(name, hash_key_name, read_capacity_units=5, write_capacity_units=5):
+    try:
+        table = resources.dynamodb.create_table(TableName=name,
+                                                KeySchema=[dict(AttributeName=hash_key_name, KeyType="HASH")],
+                                                AttributeDefinitions=[dict(AttributeName=hash_key_name,
+                                                                           AttributeType="S")],
+                                                ProvisionedThroughput=dict(ReadCapacityUnits=read_capacity_units,
+                                                                           WriteCapacityUnits=write_capacity_units))
+    except ClientError as e:
+        expect_error_codes(e, "ResourceInUseException")
+        table = resources.dynamodb.Table(name)
+    table.wait_until_exists()
+    return table
+
+def ensure_s3_bucket(name):
+    bucket = resources.s3.Bucket(name)
+    bucket.create()
+    bucket.wait_until_exists()
+    return bucket
+
 def get_command_and_env(args):
     shellcode = ["set -a",
                  "if [ -f /etc/environment ]; then source /etc/environment; fi",
@@ -124,19 +144,23 @@ def get_command_and_env(args):
                       "chmod +x $BATCH_SCRIPT",
                       "$BATCH_SCRIPT"]
     elif args.cwl:
+        ensure_dynamodb_table("aegea-batch-jobs", hash_key_name="job_id")
+        bucket = ensure_s3_bucket("aegea-batch-jobs-{}".format(ARN.get_account_id()))
+        args.environment.append(dict(name="AEGEA_BATCH_S3_BASE_URL", value="s3://" + bucket.name))
+
         from cwltool.main import main as cwltool_main
         with io.BytesIO() as preprocessed_cwl:
             if cwltool_main(["--print-pre", args.cwl], stdout=preprocessed_cwl) != 0:
                 raise AegeaException("Error while running cwltool")
             cwl_spec = yaml.load(preprocessed_cwl.getvalue())
             payload = base64.b64encode(preprocessed_cwl.getvalue()).decode()
-            args.environment.append(dict(name="CWL_WF_DEF_B64", value=payload))
+            args.environment.append(dict(name="AEGEA_BATCH_CWL_DEF_B64", value=payload))
             payload = base64.b64encode(args.cwl_input.read()).decode()
-            args.environment.append(dict(name="CWL_JOB_ORDER_B64", value=payload))
+            args.environment.append(dict(name="AEGEA_BATCH_CWL_JOB_B64", value=payload))
 
         for requirement in cwl_spec.get("requirements", []):
             if requirement["class"] == "DockerRequirement":
-                # FIXME: dockerFile support
+                # FIXME: dockerFile support: ensure_ecr_image(...)
                 # container_props["image"] = requirement["dockerPull"]
                 pass
 
@@ -144,8 +168,8 @@ def get_command_and_env(args):
             'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
             "apt-get update -qq",
             "apt-get install -qqy python-pip python-requests python-yaml python-lockfile python-pyparsing awscli", # noqa
-            "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419 boto3 awscli dynamoq",
-            "cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d) | dynamoq update aegea_batch_jobs $AWS_BATCH_JOB_ID" # noqa
+            "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419 boto3 awscli dynamoq tractorbeam",
+            "cwltool --no-container --preserve-entire-environment <(echo $AEGEA_BATCH_CWL_DEF_B64 | base64 -d) <(echo $AEGEA_BATCH_CWL_JOB_B64 | base64 -d | tractor pull) | tractor push $AEGEA_BATCH_S3_BASE_URL/$AWS_BATCH_JOB_ID | dynamoq update aegea-batch-jobs $AWS_BATCH_JOB_ID" # noqa
         ]
     args.command = bash_cmd_preamble + shellcode + (args.command or [])
     return args.command, args.environment
@@ -246,11 +270,12 @@ parser.add_argument("--queues", nargs="+")
 parser.add_argument("--status", nargs="+",
                     default="SUBMITTED PENDING RUNNABLE STARTING RUNNING SUCCEEDED FAILED".split())
 
+job_status_colors = dict(SUBMITTED=YELLOW(), PENDING=YELLOW(), RUNNABLE=BOLD()+YELLOW(),
+                         STARTING=GREEN(), RUNNING=GREEN(),
+                         SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
+
 def format_job_status(status):
-    colors = dict(SUBMITTED=YELLOW(), PENDING=YELLOW(), RUNNABLE=BOLD()+YELLOW(),
-                  STARTING=GREEN(), RUNNING=GREEN(),
-                  SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
-    return colors[status] + status + ENDC()
+    return job_status_colors[status] + status + ENDC()
 
 class LogReader:
     log_group_name, start_time = "/aws/batch/job", 0
