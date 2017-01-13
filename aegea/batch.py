@@ -90,7 +90,7 @@ cce_parser.add_argument("--type", choices={"MANAGED", "UNMANAGED"}, default="MAN
 cce_parser.add_argument("--compute-type", choices={"EC2", "SPOT"}, default="SPOT")
 cce_parser.add_argument("--min-vcpus", type=int, default=0)
 cce_parser.add_argument("--desired-vcpus", type=int, default=2)
-cce_parser.add_argument("--max-vcpus", type=int, default=8)
+cce_parser.add_argument("--max-vcpus", type=int, default=64)
 cce_parser.add_argument("--ssh-key-name", default=__name__)
 cce_parser.add_argument("--instance-role", default=__name__)
 
@@ -143,9 +143,9 @@ def get_command_and_env(args):
         shellcode += [
             'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
             "apt-get update -qq",
-            "apt-get install -qqy curl cloud-init net-tools python-pip python-requests python-yaml python-lockfile python-pyparsing", # noqa
-            "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419",
-            "cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d)" # noqa
+            "apt-get install -qqy python-pip python-requests python-yaml python-lockfile python-pyparsing awscli", # noqa
+            "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419 boto3 awscli dynamoq",
+            "cwltool --no-container --preserve-entire-environment <(echo $CWL_WF_DEF_B64 | base64 -d) <(echo $CWL_JOB_ORDER_B64 | base64 -d) | dynamoq update aegea_batch_jobs $AWS_BATCH_JOB_ID" # noqa
         ]
     args.command = bash_cmd_preamble + shellcode + (args.command or [])
     return args.command, args.environment
@@ -215,7 +215,8 @@ group = submit_parser.add_argument_group(title="job definition parameters", desc
 See http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html""")
 img_group = group.add_mutually_exclusive_group()
 img_group.add_argument("--image", default="ubuntu", help="Docker image URL to use for running Batch job")
-img_group.add_argument("--ecs-image", metavar="IMAGE", help="Name of Docker image residing in this account's ECR")
+img_group.add_argument("--ecs-image", "--ecr-image", metavar="IMAGE",
+                       help="Name of Docker image residing in this account's Elastic Container Registry")
 group.add_argument("--vcpus", type=int, default=1)
 group.add_argument("--memory", type=int, default=1024)
 group.add_argument("--privileged", action="store_true", default=False)

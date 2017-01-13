@@ -8,9 +8,61 @@ build_docker_image:
   rootfs_skel_dirs:
     - auto
   commands:
-    - echo foo > /bar
+    - "pip install boto3==1.3.1 awscli==1.10.34"
   packages:
+    - language-pack-en
+    - iptables-persistent
+    - debian-goodies
+    - bridge-utils
+    - pixz
+    - cryptsetup-bin
+    - mdadm
+    - btrfs-tools
+    - libffi-dev
+    - libssl-dev
+    - libxml2-dev
+    - libxslt1-dev
+    - libyaml-dev
+    - libcurl4-openssl-dev
+    - libhdf5-dev
+    - libjemalloc-dev
+    - libzip-dev
+    - libsnappy-dev
+    - liblz4-dev
+    - libboost-dev
+    - libgmp-dev
+    - libmpfr-dev
+    - libhts-dev
+    - libsqlite3-dev
+    - htop
+    - pydf
     - jq
+    - httpie
+    - python-dev
+    - python-cffi
+    - python-pip
+    - python-setuptools
+    - python-wheel
+    - python-virtualenv
+    - python3-dev
+    - python3-cffi
+    - python3-pip
+    - python3-setuptools
+    - python3-wheel
+    - nfs-common
+    - unzip
+    - build-essential
+    - cmake
+    - libtool
+    - autoconf
+    - ruby
+    - sysstat
+    - dstat
+    - numactl
+    - gdebi-core
+    - sqlite3
+    - stunnel
+    - moreutils
   cloud_config_data: {}
 
 build_ami:

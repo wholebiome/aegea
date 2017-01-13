@@ -70,7 +70,7 @@ def build_docker_image(args):
     ensure_ecr_repo(args.name)
     submit_args = submit_parser.parse_args([
         "--command",
-        "set -euxo pipefail",
+        "set -euo pipefail",
         "apt-get update -qq",
         "apt-get install -qqy docker.io python-pip",
         "pip install -q awscli",
