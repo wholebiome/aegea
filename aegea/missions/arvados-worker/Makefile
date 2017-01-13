@@ -1,3 +1,5 @@
+SHELL=/bin/bash -eo pipefail
+
 rootfs.skel: %: %.in environment
 	-rm -rf $@
 	cp -R $@.in $@

@@ -13,16 +13,16 @@ library dependencies:
 +--------------+---------+-----------------------------------------------------------------------------------------+
 | OS           | Python  | Command                                                                                 |
 +==============+=========+=========================================================================================+
-| Ubuntu       | Python 2| apt-get install python-dev python-cffi libssl-dev                                       |
+| Ubuntu       | Python 2| apt-get install python-dev python-cffi libssl-dev moreutils                             |
 +--------------+---------+-----------------------------------------------------------------------------------------+
-| Ubuntu       | Python 3| apt-get install python3-dev python3-cffi libssl-dev                                     |
+| Ubuntu       | Python 3| apt-get install python3-dev python3-cffi libssl-dev moreutils                           |
 +--------------+---------+-----------------------------------------------------------------------------------------+
-| Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel                                      |
+| Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel moreutils                            |
 +--------------+---------+-----------------------------------------------------------------------------------------+
-| Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel                                    |
+| Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel moreutils                          |
 +--------------+---------+-----------------------------------------------------------------------------------------+
 | OS X         |         | `Install Homebrew <http://brew.sh/>`_. Run                                              |
-|              |         | ``brew install openssl && brew link --force openssl``.                                  |
+|              |         | ``brew install openssl moreutils && brew link --force openssl``.                        |
 +--------------+---------+-----------------------------------------------------------------------------------------+
 
 Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access credentials that will be used by the
