@@ -9,6 +9,7 @@ from . import register_parser, logger, config, __version__
 from .util.aws import (locate_ami, get_user_data, ensure_vpc, ensure_subnet, gzip_compress_bytes,
                        ensure_security_group, add_tags, get_bdm, resolve_instance_id, resources, clients)
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
+from .util.printing import GREEN
 from .launch import launch, parser as launch_parser
 
 def get_bootstrap_files(rootfs_skel_dirs):
@@ -61,20 +62,26 @@ def build_ami(args):
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
+    sys.stderr.write("Waiting for cloud-init...")
+    sys.stderr.flush()
+    devnull = open(os.devnull, "w")
     for i in range(900):
         try:
-            ssh_client.check_call("ls /var/lib/cloud/data/result.json")
-            if ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json").strip() != "[]":
+            ssh_client.check_output("ls /var/lib/cloud/data/result.json", stderr=devnull)
+            res = ssh_client.check_output("sudo jq .v1.errors /var/lib/cloud/data/result.json", stderr=devnull)
+            if res.strip() != "[]":
                 raise Exception("cloud-init encountered errors")
             break
         except Exception as e:
             if "ENOENT" in str(e) or "EPERM" in str(e) or "No such file or directory" in str(e):
+                sys.stderr.write(".")
+                sys.stderr.flush()
                 time.sleep(1)
             else:
                 raise
     else:
         raise Exception("cloud-init encountered errors")
-
+    sys.stderr.write(GREEN("OK") + "\n")
     description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     tags = dict(tag.split("=", 1) for tag in args.tags)
