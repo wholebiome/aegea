@@ -1,3 +1,10 @@
+Changes for v1.7.1 (2017-01-13)
+===============================
+
+-  Test and release infra improvements
+
+-  Batch docs
+
 Changes for v1.7.0 (2017-01-10)
 ===============================
 
