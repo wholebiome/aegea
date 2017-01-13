@@ -1,3 +1,10 @@
+Changes for v1.7.2 (2017-01-13)
+===============================
+
+-  Fix makefile shell assumption
+
+-  Batch WIP
+
 Changes for v1.7.1 (2017-01-13)
 ===============================
 
