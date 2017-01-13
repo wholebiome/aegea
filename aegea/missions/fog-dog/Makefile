@@ -1,4 +1,4 @@
-SHELL=/bin/bash -eo pipefail
+SHELL=/bin/bash
 
 rootfs.skel: %: %.in environment
 	-rm -rf $@
