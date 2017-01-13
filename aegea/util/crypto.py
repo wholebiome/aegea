@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys
 
 from .. import logger
+from ..aws import resources
 from .compat import subprocess
 
 def new_ssh_key(bits=2048):
@@ -20,8 +21,7 @@ def get_ssh_key_path(name):
 
 def ensure_ssh_key(name, verify_pem_file=True):
     from paramiko import RSAKey
-    from .aws.resources import ec2
-    for key_pair in ec2.key_pairs.all():
+    for key_pair in resources.ec2.key_pairs.all():
         if key_pair.name == name:
             if verify_pem_file and not os.path.exists(get_ssh_key_path(name)):
                 msg = "Key {} found in EC2, but not in ~/.ssh."
@@ -35,8 +35,8 @@ def ensure_ssh_key(name, verify_pem_file=True):
             logger.info("Creating key pair %s", name)
             ssh_key = new_ssh_key()
             ssh_key.write_private_key_file(get_ssh_key_path(name))
-        ec2.import_key_pair(KeyName=name,
-                            PublicKeyMaterial=get_public_key_from_pair(ssh_key))
+        resources.ec2.import_key_pair(KeyName=name,
+                                      PublicKeyMaterial=get_public_key_from_pair(ssh_key))
         logger.info("Imported SSH key %s", get_ssh_key_path(name))
     try:
         subprocess.check_call(["ssh-add", get_ssh_key_path(name)], timeout=5)
