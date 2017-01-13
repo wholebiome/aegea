@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys
 
 from .. import logger
-from ..aws import resources
+from .aws import resources
 from .compat import subprocess
 
 def new_ssh_key(bits=2048):
