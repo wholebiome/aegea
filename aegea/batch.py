@@ -201,7 +201,7 @@ def submit(args):
     command, environment = get_command_and_env(args)
     submit_args = dict(jobName=args.name,
                        jobQueue=args.queue,
-                       dependsOn=args.depends_on,
+                       dependsOn=[dict(jobId=dep) for dep in args.depends_on],
                        jobDefinition=args.job_definition_arn,
                        parameters={k: v for k, v in args.parameters},
                        containerOverrides=dict(command=command, environment=environment))
@@ -215,6 +215,8 @@ def submit(args):
         job = clients.batch.submit_job(**submit_args)
     if args.watch:
         watch(watch_parser.parse_args([job["jobId"]]))
+        if args.cwl:
+            job.update(resources.dynamodb.Table("aegea-batch-jobs").get_item(Key={"job_id": job["jobId"]})["Item"])
     elif args.wait:
         raise NotImplementedError()
     return job

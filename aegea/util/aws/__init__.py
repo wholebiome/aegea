@@ -142,8 +142,14 @@ def ensure_security_group(name, vpc, tcp_ingress=[dict(port=22, cidr="0.0.0.0/0"
                             CidrIp=rule["cidr"])
     return security_group
 
+def get_client_token(iam_username, service):
+    from getpass import getuser
+    from socket import gethostname
+    tok = "{}.{}.{}:{}@{}".format(iam_username, service, int(time.time()), getuser(), gethostname().split(".")[0])
+    return tok[:64]
+
 class DNSZone(VerboseRepr):
-    def __init__(self, zone_name=None, use_unique_private_zone=True):
+    def __init__(self, zone_name=None, use_unique_private_zone=True, create_default_private_zone=True):
         if zone_name:
             self.zone = clients.route53.list_hosted_zones_by_name(DNSName=zone_name)["HostedZones"][0]
             assert self.zone["Name"].rstrip(".") == zone_name.rstrip(".")
@@ -157,6 +163,15 @@ class DNSZone(VerboseRepr):
             else:
                 msg = "Found {} private DNS zones; unable to determine zone to use"
                 raise AegeaException(msg.format(len(private_zones)))
+        elif create_default_private_zone:
+            vpc = ensure_vpc()
+            vpc.modify_attribute(EnableDnsSupport=dict(Value=True))
+            vpc.modify_attribute(EnableDnsHostnames=dict(Value=True))
+            res = clients.route53.create_hosted_zone(Name="aegea.",
+                                                     CallerReference=get_client_token(None, "route53"),
+                                                     HostedZoneConfig=dict(PrivateZone=True),
+                                                     VPC=dict(VPCRegion=ARN.get_region(), VPCId=vpc.vpc_id))
+            self.zone = res["HostedZone"]
         else:
             raise AegeaException("Unable to determine DNS zone to use")
         self.zone_id = os.path.basename(self.zone["Id"])

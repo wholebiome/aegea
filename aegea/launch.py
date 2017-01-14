@@ -21,7 +21,7 @@ import os, sys, time, datetime, base64, json
 from . import register_parser, logger, config
 
 from .util import wait_for_port, validate_hostname, paginate
-from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_security_group, DNSZone,
+from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_security_group, DNSZone, get_client_token,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder, resources, clients)
 from .util.crypto import (new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line,
@@ -94,10 +94,7 @@ def launch(args):
     if args.availability_zone:
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
     if args.client_token is None:
-        from getpass import getuser
-        from socket import gethostname
-        tok = "{}.{}.{}:{}@{}".format(iam_username, __name__, int(time.time()), getuser(), gethostname().split(".")[0])
-        args.client_token = tok[:64]
+        args.client_token = get_client_token(iam_username, __name__)
     try:
         if args.spot:
             launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"]).decode()
@@ -180,8 +177,8 @@ parser.add_argument("--min-mem-per-core-gb", type=float)
 parser.add_argument("--instance-type", "-t", default="t2.micro")
 parser.add_argument("--spot-price", type=float,
                     help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
-parser.add_argument("--no-dns", dest="use_dns", action="store_false",
-                    help="Skip registering instance name in private DNS (if you don't use private DNS, or don't want the launching principal to have Route53 write access)")  # noqa
+parser.add_argument("--no-dns", dest="use_dns", action="store_false", help="""
+Skip registering instance name in private DNS (if you don't want launching principal to have Route53 write access)""")
 parser.add_argument("--client-token", help="Token used to identify your instance, SIR or SFR")
 parser.add_argument("--subnet")
 parser.add_argument("--availability-zone", "--az")

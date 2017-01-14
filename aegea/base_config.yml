@@ -67,6 +67,9 @@ build_docker_image:
     - python-yaml
     - python-lockfile
     - python-pyparsing
+    - curl
+    - wget
+    - git
   cloud_config_data: {}
 
 build_ami:
@@ -163,7 +166,7 @@ build_ami:
 # Name your Route 53 private DNS zone here. If you leave the value as
 # null, Aegea will enumerate the private DNS zones in your account,
 # and if only one exists, select and use that one. Otherwise, Aegea
-# will raise an error.
+# will create and use a new private zone, "aegea."
 dns:
   private_zone: null
 
