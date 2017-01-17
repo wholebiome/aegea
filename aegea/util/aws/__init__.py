@@ -160,18 +160,18 @@ class DNSZone(VerboseRepr):
                     private_zones.append(zone)
             if len(private_zones) == 1:
                 self.zone = zone
+            elif len(private_zones) == 0 and create_default_private_zone:
+                vpc = ensure_vpc()
+                vpc.modify_attribute(EnableDnsSupport=dict(Value=True))
+                vpc.modify_attribute(EnableDnsHostnames=dict(Value=True))
+                res = clients.route53.create_hosted_zone(Name="aegea.",
+                                                         CallerReference=get_client_token(None, "route53"),
+                                                         HostedZoneConfig=dict(PrivateZone=True),
+                                                         VPC=dict(VPCRegion=ARN.get_region(), VPCId=vpc.vpc_id))
+                self.zone = res["HostedZone"]
             else:
                 msg = "Found {} private DNS zones; unable to determine zone to use"
                 raise AegeaException(msg.format(len(private_zones)))
-        elif create_default_private_zone:
-            vpc = ensure_vpc()
-            vpc.modify_attribute(EnableDnsSupport=dict(Value=True))
-            vpc.modify_attribute(EnableDnsHostnames=dict(Value=True))
-            res = clients.route53.create_hosted_zone(Name="aegea.",
-                                                     CallerReference=get_client_token(None, "route53"),
-                                                     HostedZoneConfig=dict(PrivateZone=True),
-                                                     VPC=dict(VPCRegion=ARN.get_region(), VPCId=vpc.vpc_id))
-            self.zone = res["HostedZone"]
         else:
             raise AegeaException("Unable to determine DNS zone to use")
         self.zone_id = os.path.basename(self.zone["Id"])
