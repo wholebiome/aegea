@@ -49,7 +49,7 @@ Aegea Batch
 The `AWS Batch <https://aws.amazon.com/batch>`_ API currently requires you to use the us-east-1 region. You can use
 ``aws configure`` to select this region.
 
-`missions/docker-example <missions/docker-example>`_ is a root directory of an **aegea mission** -
+`aegea/missions/docker-example/ <aegea/missions/docker-example/>`_ is a root directory of an **aegea mission** -
 a configuration management role. It has a rootfs.skel and a config.yml, which has directives to install packages,
 etc. The example just installs the bwa APT package.
 
