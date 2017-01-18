@@ -1,3 +1,14 @@
+Changes for v1.7.3 (2017-01-18)
+===============================
+
+-  Add automatic configuration for route53 private DNS
+
+-  Various improvements to aegea batch
+
+-  Work around autoloader import issue seen on some Python 2.7 versions
+
+-  aegea build\_ami: improve progress and error messages
+
 Changes for v1.7.2 (2017-01-13)
 ===============================
 
