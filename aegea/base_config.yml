@@ -8,7 +8,7 @@ build_docker_image:
   rootfs_skel_dirs:
     - auto
   commands:
-    - "pip install boto3==1.4.3 awscli==1.11.36 dynamoq tractorbeam"
+    - "pip install awscli-cwlogs==1.4.0 boto3==1.4.3 awscli==1.11.36 dynamoq tractorbeam"
   packages:
     - language-pack-en
     - iptables-persistent
@@ -24,12 +24,10 @@ build_docker_image:
     - libxslt1-dev
     - libyaml-dev
     - libcurl4-openssl-dev
-    - libhdf5-dev
     - libjemalloc-dev
     - libzip-dev
     - libsnappy-dev
     - liblz4-dev
-    - libboost-dev
     - libgmp-dev
     - libmpfr-dev
     - libhts-dev
@@ -70,6 +68,7 @@ build_docker_image:
     - curl
     - wget
     - git
+    - aria2
   cloud_config_data: {}
 
 build_ami:
@@ -139,6 +138,7 @@ build_ami:
     - sqlite3
     - stunnel
     - moreutils
+    - aria2
   commands:
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
@@ -307,6 +307,7 @@ ecr_ls:
     - imageTags
     - imageDigest
     - imagePushedAt
+    - imageSizeInBytes
 
 sirs:
   columns:
@@ -477,6 +478,15 @@ batch_queues:
     - state
     - status
     - statusReason
+
+# Valid instance types values: "optimal", family name, type name
+batch_create_compute_environment:
+  type: MANAGED
+  compute_type: SPOT
+  instance_types: [m3, c3, r3]
+  min_vcpus: 0
+  desired_vcpus: 2
+  max_vcpus: 64
 
 batch_compute_environments:
   columns:

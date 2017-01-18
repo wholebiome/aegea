@@ -10,8 +10,8 @@ from botocore.exceptions import ClientError
 import yaml
 
 from . import logger
-from .ls import register_parser, register_listing_parser, grep, grep_parser
-from .util import Timestamp, paginate, hashabledict
+from .ls import register_parser, register_listing_parser
+from .util import Timestamp, paginate
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.exceptions import AegeaException
 from .util.crypto import ensure_ssh_key
@@ -67,7 +67,7 @@ def create_compute_environment(args):
                                                          "service-role/AmazonEC2ContainerServiceforEC2Role"})
     compute_resources = dict(type=args.compute_type,
                              minvCpus=args.min_vcpus, desiredvCpus=args.desired_vcpus, maxvCpus=args.max_vcpus,
-                             instanceTypes=["optimal"],
+                             instanceTypes=args.instance_types,
                              subnets=[subnet.id for subnet in vpc.subnets.all()],
                              securityGroupIds=[ensure_security_group("aegea.launch", vpc).id],
                              instanceRole=instance_profile.name,
@@ -86,11 +86,12 @@ def create_compute_environment(args):
 
 cce_parser = register_parser(create_compute_environment, parent=batch_parser, help="Create a Batch compute environment")
 cce_parser.add_argument("name")
-cce_parser.add_argument("--type", choices={"MANAGED", "UNMANAGED"}, default="MANAGED")
-cce_parser.add_argument("--compute-type", choices={"EC2", "SPOT"}, default="SPOT")
-cce_parser.add_argument("--min-vcpus", type=int, default=0)
-cce_parser.add_argument("--desired-vcpus", type=int, default=2)
-cce_parser.add_argument("--max-vcpus", type=int, default=64)
+cce_parser.add_argument("--type", choices={"MANAGED", "UNMANAGED"})
+cce_parser.add_argument("--compute-type", choices={"EC2", "SPOT"})
+cce_parser.add_argument("--min-vcpus", type=int)
+cce_parser.add_argument("--desired-vcpus", type=int)
+cce_parser.add_argument("--max-vcpus", type=int)
+cce_parser.add_argument("--instance-types", nargs="+")
 cce_parser.add_argument("--ssh-key-name", default=__name__)
 cce_parser.add_argument("--instance-role", default=__name__)
 
@@ -167,7 +168,7 @@ def get_command_and_env(args):
         shellcode += [
             # 'sed -i -e "s|http://archive.ubuntu.com|http://us-east-1.ec2.archive.ubuntu.com|g" /etc/apt/sources.list',
             # "apt-get update -qq",
-            # "apt-get install -qqy python-pip python-requests python-yaml python-lockfile python-pyparsing awscli", # noqa
+            # "apt-get install -qqy --no-install-suggests --no-install-recommends --force-yes python-pip python-requests python-yaml python-lockfile python-pyparsing awscli", # noqa
             # "pip install ruamel.yaml==0.13.4 cwltool==1.0.20161227200419 dynamoq tractorbeam",
             "cwltool --no-container --preserve-entire-environment <(echo $AEGEA_BATCH_CWL_DEF_B64 | base64 -d) <(echo $AEGEA_BATCH_CWL_JOB_B64 | base64 -d | tractor pull) | tractor push $AEGEA_BATCH_S3_BASE_URL/$AWS_BATCH_JOB_ID | dynamoq update aegea-batch-jobs $AWS_BATCH_JOB_ID" # noqa
         ]
@@ -241,7 +242,7 @@ group = submit_parser.add_argument_group(title="job definition parameters", desc
 See http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html""")
 img_group = group.add_mutually_exclusive_group()
 img_group.add_argument("--image", default="ubuntu", help="Docker image URL to use for running Batch job")
-img_group.add_argument("--ecs-image", "--ecr-image", metavar="IMAGE",
+img_group.add_argument("--ecs-image", "--ecr-image", metavar="REPO[:TAG]",
                        help="Name of Docker image residing in this account's Elastic Container Registry")
 group.add_argument("--vcpus", type=int, default=1)
 group.add_argument("--memory", type=int, default=1024)
