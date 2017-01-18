@@ -507,6 +507,7 @@ batch_ls:
     - jobId
     - jobName
     - status
+    - statusReason
     - jobDefinition
     - parameters
     - container.image
