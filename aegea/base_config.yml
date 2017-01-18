@@ -503,9 +503,11 @@ batch_compute_environments:
     - computeResources.instanceTypes
 
 batch_ls:
+  sort_by: createdAt
   columns:
     - jobId
     - jobName
+    - createdAt
     - status
     - statusReason
     - jobDefinition
@@ -514,7 +516,6 @@ batch_ls:
     - container.environment
     - container.vcpus
     - container.memory
-    - createdAt
     - dependsOn
 
 launch:
