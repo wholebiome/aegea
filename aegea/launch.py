@@ -85,6 +85,10 @@ def launch(args):
                        InstanceType=args.instance_type,
                        BlockDeviceMappings=get_bdm(),
                        UserData=get_user_data(**user_data_args))
+    # TODO:
+    # if over 16384, upload to s3://aegea-assets-:ACCOUNT_ID/ec2/user-data/:SHA256
+    # tar -cz path | openssl aes-256-cbc -e -k foobar | aws s3 ...
+    # aws s3 ... | openssl aes-256-cbc -d -k foobar | tar -x -C /
     logger.info("Launch spec user data is %i bytes long", len(launch_spec["UserData"]))
     if args.iam_role:
         instance_profile = ensure_instance_profile(args.iam_role, policies=args.iam_policies)

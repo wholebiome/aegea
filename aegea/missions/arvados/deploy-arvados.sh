@@ -13,8 +13,25 @@ fi
 export ARVADOS_INSTANCE=arvados-$(date "+%Y-%m-%d-%H-%M")
 export ARVADOS_SLURMCTL_HOST=$ARVADOS_INSTANCE
 
+aegea-build-image-for-mission --image-type ami arvados-worker arvwrkr-$(date "+%Y-%m-%d-%H-%M") --tags arvados-class=dynamic-compute cluster=$ARVADOS_UUID_PREFIX
+
+aws iam create-user --user-name arvados || true
+aws iam attach-user-policy --user-name arvados --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess
+for i in $(aws iam list-access-keys --user-name arvados | jq --raw-output .AccessKeyMetadata[].AccessKeyId); do
+    aws iam delete-access-key --user-name arvados --access-key-id $i
+done
+create_access_key_output=$(aws iam create-access-key --user-name arvados)
+
+export ARVADOS_AWS_DEFAULT_REGION=$(aws ec2 describe-availability-zones | jq --raw-output .AvailabilityZones[0].RegionName)
+export ARVADOS_AWS_ACCESS_KEY_ID=$(echo "$create_access_key_output" | jq --raw-output .AccessKey.AccessKeyId)
+export ARVADOS_AWS_SECRET_ACCESS_KEY=$(echo "$create_access_key_output" | jq --raw-output .AccessKey.SecretAccessKey)
+# FIXME: ANM needs access to the private key for this
+export ARVADOS_EC2_SSH_KEYPAIR_NAME=aegea.launch
+export ARVADOS_EC2_WORKER_AMI_ID=$(aegea images --json --tag AegeaMission=arvados-worker | jq --raw-output .[].id | tail -n 1)
+export ARVADOS_EC2_SUBNET_ID=$(aegea subnets --json | jq --raw-output .[].id | head -n 1)
+export ARVADOS_EC2_SG_ID=$(aws ec2 describe-security-groups --filters Name=group-name,Values=$ARVADOS_EC2_SG_NAME | jq --raw-output .SecurityGroups[].GroupId)
+
 aegea-build-image-for-mission --image-type ami arvados arvados-$(date "+%Y-%m-%d-%H-%M")
-aegea-build-image-for-mission --image-type ami arvados-worker arvwrkr-$(date "+%Y-%m-%d-%H-%M")
 
 aegea launch $ARVADOS_INSTANCE --instance-type m3.large --ami-tags AegeaMission=arvados --wait-for-ssh --commands "echo manual > /etc/init/arvados-keep.override"
 

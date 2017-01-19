@@ -10,6 +10,10 @@ export CRUNCH_DISPATCH_TOKEN=$ARVADOS_API_TOKEN
 
 cat /etc/arvados/crunch-dispatch-slurm/crunch-dispatch-slurm.yml | envsubst | sponge /etc/arvados/crunch-dispatch-slurm/crunch-dispatch-slurm.yml
 
+export ARVADOS_NODE_MANAGER_TOKEN=$(arv api_client_authorization create_system_auth --scopes '["GET /arvados/v1/jobs/queue", "GET /arvados/v1/nodes", "PUT /arvados/v1/nodes", "PUT /arvados/v1/nodes/", "POST /arvados/v1/nodes", "POST /arvados/v1/nodes/"]' | jq --raw-output .api_token)
+
+cat /etc/arvados/nodemanager/ec2.cfg | envsubst | sponge /etc/arvados/nodemanager/ec2.cfg
+
 for i in $(cat /etc/keep.conf.json|jq --raw-output --compact-output .[]); do
     arv keep_service create --keep-service "$i"
 done
