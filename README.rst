@@ -54,7 +54,7 @@ a configuration management role. It has a rootfs.skel and a config.yml, which ha
 etc. The example just installs the bwa APT package.
 
 Run ``aegea-build-image-for-mission docker-example dex`` to build an ECR image called dex from the "docker-example"
-mission. You can list ECR images with ``aegea ecr ls``.
+mission. You can list ECR images with ``aegea ecr ls``, and delete them with e.g. ``aws ecr delete-repository dex``.
 
 Run ``aegea batch submit --ecs-image dex --command "bwa aln || true" "bwa mem || true" --memory 2048 --vcpus 4 --watch``
 to run a Batch job that requires 2 GB RAM and 4 cores to be allocated to the Docker container, using the "dex" image,
