@@ -7,8 +7,8 @@ from botocore.exceptions import ClientError
 
 from . import register_parser, logger, config, __version__
 from .util.aws import ARN, clients, resources, expect_error_codes
+from .util.cloudinit import get_bootstrap_files, encode_cloud_config_payload
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
-from .build_ami import get_bootstrap_files
 from .batch import submit, submit_parser, bash_cmd_preamble
 
 dockerfile = """
@@ -53,7 +53,7 @@ def get_cloud_config(args):
         "datasource_list": ["None"],
         "datasource": {
             "None": {
-                "userdata_raw": "#cloud-config\n" + json.dumps(cloud_config_data)
+                "userdata_raw": encode_cloud_config_payload(cloud_config_data, gzip=False)
             }
         }
     }

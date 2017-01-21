@@ -1,46 +1,13 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, json, time, base64
-from argparse import Namespace
-from collections import OrderedDict
 from io import open
 
-from . import register_parser, logger, config, __version__
-from .util.aws import (locate_ami, get_user_data, ensure_vpc, ensure_subnet, gzip_compress_bytes,
-                       ensure_security_group, add_tags, get_bdm, resolve_instance_id, resources, clients)
-from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
+from . import register_parser, logger, __version__
+from .util.aws import locate_ami, add_tags, get_bdm, resolve_instance_id, resources, clients
+from .util.crypto import get_ssh_key_filename
 from .util.printing import GREEN
 from .launch import launch, parser as launch_parser
-
-def get_bootstrap_files(rootfs_skel_dirs):
-    manifest = OrderedDict()
-    aegea_conf = os.getenv("AEGEA_CONFIG_FILE")
-
-    for rootfs_skel_dir in rootfs_skel_dirs:
-        if rootfs_skel_dir == "auto":
-            fn = os.path.join(os.path.dirname(__file__), "rootfs.skel")
-        elif aegea_conf:
-            # FIXME: not compatible with colon-separated AEGEA_CONFIG_FILE
-            fn = os.path.join(os.path.dirname(aegea_conf), rootfs_skel_dir)
-        elif os.path.exists(rootfs_skel_dir):
-            fn = os.path.abspath(os.path.normpath(rootfs_skel_dir))
-        else:
-            raise Exception("rootfs_skel directory {} not found".format(fn))
-        logger.debug("Trying rootfs.skel: %s" % fn)
-        if not os.path.exists(fn):
-            raise Exception("rootfs_skel directory {} not found".format(fn))
-        for root, dirs, files in os.walk(fn):
-            for file_ in files:
-                path = os.path.join("/", os.path.relpath(root, fn), file_)
-                with open(os.path.join(root, file_), "rb") as fh:
-                    content = fh.read()
-                    manifest[path] = dict(path=path,
-                                          permissions=oct(os.stat(os.path.join(root, file_)).st_mode)[-3:])
-                    try:
-                        manifest[path].update(content=content.decode())
-                    except UnicodeDecodeError:
-                        manifest[path].update(content=base64.b64encode(gzip_compress_bytes(content)), encoding="gz+b64")
-    return list(manifest.values())
 
 def build_ami(args):
     from .util.ssh import AegeaSSHClient
@@ -57,7 +24,7 @@ def build_ami(args):
         launch_args = launch_parser.parse_args(args=[hostname], namespace=args)
         launch_args.wait_for_ssh = True
         launch_args.iam_role = None
-        launch_args.cloud_config_data.update(files=get_bootstrap_files(args.rootfs_skel_dirs))
+        launch_args.cloud_config_data.update(rootfs_skel_dirs=args.rootfs_skel_dirs)
         instance = resources.ec2.Instance(launch(launch_args)["instance_id"])
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()

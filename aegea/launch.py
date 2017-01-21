@@ -21,11 +21,12 @@ import os, sys, time, datetime, base64, json
 from . import register_parser, logger, config
 
 from .util import wait_for_port, validate_hostname, paginate
-from .util.aws import (get_user_data, ensure_vpc, ensure_subnet, ensure_security_group, DNSZone, get_client_token,
+from .util.cloudinit import get_user_data
+from .util.aws import (ensure_vpc, ensure_subnet, ensure_security_group, DNSZone, get_client_token,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
-                       expect_error_codes, resolve_ami, get_ondemand_price_usd, SpotFleetBuilder, resources, clients)
-from .util.crypto import (new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line,
-                          get_ssh_key_filename)
+                       expect_error_codes, resolve_ami, get_ondemand_price_usd, resources, clients)
+from .util.aws.spot import SpotFleetBuilder
+from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line
 from .util.exceptions import AegeaException
 from botocore.exceptions import ClientError
 
@@ -178,6 +179,7 @@ parser.add_argument("--spot", action="store_true")
 parser.add_argument("--duration-hours", type=float, help="Terminate the spot instance after this number of hours")
 parser.add_argument("--cores", type=int, help="Minimum number of cores to request (spot fleet API)")
 parser.add_argument("--min-mem-per-core-gb", type=float)
+# FIXME: mutex or support options in spot fleet
 parser.add_argument("--instance-type", "-t", default="t2.micro")
 parser.add_argument("--spot-price", type=float,
                     help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")

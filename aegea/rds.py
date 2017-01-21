@@ -8,9 +8,9 @@ import os, sys, argparse, getpass
 from datetime import datetime
 
 from . import register_parser
-from .util import Timestamp, paginate
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate
-from .util.aws import ARN, resources, clients, encode_tags
+from .util import paginate
+from .util.printing import page_output, tabulate
+from .util.aws import ARN, clients, encode_tags
 
 def rds(args):
     rds_parser.print_help()

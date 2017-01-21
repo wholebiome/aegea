@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os, sys, json, io, gzip, time
 import requests
-from collections import OrderedDict
 from warnings import warn
 from datetime import datetime, timedelta
 
@@ -11,10 +10,8 @@ from botocore.exceptions import ClientError
 from botocore.utils import parse_to_aware_datetime
 
 from ... import logger
-from .. import constants, VerboseRepr, paginate
+from .. import VerboseRepr, paginate
 from ..exceptions import AegeaException
-from ..crypto import get_public_key_from_pair
-from ..compat import StringIO
 from . import clients, resources
 
 def get_assume_role_policy_doc(*principals):
@@ -67,31 +64,6 @@ def locate_ami(product, region=None, channel="releases", stream="released", root
                 return image.image_id
     raise AegeaException("No AMI found for {} {} {} {}".format(product, region, root_store, virt))
 
-def gzip_compress_bytes(payload):
-    buf = io.BytesIO()
-    with gzip.GzipFile(fileobj=buf, mode="w") as gzfh:
-        gzfh.write(payload)
-    return buf.getvalue()
-
-def get_user_data(host_key=None, commands=None, packages=None, files=None, **kwargs):
-    if packages is None:
-        packages = []
-    if commands is None:
-        commands = []
-    if files is None:
-        files = []
-    cloud_config_data = OrderedDict(packages=packages, write_files=files, runcmd=commands)
-    for key in sorted(kwargs):
-        cloud_config_data[key] = kwargs[key]
-    if host_key is not None:
-        buf = StringIO()
-        host_key.write_private_key(buf)
-        cloud_config_data["ssh_keys"] = dict(rsa_private=buf.getvalue(),
-                                             rsa_public=get_public_key_from_pair(host_key))
-    # TODO: default=dict is for handling tweak.Config objects in the hierarchy. Should subclass dict, not MutableMapping
-    payload = "#cloud-config\n" + json.dumps(cloud_config_data, default=dict)
-    return gzip_compress_bytes(payload.encode())
-
 def ensure_vpc():
     for vpc in resources.ec2.vpcs.filter(Filters=[dict(Name="isDefault", Values=["true"])]):
         break
@@ -141,6 +113,14 @@ def ensure_security_group(name, vpc, tcp_ingress=[dict(port=22, cidr="0.0.0.0/0"
         ensure_ingress_rule(security_group, IpProtocol="tcp", FromPort=rule["port"], ToPort=rule["port"],
                             CidrIp=rule["cidr"])
     return security_group
+
+def ensure_s3_bucket(name=None):
+    if name is None:
+        name = "aegea-assets-{}".format(ARN.get_account_id())
+    bucket = resources.s3.Bucket(name)
+    bucket.create()
+    bucket.wait_until_exists()
+    return bucket
 
 def get_client_token(iam_username, service):
     from getpass import getuser
@@ -385,80 +365,6 @@ def get_ec2_products(region=None, instance_type=None, tenancy="Shared", operatin
 def get_ondemand_price_usd(region, instance_type, **kwargs):
     for product in get_ec2_products(region=region, instance_type=instance_type, **kwargs):
         return product["pricePerUnit"]["USD"]
-
-class SpotFleetBuilder(VerboseRepr):
-    # TODO: vivify from toolspec; vivify from SFR ID; update with incremental cores/memory requirements
-    def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0,
-                 min_ephemeral_storage_gb=0, spot_price=None, duration_hours=None, client_token=None, dry_run=False):
-        if spot_price is None:
-            spot_price = 1
-        if "SecurityGroupIds" in launch_spec:
-            launch_spec["SecurityGroups"] = [dict(GroupId=i) for i in launch_spec["SecurityGroupIds"]]
-            del launch_spec["SecurityGroupIds"]
-        self.launch_spec = launch_spec
-        self.cores = cores
-        self.min_cores_per_instance = min_cores_per_instance
-        self.min_ephemeral_storage_gb = min_ephemeral_storage_gb
-        if min_cores_per_instance > cores:
-            raise AegeaException("SpotFleetBuilder: min_cores_per_instance cannot exceed cores")
-        self.min_mem_per_core_gb = min_mem_per_core_gb
-        self.gpus_per_instance = gpus_per_instance
-        self.dry_run = dry_run
-        self.iam_fleet_role = self.get_iam_fleet_role()
-        self.spot_fleet_request_config = dict(SpotPrice=str(spot_price),
-                                              TargetCapacity=cores,
-                                              IamFleetRole=self.iam_fleet_role.arn)
-        if client_token:
-            self.spot_fleet_request_config.update(ClientToken=client_token)
-        if duration_hours:
-            deadline = datetime.utcnow().replace(microsecond=0) + timedelta(hours=duration_hours)
-            self.spot_fleet_request_config.update(ValidUntil=deadline,
-                                                  TerminateInstancesWithExpiration=True)
-
-    @classmethod
-    def get_iam_fleet_role(cls):
-        return ensure_iam_role("SpotFleet",
-                               policies=["service-role/AmazonEC2SpotFleetRole"],
-                               trust=["spotfleet"])
-
-    def instance_types(self, max_overprovision=3, restrict_to_families=None):
-        def compute_ephemeral_storage_gb(instance_data):
-            if instance_data["storage"] == "EBS only":
-                return 0
-            count, size = [int(x) for x in instance_data["storage"].rstrip("SSD").rstrip("HDD").split("x")]
-            return count * size
-
-        max_cores = self.cores * max_overprovision
-        max_mem_per_core = self.min_mem_per_core_gb * max_overprovision
-        max_gpus = self.gpus_per_instance * max_overprovision
-        for instance_type, instance_data in constants.get("instance_types").items():
-            cores, gpus = int(instance_data["vcpu"]), int(instance_data["gpu"] or 0)
-            mem_per_core = float(instance_data["memory"].rstrip(" GiB")) / cores
-            if compute_ephemeral_storage_gb(instance_data) < self.min_ephemeral_storage_gb:
-                continue
-            if cores < self.min_cores_per_instance or cores > max_cores:
-                continue
-            if mem_per_core < self.min_mem_per_core_gb or mem_per_core > max_mem_per_core:
-                continue
-            if gpus < self.gpus_per_instance or gpus > max_gpus:
-                continue
-            if restrict_to_families and not any(instance_type.startswith(fam + ".") for fam in restrict_to_families):
-                continue
-            yield instance_type, int(instance_data["vcpu"])
-
-    def launch_specs(self, **kwargs):
-        for instance_type, weighted_capacity in self.instance_types(**kwargs):
-            yield dict(self.launch_spec,
-                       InstanceType=instance_type,
-                       WeightedCapacity=weighted_capacity)
-
-    def __call__(self, **kwargs):
-        self.spot_fleet_request_config["LaunchSpecifications"] = list(self.launch_specs())
-        logger.debug(self.spot_fleet_request_config)
-        res = clients.ec2.request_spot_fleet(DryRun=self.dry_run,
-                                             SpotFleetRequestConfig=self.spot_fleet_request_config,
-                                             **kwargs)
-        return res["SpotFleetRequestId"]
 
 def get_iam_role_for_instance(instance):
     instance = resources.ec2.Instance(resolve_instance_id(instance))

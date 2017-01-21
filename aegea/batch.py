@@ -12,12 +12,12 @@ import yaml
 from . import logger
 from .ls import register_parser, register_listing_parser
 from .util import Timestamp, paginate
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
+from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.exceptions import AegeaException
 from .util.crypto import ensure_ssh_key
-from .util.compat import lru_cache
-from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_instance_profile, make_waiter, ensure_subnet,
-                       ensure_vpc, ensure_security_group, SpotFleetBuilder)
+from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_instance_profile, make_waiter,
+                       ensure_vpc, ensure_security_group, ensure_s3_bucket)
+from .util.aws.spot import SpotFleetBuilder
 
 bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
 
@@ -123,12 +123,6 @@ def ensure_dynamodb_table(name, hash_key_name, read_capacity_units=5, write_capa
         table = resources.dynamodb.Table(name)
     table.wait_until_exists()
     return table
-
-def ensure_s3_bucket(name):
-    bucket = resources.s3.Bucket(name)
-    bucket.create()
-    bucket.wait_until_exists()
-    return bucket
 
 def get_command_and_env(args):
     shellcode = ["set -a",

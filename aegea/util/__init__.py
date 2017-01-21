@@ -1,12 +1,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, re, socket, errno, time
+import os, sys, re, socket, time, io, gzip
 from datetime import datetime
 from dateutil.parser import parse as dateutil_parse
 from dateutil.relativedelta import relativedelta
 from .printing import GREEN
 from .compat import Repr, str
-from .. import logger
 
 def wait_for_port(host, port, timeout=600, print_progress=True):
     if print_progress:
@@ -96,3 +95,9 @@ def describe_cidr(cidr):
         except Exception:
             whois_names = [cidr]
     return ", ".join(whois_names)
+
+def gzip_compress_bytes(payload):
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode="w") as gzfh:
+        gzfh.write(payload)
+    return buf.getvalue()

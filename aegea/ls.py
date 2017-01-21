@@ -6,7 +6,7 @@ from datetime import datetime
 
 from . import register_parser
 from .util import Timestamp, paginate, describe_cidr, add_time_bound_args
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE
+from .util.printing import page_output, tabulate, GREEN, BLUE
 from .util.aws import ARN, resolve_instance_id, resources, clients
 from .util.compat import timestamp
 

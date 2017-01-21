@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 
 from .ls import register_parser, register_listing_parser
 from .util import Timestamp, paginate, hashabledict
-from .util.printing import format_table, page_output, get_field, get_cell, tabulate
+from .util.printing import page_output, tabulate
 from .util.exceptions import AegeaException
 from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, resolve_instance_id, resolve_security_group, get_elb_dns_aliases,

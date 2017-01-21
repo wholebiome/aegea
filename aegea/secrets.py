@@ -49,13 +49,12 @@ Using ``aegea secrets`` to save an API key (password) accessible by the IAM grou
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, sys, argparse, subprocess, json, copy
-from textwrap import fill
 
 from botocore.exceptions import ClientError
 
 from . import register_parser
 from .util.aws import ARN, IAMPolicyBuilder, resources, expect_error_codes, ensure_iam_policy
-from .util.printing import format_table, page_output, tabulate
+from .util.printing import page_output, tabulate
 from .util.exceptions import AegeaException
 from .util.crypto import new_ssh_key, hostkey_line, key_fingerprint
 from .util.compat import StringIO

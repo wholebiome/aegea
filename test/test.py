@@ -9,8 +9,10 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, pkg_root)
 import aegea
 from aegea.util import Timestamp
-from aegea.util.aws import (resolve_ami, SpotFleetBuilder, IAMPolicyBuilder, locate_ami, get_ondemand_price_usd, ARN,
-                            DNSZone, get_user_data, get_public_ip_ranges)
+from aegea.util.cloudinit import get_user_data
+from aegea.util.aws import (resolve_ami, IAMPolicyBuilder, locate_ami, get_ondemand_price_usd, ARN, DNSZone,
+                            get_public_ip_ranges)
+from aegea.util.aws.spot import SpotFleetBuilder
 from aegea.util.exceptions import AegeaException
 from aegea.util.compat import USING_PYTHON2, str
 from aegea.util.git import private_submodules

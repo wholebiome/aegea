@@ -10,7 +10,7 @@ EC2 key pairs have no ARNs and no distingiushing ID prefix. To delete them by na
 
 import os, sys, argparse, subprocess, time
 from . import register_parser, logger
-from .util.aws import expect_error_codes, resources, clients, make_waiter
+from .util.aws import expect_error_codes, resources, clients
 from botocore.exceptions import ClientError
 
 def rm(args):
