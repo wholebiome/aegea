@@ -81,11 +81,11 @@ def upload_bootstrap_asset(cloud_config_data, rootfs_skel_dirs):
     enc_key = "".join(random.choice(string.ascii_letters) for x in range(32))
     logger.info("Uploading bootstrap asset %s to S3", key_name)
     bucket = ensure_s3_bucket()
-    encryptor = subprocess.Popen(["openssl", "aes-256-cbc", "-e", "-k", enc_key],
-                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    encrypted_tarfile = encryptor.communicate(get_bootstrap_files(rootfs_skel_dirs, dest="tarfile"))[0]
+    cipher = subprocess.Popen(["openssl", "aes-256-cbc", "-e", "-k", enc_key],
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    encrypted_tarfile = cipher.communicate(get_bootstrap_files(rootfs_skel_dirs, dest="tarfile"))[0]
     bucket.upload_fileobj(io.BytesIO(encrypted_tarfile), key_name)
     url = clients.s3.generate_presigned_url(ClientMethod='get_object', Params=dict(Bucket=bucket.name, Key=key_name))
-    cmd = "curl '{url}' | openssl aes-256-cbc -d -k {key} | tar -xz -C /".format(url=url, key=enc_key)
-    cloud_config_data["runcmd"].insert(0, cmd)
+    cmd = "curl -s '{url}' | openssl aes-256-cbc -d -k {key} | tar -xz --no-same-owner -C /"
+    cloud_config_data["runcmd"].insert(0, cmd.format(url=url, key=enc_key))
     del cloud_config_data["write_files"]

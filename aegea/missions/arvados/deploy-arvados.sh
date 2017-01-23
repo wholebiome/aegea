@@ -40,7 +40,7 @@ for service in keep0 keep1; do
     aegea zones update $ARVADOS_PRIVATE_DNS_ZONE "arvados-$service=${ARVADOS_INSTANCE}-${service}.$ARVADOS_PRIVATE_DNS_ZONE"
     EBS_VOLUME=$(aegea ebs create --size-gb 40 --volume-type gp2 --tags Name=${ARVADOS_INSTANCE}-$service | jq --raw-output .VolumeId)
     aegea ebs attach $EBS_VOLUME ${ARVADOS_INSTANCE}-$service xvdz
-    aegea ssh ubuntu@${ARVADOS_INSTANCE}-$service "sudo mkfs.ext4 /dev/xvdz && sudo mount /dev/xvdz /mnt/keep && sudo service arvados-keep restart"
+    aegea ssh ubuntu@${ARVADOS_INSTANCE}-$service "sudo bash -ec 'mkdir -p /mnt/keep; mkfs.ext4 /dev/xvdz; mount /dev/xvdz /mnt/keep; service arvados-keep restart'"
 done
 
 aegea zones update $ARVADOS_PRIVATE_DNS_ZONE "arvados=$ARVADOS_INSTANCE.$ARVADOS_PRIVATE_DNS_ZONE"
