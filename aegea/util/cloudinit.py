@@ -63,7 +63,7 @@ def get_user_data(host_key=None, commands=None, packages=None, rootfs_skel_dirs=
         host_key.write_private_key(buf)
         cloud_config_data["ssh_keys"] = dict(rsa_private=buf.getvalue(),
                                              rsa_public=get_public_key_from_pair(host_key))
-    payload = encode_cloud_config_payload(cloud_config_data, rootfs_skel_dirs)
+    payload = encode_cloud_config_payload(cloud_config_data)
     if len(payload) >= 16384:
         logger.warn("Cloud-init payload is too large to be passed in user data, extracting rootfs.skel")
         upload_bootstrap_asset(cloud_config_data, rootfs_skel_dirs)
