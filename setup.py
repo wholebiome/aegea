@@ -31,7 +31,8 @@ setup(
         "python-dateutil >= 2.5.3, < 3",
         "babel >= 2.3.4, < 3",
         "ipwhois >= 0.13.0, < 1",
-        "github3.py >= 0.9.6, < 1",
+        "github3.py == 1.0.0a4",
+        "uritemplate.py == 3.0.2",
         "awscli >= 1.2.9"
     ],
     extras_require={

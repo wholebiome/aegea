@@ -219,7 +219,7 @@ def submit(args):
 submit_parser = register_parser(submit, parent=batch_parser, help="Submit a job to a Batch queue")
 submit_parser.add_argument("--name", default=__name__.replace(".", "_"))
 submit_parser.add_argument("--queue", default=__name__.replace(".", "_"))
-submit_parser.add_argument("--depends-on", nargs="+", default=[])
+submit_parser.add_argument("--depends-on", nargs="+", metavar="JOB_ID", default=[])
 submit_parser.add_argument("--job-definition-arn")
 group = submit_parser.add_mutually_exclusive_group()
 group.add_argument("--watch", action="store_true", help="Monitor submitted job, stream log until job completes")
