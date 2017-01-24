@@ -35,6 +35,7 @@ parser = register_listing_parser(queues, parent=batch_parser, help="List Batch q
 
 def create_queue(args):
     ces = [dict(computeEnvironment=e, order=i) for i, e in enumerate(args.compute_environments)]
+    logger.info("Creating queue %s in %s", args.name, ces)
     queue = clients.batch.create_job_queue(jobQueueName=args.name, priority=args.priority, computeEnvironmentOrder=ces)
     make_waiter(clients.batch.describe_job_queues, "jobQueues[].status", "VALID", "pathAny").wait(jobQueues=[args.name])
     return queue
@@ -74,7 +75,7 @@ def create_compute_environment(args):
                              bidPercentage=100,
                              spotIamFleetRole=SpotFleetBuilder.get_iam_fleet_role().name,
                              ec2KeyPair=args.ssh_key_name)
-    logger.info("Creating compute environment in %s", vpc)
+    logger.info("Creating compute environment %s in %s", args.name, vpc)
     compute_environment = clients.batch.create_compute_environment(computeEnvironmentName=args.name,
                                                                    type=args.type,
                                                                    computeResources=compute_resources,

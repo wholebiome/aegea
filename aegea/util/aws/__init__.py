@@ -71,18 +71,27 @@ def ensure_vpc():
         for vpc in resources.ec2.vpcs.all():
             break
         else:
-            logger.info("Creating VPC")
-            vpc = resources.ec2.create_vpc() # CidrBlock=...
+            from ... import config
+            logger.info("Creating VPC with CIDR %s", config.vpc.default_cidr)
+            vpc = resources.ec2.create_vpc(CidrBlock=config.vpc.default_cidr)
             clients.ec2.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
             vpc.modify_attribute(EnableDnsSupport={"Value": True})
             vpc.modify_attribute(EnableDnsHostnames={"Value": True})
     return vpc
 
+def availability_zones():
+    for az in clients.ec2.describe_availability_zones()["AvailabilityZones"]:
+        yield az["ZoneName"]
+
 def ensure_subnet(vpc):
     for subnet in vpc.subnets.all():
         break
     else:
-        raise AegeaException("Not implemented")
+        from ... import config
+        for i, az in enumerate(availability_zones()):
+            logger.info("Creating subnet with CIDR %s in %s", config.vpc.default_subnet_cidrs[i], vpc)
+            subnet = resources.ec2.create_subnet(VpcId=vpc.id, CidrBlock=config.vpc.default_subnet_cidrs[i])
+            clients.ec2.get_waiter("subnet_available").wait(SubnetIds=[subnet.id])
     return subnet
 
 def ensure_ingress_rule(security_group, **kwargs):
@@ -407,3 +416,9 @@ def make_waiter(op, path, expected, matcher="path", delay=1, max_attempts=30):
     acceptor = dict(matcher=matcher, argument=path, expected=expected, state="success")
     waiter_cfg = dict(operation=op.__name__, delay=delay, maxAttempts=max_attempts, acceptors=[acceptor])
     return Waiter(op.__name__, SingleWaiterConfig(waiter_cfg), op)
+
+def ensure_log_group(name):
+    try:
+        clients.logs.create_log_group(logGroupName=name)
+    except clients.logs.exceptions.ResourceAlreadyExistsException:
+        pass

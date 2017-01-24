@@ -170,6 +170,14 @@ build_ami:
 dns:
   private_zone: null
 
+vpc:
+  default_cidr: 10.0.0.0/16
+  default_subnet_cidrs:
+    - 10.0.0.0/20
+    - 10.0.32.0/20
+    - 10.0.64.0/20
+    - 10.0.96.0/20
+
 ls:
   sort_by: launch_time
   columns:

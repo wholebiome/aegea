@@ -14,7 +14,7 @@ from .util.printing import page_output, tabulate
 from .util.exceptions import AegeaException
 from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, resolve_instance_id, resolve_security_group, get_elb_dns_aliases,
-                       DNSZone, ensure_vpc, expect_error_codes)
+                       DNSZone, ensure_vpc, expect_error_codes, availability_zones)
 
 def elb(args):
     elb_parser.print_help()
@@ -122,7 +122,6 @@ def create(args):
     else:
         raise AegeaException("Unable to find Route53 DNS zone for {}".format(args.dns_alias))
     cert = find_acm_cert(args.dns_alias)
-    azs = [az["ZoneName"] for az in clients.ec2.describe_availability_zones()["AvailabilityZones"]]
     if args.type == "ELB":
         listener = dict(Protocol="https",
                         LoadBalancerPort=443,
@@ -131,7 +130,7 @@ def create(args):
                         InstancePort=args.instance_port or 80)
         elb = clients.elb.create_load_balancer(LoadBalancerName=args.elb_name,
                                                Listeners=[listener],
-                                               AvailabilityZones=azs,
+                                               AvailabilityZones=list(availability_zones()),
                                                SecurityGroups=[sg.id for sg in args.security_groups])
     elif args.type == "ALB":
         vpc = ensure_vpc()

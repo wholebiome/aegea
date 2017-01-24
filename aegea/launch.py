@@ -22,7 +22,7 @@ from . import register_parser, logger, config
 
 from .util import wait_for_port, validate_hostname, paginate
 from .util.cloudinit import get_user_data
-from .util.aws import (ensure_vpc, ensure_subnet, ensure_security_group, DNSZone, get_client_token,
+from .util.aws import (ensure_vpc, ensure_subnet, ensure_security_group, DNSZone, get_client_token, ensure_log_group,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
                        expect_error_codes, resolve_ami, get_ondemand_price_usd, resources, clients)
 from .util.aws.spot import SpotFleetBuilder
@@ -50,6 +50,8 @@ def launch(args):
         dns_zone = DNSZone(config.dns.get("private_zone"))
         config.dns.private_zone = dns_zone.zone["Name"]
     ensure_ssh_key(args.ssh_key_name, verify_pem_file=args.verify_ssh_key_pem_file)
+    # TODO: move all account init checks into init helper with region-specific semaphore on s3
+    ensure_log_group("syslog")
     try:
         i = resolve_instance_id(args.hostname)
         msg = "The hostname {} is being used by {} (state: {})"
