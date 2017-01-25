@@ -76,12 +76,14 @@ def ensure_vpc():
             logger.info("Creating VPC with CIDR %s", config.vpc.cidr[ARN.get_region()])
             vpc = resources.ec2.create_vpc(CidrBlock=config.vpc.cidr[ARN.get_region()])
             clients.ec2.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
+            add_tags(vpc, Name=__name__)
             vpc.modify_attribute(EnableDnsSupport=dict(Value=config.vpc.enable_dns_support))
             vpc.modify_attribute(EnableDnsHostnames=dict(Value=config.vpc.enable_dns_hostnames))
             internet_gateway = resources.ec2.create_internet_gateway()
             vpc.attach_internet_gateway(InternetGatewayId=internet_gateway.id)
             for route_table in vpc.route_tables.all():
                 route_table.create_route(DestinationCidrBlock="0.0.0.0/0", GatewayId=internet_gateway.id)
+            ensure_subnet(vpc)
     return vpc
 
 def availability_zones():
@@ -99,6 +101,7 @@ def ensure_subnet(vpc):
             logger.info("Creating subnet with CIDR %s in %s, %s", subnet_cidr, vpc, az)
             subnet = resources.ec2.create_subnet(VpcId=vpc.id, CidrBlock=str(subnet_cidr), AvailabilityZone=az)
             clients.ec2.get_waiter("subnet_available").wait(SubnetIds=[subnet.id])
+            add_tags(subnet, Name=__name__)
             clients.ec2.modify_subnet_attribute(SubnetId=subnet.id,
                                                 MapPublicIpOnLaunch=dict(Value=config.vpc.map_public_ip_on_launch))
     return subnet
