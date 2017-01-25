@@ -94,7 +94,7 @@ def describe_cidr(cidr):
             whois_names = [socket.gethostbyaddr(address)]
         except Exception:
             whois_names = [cidr]
-    return ", ".join(whois_names)
+    return ", ".join(str(n) for n in whois_names)
 
 def gzip_compress_bytes(payload):
     buf = io.BytesIO()

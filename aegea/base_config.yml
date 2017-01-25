@@ -170,13 +170,31 @@ build_ami:
 dns:
   private_zone: null
 
+# The CIDR and subnet prefix configuration here is only used by aegea
+# when a default VPC is not found in your account in a given region
+# that you have logged in to. AWS automatically creates a default VPC
+# the first time you access a region. That VPC always has CIDR
+# 172.31.0.0/16 with /20 subnets.
 vpc:
-  default_cidr: 10.0.0.0/16
-  default_subnet_cidrs:
-    - 10.0.0.0/20
-    - 10.0.32.0/20
-    - 10.0.64.0/20
-    - 10.0.96.0/20
+  cidr:
+    us-east-1: 10.0.0.0/16
+    us-east-2: 10.1.0.0/16
+    us-west-1: 10.2.0.0/16
+    us-west-2: 10.3.0.0/16
+    ap-northeast-1: 10.4.0.0/16
+    ap-northeast-2: 10.5.0.0/16
+    ap-southeast-1: 10.6.0.0/16
+    ap-southeast-2: 10.7.0.0/16
+    ap-south-1: 10.8.0.0/16
+    ca-central-1: 10.9.0.0/16
+    eu-west-1: 10.10.0.0/16
+    eu-west-2: 10.11.0.0/16
+    eu-central-1: 10.12.0.0/16
+    sa-east-1: 10.13.0.0/16
+  subnet_prefix: 20
+  enable_dns_support: true
+  enable_dns_hostnames: true
+  map_public_ip_on_launch: true
 
 ls:
   sort_by: launch_time
@@ -491,7 +509,7 @@ batch_queues:
 batch_create_compute_environment:
   type: MANAGED
   compute_type: SPOT
-  instance_types: [m3, c3, r3]
+  instance_types: [m4, c4, r4]
   min_vcpus: 0
   desired_vcpus: 2
   max_vcpus: 64

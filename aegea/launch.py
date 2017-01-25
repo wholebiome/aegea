@@ -51,7 +51,10 @@ def launch(args):
         config.dns.private_zone = dns_zone.zone["Name"]
     ensure_ssh_key(args.ssh_key_name, verify_pem_file=args.verify_ssh_key_pem_file)
     # TODO: move all account init checks into init helper with region-specific semaphore on s3
-    ensure_log_group("syslog")
+    try:
+        ensure_log_group("syslog")
+    except ClientError:
+        logger.warn("Unable to query or create cloudwatch syslog group. Logs may be undeliverable")
     try:
         i = resolve_instance_id(args.hostname)
         msg = "The hostname {} is being used by {} (state: {})"
@@ -67,6 +70,8 @@ def launch(args):
     else:
         vpc = ensure_vpc()
         subnet = ensure_subnet(vpc)
+    if not subnet.map_public_ip_on_launch:
+        raise AegeaException("Subnets without public IP mapping are not supported")
 
     if args.security_groups:
         security_groups = [resolve_security_group(sg, vpc) for sg in args.security_groups]
@@ -88,10 +93,6 @@ def launch(args):
                        InstanceType=args.instance_type,
                        BlockDeviceMappings=get_bdm(),
                        UserData=get_user_data(**user_data_args))
-    # TODO:
-    # if over 16384, upload to s3://aegea-assets-:ACCOUNT_ID/ec2/user-data/:SHA256
-    # tar -cz path | openssl aes-256-cbc -e -k foobar | aws s3 ...
-    # aws s3 ... | openssl aes-256-cbc -d -k foobar | tar -x -C /
     logger.info("Launch spec user data is %i bytes long", len(launch_spec["UserData"]))
     if args.iam_role:
         instance_profile = ensure_instance_profile(args.iam_role, policies=args.iam_policies)

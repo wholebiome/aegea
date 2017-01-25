@@ -12,6 +12,7 @@ from botocore.utils import parse_to_aware_datetime
 from ... import logger
 from .. import VerboseRepr, paginate
 from ..exceptions import AegeaException
+from ..compat import str
 from . import clients, resources
 
 def get_assume_role_policy_doc(*principals):
@@ -72,11 +73,11 @@ def ensure_vpc():
             break
         else:
             from ... import config
-            logger.info("Creating VPC with CIDR %s", config.vpc.default_cidr)
-            vpc = resources.ec2.create_vpc(CidrBlock=config.vpc.default_cidr)
+            logger.info("Creating VPC with CIDR %s", config.vpc.cidr[ARN.get_region()])
+            vpc = resources.ec2.create_vpc(CidrBlock=config.vpc.cidr[ARN.get_region()])
             clients.ec2.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
-            vpc.modify_attribute(EnableDnsSupport={"Value": True})
-            vpc.modify_attribute(EnableDnsHostnames={"Value": True})
+            vpc.modify_attribute(EnableDnsSupport=dict(Value=config.vpc.enable_dns_support))
+            vpc.modify_attribute(EnableDnsHostnames=dict(Value=config.vpc.enable_dns_hostnames))
     return vpc
 
 def availability_zones():
@@ -87,11 +88,15 @@ def ensure_subnet(vpc):
     for subnet in vpc.subnets.all():
         break
     else:
+        from ipaddress import ip_network
         from ... import config
-        for i, az in enumerate(availability_zones()):
-            logger.info("Creating subnet with CIDR %s in %s", config.vpc.default_subnet_cidrs[i], vpc)
-            subnet = resources.ec2.create_subnet(VpcId=vpc.id, CidrBlock=config.vpc.default_subnet_cidrs[i])
+        subnet_cidrs = ip_network(str(config.vpc.cidr[ARN.get_region()])).subnets(new_prefix=config.vpc.subnet_prefix)
+        for az, subnet_cidr in zip(availability_zones(), subnet_cidrs):
+            logger.info("Creating subnet with CIDR %s in %s, %s", subnet_cidr, vpc, az)
+            subnet = resources.ec2.create_subnet(VpcId=vpc.id, CidrBlock=str(subnet_cidr), AvailabilityZone=az)
             clients.ec2.get_waiter("subnet_available").wait(SubnetIds=[subnet.id])
+            clients.ec2.modify_subnet_attribute(SubnetId=subnet.id,
+                                                MapPublicIpOnLaunch=dict(Value=config.vpc.map_public_ip_on_launch))
     return subnet
 
 def ensure_ingress_rule(security_group, **kwargs):
@@ -118,6 +123,11 @@ def ensure_security_group(name, vpc, tcp_ingress=[dict(port=22, cidr="0.0.0.0/0"
     except (ClientError, KeyError):
         logger.info("Creating security group %s for %s", name, vpc)
         security_group = vpc.create_security_group(GroupName=name, Description=name)
+        for i in range(90):
+            try:
+                clients.ec2.describe_security_groups(GroupIds=[security_group.id])
+            except ClientError:
+                time.sleep(1)
     for rule in tcp_ingress:
         ensure_ingress_rule(security_group, IpProtocol="tcp", FromPort=rule["port"], ToPort=rule["port"],
                             CidrIp=rule["cidr"])

@@ -179,6 +179,8 @@ def ensure_job_definition(args):
         for i, (host_path, guest_path) in enumerate(args.volumes):
             container_props["volumes"].append({"host": {"sourcePath": host_path}, "name": "vol%d" % i})
             container_props["mountPoints"].append({"sourceVolume": "vol%d" % i, "containerPath": guest_path})
+    if args.job_role:
+        container_props.update(jobRoleArn=str(ARN(service="iam", region="", resource="role/" + args.job_role)))
     return clients.batch.register_job_definition(jobDefinitionName=__name__.replace(".", "_"),
                                                  type="container",
                                                  containerProperties=container_props)
@@ -246,6 +248,7 @@ group.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=
 group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
                    type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
 group.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default=[])
+group.add_argument("--job-role", metavar="IAM_ROLE", help="Name of IAM role to grant to the job")
 submit_parser.add_argument("--dry-run", action="store_true", help="Gather arguments and stop short of submitting job")
 
 def terminate(args):
