@@ -78,6 +78,10 @@ def ensure_vpc():
             clients.ec2.get_waiter("vpc_available").wait(VpcIds=[vpc.id])
             vpc.modify_attribute(EnableDnsSupport=dict(Value=config.vpc.enable_dns_support))
             vpc.modify_attribute(EnableDnsHostnames=dict(Value=config.vpc.enable_dns_hostnames))
+            internet_gateway = resources.ec2.create_internet_gateway()
+            vpc.attach_internet_gateway(InternetGatewayId=internet_gateway.id)
+            for route_table in vpc.route_tables.all():
+                route_table.create_route(DestinationCidrBlock="0.0.0.0/0", GatewayId=internet_gateway.id)
     return vpc
 
 def availability_zones():
