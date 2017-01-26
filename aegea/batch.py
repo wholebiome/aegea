@@ -15,11 +15,23 @@ from .util import Timestamp, paginate
 from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.exceptions import AegeaException
 from .util.crypto import ensure_ssh_key
-from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_instance_profile, make_waiter,
-                       ensure_vpc, ensure_security_group, ensure_s3_bucket)
+from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_role, ensure_instance_profile,
+                       make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket)
 from .util.aws.spot import SpotFleetBuilder
 
 bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
+ebs_vol_mgr_shellcode = """iid=$(http http://169.254.169.254/latest/dynamic/instance-identity/document)
+aws configure set default.region $(echo "$iid" | jq -r .region)
+az=$(echo "$iid" | jq -r .availabilityZone)
+vid=$(aws ec2 create-volume --availability-zone $az --size %s --volume-type st1 | jq -r .VolumeId)
+trap "umount /mnt || umount -l /mnt; aws ec2 detach-volume --volume-id $vid; while ! aws ec2 describe-volumes --volume-ids $vid | jq -re .Volumes[0].Attachments==[]; do sleep 1; done; aws ec2 delete-volume --volume-id $vid" EXIT
+while [[ $(aws ec2 describe-volumes --volume-ids $vid | jq -r .Volumes[0].State) != available ]]; do sleep 1; done
+for devnode in /dev/xvd{a..z}; do if [[ ! -e $devnode ]]; then break; fi; done
+aws ec2 attach-volume --instance-id $(echo "$iid" | jq -r .instanceId) --volume-id $vid --device $devnode
+while [[ $(aws ec2 describe-volumes --volume-ids $vid | jq -r .Volumes[0].State) != in-use ]]; do sleep 1; done
+while [[ ! -e $devnode ]]; do sleep 1; done
+mkfs.ext4 $devnode
+mount $devnode %s""" # noqa
 
 def batch(args):
     batch_parser.print_help()
@@ -131,7 +143,12 @@ def get_command_and_env(args):
                  "if [ -f /etc/default/locale ]; then source /etc/default/locale; fi",
                  "set +a",
                  "if [ -f /etc/profile ]; then source /etc/profile; fi",
-                 "set -euo pipefail"]
+                 "set -euxo pipefail"]
+    if args.storage:
+        args.privileged = True
+        args.volumes.append(["/dev", "/dev"])
+        for mountpoint, size_gb in args.storage:
+            shellcode += (ebs_vol_mgr_shellcode % (size_gb, mountpoint)).splitlines()
     if args.execute:
         payload = base64.b64encode(args.execute.read()).decode()
         args.environment.append(dict(name="BATCH_SCRIPT_B64", value=payload))
@@ -179,8 +196,9 @@ def ensure_job_definition(args):
         for i, (host_path, guest_path) in enumerate(args.volumes):
             container_props["volumes"].append({"host": {"sourcePath": host_path}, "name": "vol%d" % i})
             container_props["mountPoints"].append({"sourceVolume": "vol%d" % i, "containerPath": guest_path})
-    if args.job_role:
-        container_props.update(jobRoleArn=str(ARN(service="iam", region="", resource="role/" + args.job_role)))
+    iam_role = ensure_iam_role(args.job_role, trust=["ecs-tasks"],
+                               policies=["AmazonEC2FullAccess", "AmazonDynamoDBFullAccess", "AmazonS3FullAccess"])
+    container_props.update(jobRoleArn=iam_role.arn)
     return clients.batch.register_job_definition(jobDefinitionName=__name__.replace(".", "_"),
                                                  type="container",
                                                  containerProperties=container_props)
@@ -194,9 +212,9 @@ def ensure_queue(name):
         return create_queue(cq_args)
 
 def submit(args):
+    command, environment = get_command_and_env(args)
     if args.job_definition_arn is None:
         args.job_definition_arn = ensure_job_definition(args)["jobDefinitionArn"]
-    command, environment = get_command_and_env(args)
     submit_args = dict(jobName=args.name,
                        jobQueue=args.queue,
                        dependsOn=[dict(jobId=dep) for dep in args.depends_on],
@@ -248,7 +266,9 @@ group.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=
 group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
                    type=lambda x: dict(zip(["name", "value"], x.split("=", 1))), default=[])
 group.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default=[])
-group.add_argument("--job-role", metavar="IAM_ROLE", help="Name of IAM role to grant to the job")
+group.add_argument("--job-role", metavar="IAM_ROLE", default=__name__ + ".worker",
+                   help="Name of IAM role to grant to the job")
+group.add_argument("--storage", nargs="+", metavar="MOUNTPOINT=SIZE_GB", type=lambda x: x.split("=", 1), default=[])
 submit_parser.add_argument("--dry-run", action="store_true", help="Gather arguments and stop short of submitting job")
 
 def terminate(args):
@@ -324,8 +344,8 @@ def watch(args):
             last_status = job_desc["status"]
         if job_desc["status"] in {"RUNNING", "SUCCEEDED", "FAILED"}:
             get_logs(get_logs_args)
-        if "reason" in job_desc.get("container", {}):
-            logger.info("Job %s: %s", args.job_id, job_desc["container"]["reason"])
+        if "statusReason" in job_desc:
+            logger.info("Job %s: %s", args.job_id, job_desc["statusReason"])
 
 watch_parser = register_parser(watch, parent=batch_parser, help="Monitor a running Batch job and stream its logs")
 watch_parser.add_argument("job_id")
