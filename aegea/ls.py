@@ -10,10 +10,17 @@ from .util.printing import page_output, tabulate, GREEN, BLUE
 from .util.aws import ARN, resolve_instance_id, resources, clients
 from .util.compat import timestamp
 
+def column_completer(parser, **kwargs):
+    from aegea.util.aws import resources
+    resource = getattr(resources, parser.get_default("resource"))
+    subresource = getattr(resource, parser.get_default("subresource"))
+    return [attr for attr in dir(subresource("")) if not attr.startswith("_")]
+
 def register_listing_parser(function, **kwargs):
     col_def = dict(default=kwargs.pop("column_defaults")) if "column_defaults" in kwargs else {}
     parser = register_parser(function, **kwargs)
-    parser.add_argument("-c", "--columns", nargs="+", help="Names of columns to print", **col_def)
+    col_arg = parser.add_argument("-c", "--columns", nargs="+", help="Names of columns to print", **col_def)
+    col_arg.completer = column_completer
     return parser
 
 def register_filtering_parser(function, **kwargs):

@@ -22,7 +22,7 @@ setup(
     install_requires=[
         "setuptools",
         "boto3 >= 1.4.2, < 2",
-        "argcomplete >= 1.7.0, < 2",
+        "argcomplete >= 1.8.2, < 2",
         "paramiko >= 2.1.1, < 3",
         "requests >= 2.12.4, < 3",
         "tweak >= 0.4.0, < 1",

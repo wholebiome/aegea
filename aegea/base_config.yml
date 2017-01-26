@@ -197,6 +197,8 @@ vpc:
   map_public_ip_on_launch: true
 
 ls:
+  resource: ec2
+  subresource: Instance
   sort_by: launch_time
   columns:
     - id
@@ -210,6 +212,8 @@ ls:
     - security_groups
 
 users:
+  resource: iam
+  subresource: User
   columns:
     - cur
     - name
@@ -220,6 +224,8 @@ users:
     - policies
 
 groups:
+  resource: iam
+  subresource: Group
   columns:
     - name
     - group_id
@@ -228,6 +234,8 @@ groups:
     - policies
 
 roles:
+  resource: iam
+  subresource: Role
   columns:
     - name
     - role_id
@@ -236,6 +244,8 @@ roles:
     - policies
 
 policies:
+  resource: iam
+  subresource: Policy
   columns:
     - policy_name
     - arn
@@ -246,6 +256,8 @@ policies:
   sort_by: attachment_count
 
 ebs_ls:
+  resource: ec2
+  subresource: Volume
   columns:
     - id
     - size
@@ -259,6 +271,8 @@ ebs_ls:
     - tags
 
 ebs_snapshots:
+  resource: ec2
+  subresource: Snapshot
   columns:
     - id
     - description
@@ -272,11 +286,15 @@ ebs_snapshots:
     - tags
 
 buckets_ls:
+  resource: s3
+  subresource: Bucket
   columns:
     - name
     - creation_date
 
 images:
+  resource: ec2
+  subresource: Image
   columns:
     - id
     - name
@@ -289,6 +307,8 @@ images:
   sort_by: creation_date
 
 security_groups:
+  resource: ec2
+  subresource: SecurityGroup
   columns:
     - id
     - group_name
@@ -299,6 +319,8 @@ security_groups:
     - peer_description
 
 acls:
+  resource: ec2
+  subresource: NetworkAcl
   columns:
     - id
     - associations
@@ -359,6 +381,8 @@ sfrs:
   sort_by: CreateTime
 
 subnets:
+  resource: ec2
+  subresource: Subnet
   columns:
     - id
     - vpc_id
@@ -370,6 +394,8 @@ subnets:
     - tags
 
 tables:
+  resource: dynamodb
+  subresource: Table
   columns:
     - name
     - key_schema
