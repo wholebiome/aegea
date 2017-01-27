@@ -6,7 +6,7 @@ from collections import OrderedDict
 from botocore.exceptions import ClientError
 
 from . import register_parser, logger, config, __version__
-from .util.aws import ARN, clients, resources, expect_error_codes
+from .util.aws import ARN, clients, resources, expect_error_codes, ensure_iam_role
 from .util.cloudinit import get_bootstrap_files, encode_cloud_config_payload
 from .util.crypto import ensure_ssh_key, new_ssh_key, add_ssh_host_key_to_known_hosts, get_ssh_key_filename
 from .batch import submit, submit_parser, bash_cmd_preamble
@@ -66,7 +66,8 @@ def ensure_ecr_repo(name):
         expect_error_codes(e, "RepositoryAlreadyExistsException")
 
 def build_docker_image(args):
-    args.tags += ["AegeaVersion={}".format(__version__)]
+    args.tags += ["AegeaVersion={}".format(__version__),
+                  'description="Built by {} for {}"'.format(__name__, resources.iam.CurrentUser().user.name)]
     ensure_ecr_repo(args.name)
     submit_args = submit_parser.parse_args([
         "--command",
@@ -94,15 +95,17 @@ def build_docker_image(args):
         dict(name="AWS_DEFAULT_REGION", value=ARN.get_region()),
         dict(name="AWS_ACCOUNT_ID", value=ARN.get_account_id())
     ]
+    builder_iam_role = ensure_iam_role(__name__, trust=["ecs-tasks"], policies=args.builder_iam_policies)
+    submit_args.job_role = builder_iam_role.name
     job = submit(submit_args)
-    #description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
-    #volumes
     return dict(job=job)
 
 parser = register_parser(build_docker_image, help="Build an Elastic Container Registry Docker image")
 parser.add_argument("name")
 # Using 14.04 here to prevent "client version exceeds server version" error because ECS host docker is too old
 parser.add_argument("--builder-image", default="ubuntu:14.04", help=argparse.SUPPRESS)
+parser.add_argument("--builder-iam-policies", nargs="+",
+                    default=["AmazonEC2FullAccess", "AmazonS3FullAccess", "AmazonEC2ContainerRegistryPowerUser"])
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help="Tag resulting image with these tags")
 parser.add_argument("--cloud-config-data", type=json.loads)
 parser.add_argument("--dockerfile")
