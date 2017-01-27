@@ -16,7 +16,8 @@ build_ami:
       - csh
       - python-scipy
       - python-biom-format
+      - prodigal
       # TODO: libmotif4
   commands:
     $extend:
-      - "echo"
+      - "pip install MicrobeCensus"
