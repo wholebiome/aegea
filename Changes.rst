@@ -1,3 +1,27 @@
+Changes for v1.7.4 (2017-01-26)
+===============================
+
+-  aegea batch: automatic setup of builder IAM policies
+
+-  aegea batch submit --job-role: automatic setup of job IAM roles
+
+-  aegea batch submit --storage: EBS volume manager
+
+-  Autocomplete column titles in listing subcommands where a resource is
+   available
+
+-  Autoconfigure a VPC if all VPCs including the default VPC were
+   deleted
+
+-  Asset loader: offload rootfs.skel to S3 when user-data exceeds 16K
+   limit
+
+-  Arvados updates
+
+-  Make missions dir doc link relative (#9)
+
+-  Display statusReason in aegea batch ls and aegea batch watch
+
 Changes for v1.7.3 (2017-01-18)
 ===============================
 
