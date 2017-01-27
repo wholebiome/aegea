@@ -11,7 +11,6 @@ from .util.aws import ARN, resolve_instance_id, resources, clients
 from .util.compat import timestamp
 
 def column_completer(parser, **kwargs):
-    from aegea.util.aws import resources
     resource = getattr(resources, parser.get_default("resource"))
     subresource = getattr(resource, parser.get_default("subresource"))
     return [attr for attr in dir(subresource("")) if not attr.startswith("_")]
