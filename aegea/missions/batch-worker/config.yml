@@ -1,0 +1,4 @@
+build_ami:
+  commands:
+    $extend:
+      - "ln -s /lib/systemd/system/ecs.service /etc/systemd/system/multi-user.target.wants"

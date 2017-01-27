@@ -16,7 +16,7 @@ from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.exceptions import AegeaException
 from .util.crypto import ensure_ssh_key
 from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_role, ensure_instance_profile,
-                       make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket)
+                       make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket, ensure_log_group)
 from .util.aws.spot import SpotFleetBuilder
 
 bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
@@ -212,6 +212,8 @@ def ensure_queue(name):
         return create_queue(cq_args)
 
 def submit(args):
+    ensure_log_group("docker")
+    ensure_log_group("syslog")
     command, environment = get_command_and_env(args)
     if args.job_definition_arn is None:
         args.job_definition_arn = ensure_job_definition(args)["jobDefinitionArn"]

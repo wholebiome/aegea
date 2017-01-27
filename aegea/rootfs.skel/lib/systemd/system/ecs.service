@@ -6,11 +6,12 @@ Requires=docker.service
 [Service]
 TimeoutStartSec=0
 Restart=always
-ExecStartPre=mkdir -p /var/log/ecs /etc/ecs /var/lib/ecs/data
-ExecStartPre=sysctl -w net.ipv4.conf.all.route_localnet=1
-ExecStartPre=iptables -t nat -A PREROUTING -p tcp -d 169.254.170.2 --dport 80 -j DNAT --to-destination 127.0.0.1:51679
-ExecStartPre=iptables -t nat -A OUTPUT -d 169.254.170.2 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 51679
-ExecStart=/usr/bin/docker run --name ecs-agent \
+ExecStartPre=/usr/bin/env mkdir -p /var/log/ecs /etc/ecs /var/lib/ecs/data
+ExecStartPre=/usr/bin/env sysctl -w net.ipv4.conf.all.route_localnet=1
+ExecStartPre=/usr/bin/env iptables -t nat -A PREROUTING -p tcp -d 169.254.170.2 --dport 80 -j DNAT --to-destination 127.0.0.1:51679
+ExecStartPre=/usr/bin/env iptables -t nat -A OUTPUT -d 169.254.170.2 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 51679
+ExecStartPre=/usr/bin/env docker rm ecs-agent
+ExecStart=/usr/bin/env docker run --name ecs-agent \
     --detach=true \
     --restart=on-failure:10 \
     --volume=/var/run/docker.sock:/var/run/docker.sock \
