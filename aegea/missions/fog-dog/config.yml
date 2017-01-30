@@ -13,7 +13,6 @@ build_ami:
       - flex
       - bison
       - bison-doc
-      - csh
       - python-scipy
       - python-biom-format
       - prodigal
@@ -21,3 +20,9 @@ build_ami:
   commands:
     $extend:
       - "pip install MicrobeCensus"
+      - "git clone --depth 1 https://github.com/Koonkie/MetaPathways_Python_Koonkie.3.0.git /opt/metapathways"
+      - "cd /opt/metapathways; git submodule update --init executables/source/trnascan; make executables/linux executables/linux/trnascan-1.4"
+      - "cd /opt/metapathways; git submodule update --init executables/source/FAST; make -j executables/linux executables/linux/fastal"
+      - "cd /opt/metapathways/executables/linux; for i in blast{n,p} bwa makeblastdb prodigal; do ln -s /usr/bin/$i; done"
+      - "cd /opt/metapathways; git clone https://github.com/kishori82/MetaPathways_rpkm executables/source/rpkm; make executables/linux executables/linux/rpkm"
+      - "sed -i 's|/home/sgeadmin/Koonkie/MetaPathways_Python_Koonkie.3.0|/opt/metapathways|g' regtests/template_config.txt"
