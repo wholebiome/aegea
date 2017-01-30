@@ -2,6 +2,8 @@ build_ami:
   base_ami_product: com.ubuntu.cloud:server:16.04:amd64
   rootfs_skel_dirs:
     $append: rootfs.skel
+
+build_image:
   packages:
     $extend:
       - bwa

@@ -4,8 +4,8 @@
 # colon-delimited variable AEGEA_CONFIG_FILE, and command-line options. See
 # https://github.com/kislyuk/aegea#configuration-management for more information.
 
-# The contents of build_image (such as build_image.commands) get added to the configuration for both build_docker_image
-# and build_ami.
+# The contents of arrays in build_image (such as build_image.commands) get added to the configuration for both
+# build_docker_image and build_ami.
 build_image:
   commands:
     - "pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.4.3 awscli==1.11.44 dynamoq==0.0.5 tractorbeam==0.1.3"
@@ -76,7 +76,7 @@ build_docker_image:
   rootfs_skel_dirs:
     - auto
   commands:
-    - "echo"
+    - "echo aegea docker image builder"
   packages:
     - bsdtar
   cloud_config_data: {}
