@@ -34,9 +34,9 @@ Aegea supports ingesting configuration from a configurable array of sources. Eac
 Configuration sources that follow the first source update the configuration using recursive dictionary merging. Sources are
 enumerated in the following order (i.e., in order of increasing priority):
 
-- Site-wide configuration source, ``/etc/NAME/config.(yml|json)``
-- User configuration source, ``~/.config/NAME/config.(yml|json)``
-- Any sources listed in the colon-delimited variable ``NAME_CONFIG_FILE``
+- Site-wide configuration source, ``/etc/aegea/config.yml``
+- User configuration source, ``~/.config/aegea/config.yml``
+- Any sources listed in the colon-delimited variable ``AEGEA_CONFIG_FILE``
 - Command line options
 
 **Array merge operators**: When loading a chain of configuration sources, Aegea uses recursive dictionary merging to

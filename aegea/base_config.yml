@@ -1,14 +1,14 @@
-# This config file (aegea/default_config.yml) is written to each
-# user's home directory under the path ~/.config/aegea/config.yml if
-# that path is not present. Run any aegea command to cause this to
-# happen.  Once the file is written, you can modify it with your site
-# or user-specific settings.
-build_docker_image:
-  base_image: ubuntu:16.04
-  rootfs_skel_dirs:
-    - auto
+# This configuration file (aegea/base_config.yml) is the source of configuration defaults for aegea. In order of
+# increasing precedence, configuration is ingested from this file, the site-wide config file /etc/aegea/config.yml, the
+# user config file ~/.config/aegea/config.yml (created the first time aegea runs), any files listed in the
+# colon-delimited variable AEGEA_CONFIG_FILE, and command-line options. See
+# https://github.com/kislyuk/aegea#configuration-management for more information.
+
+# The contents of build_image (such as build_image.commands) get added to the configuration for both build_docker_image
+# and build_ami.
+build_image:
   commands:
-    - "pip install awscli-cwlogs==1.4.0 boto3==1.4.3 awscli==1.11.36 dynamoq tractorbeam"
+    - "pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.4.3 awscli==1.11.44 dynamoq==0.0.5 tractorbeam==0.1.3"
   packages:
     - language-pack-en
     - iptables-persistent
@@ -43,11 +43,15 @@ build_docker_image:
     - python-setuptools
     - python-wheel
     - python-virtualenv
+    - python-requests
+    - python-yaml
     - python3-dev
     - python3-cffi
     - python3-pip
     - python3-setuptools
     - python3-wheel
+    - python3-requests
+    - python3-yaml
     - nfs-common
     - unzip
     - build-essential
@@ -62,14 +66,19 @@ build_docker_image:
     - sqlite3
     - stunnel
     - moreutils
-    - python-requests
-    - python-yaml
-    - python-lockfile
-    - python-pyparsing
     - curl
     - wget
     - git
     - aria2
+
+build_docker_image:
+  base_image: ubuntu:16.04
+  rootfs_skel_dirs:
+    - auto
+  commands:
+    - "echo"
+  packages:
+    - bsdtar
   cloud_config_data: {}
 
 build_ami:
@@ -78,68 +87,16 @@ build_ami:
   rootfs_skel_dirs:
     - auto
   packages:
-    - language-pack-en
-    - iptables-persistent
-    - debian-goodies
-    - bridge-utils
     - squid-deb-proxy
-    - pixz
-    - cryptsetup-bin
-    - mdadm
-    - btrfs-tools
-    - libffi-dev
-    - libssl-dev
-    - libxml2-dev
-    - libxslt1-dev
-    - libyaml-dev
-    - libcurl4-openssl-dev
     - libhdf5-dev
-    - libjemalloc-dev
-    - libzip-dev
-    - libsnappy-dev
-    - liblz4-dev
     - libboost-dev
-    - libgmp-dev
-    - libmpfr-dev
-    - libhts-dev
-    - libsqlite3-dev
-    - htop
-    - pydf
-    - jq
-    - httpie
-    - python-dev
-    - python-cffi
-    - python-pip
-    - python-setuptools
-    - python-wheel
-    - python-virtualenv
-    - python3-dev
-    - python3-cffi
-    - python3-pip
-    - python3-setuptools
-    - python3-wheel
-    - nfs-common
     - fail2ban
     - emacs24-nox
     - byobu
     - keychain
     - colordiff
     - cgmanager-utils
-    - unzip
     - nmap
-    - build-essential
-    - cmake
-    - libtool
-    - autoconf
-    - ruby
-    - sysstat
-    - dstat
-    - numactl
-    - gdebi-core
-    - sqlite3
-    - stunnel
-    - moreutils
-    - aria2
   commands:
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
@@ -164,18 +121,15 @@ build_ami:
 #        filename: arvados.list
 #        keyid: 1078ECD7
 
-# Name your Route 53 private DNS zone here. If you leave the value as
-# null, Aegea will enumerate the private DNS zones in your account,
-# and if only one exists, select and use that one. Otherwise, Aegea
-# will create and use a new private zone, "aegea."
+# Name your Route 53 private DNS zone here. If you leave the value as null, Aegea will enumerate the private DNS zones
+# in your account, and if only one exists, select and use that one. Otherwise, Aegea will create and use a new private
+# zone, "aegea."
 dns:
   private_zone: null
 
-# The CIDR and subnet prefix configuration here is only used by aegea
-# when a default VPC is not found in your account in a given region
-# that you have logged in to. AWS automatically creates a default VPC
-# the first time you access a region. That VPC always has CIDR
-# 172.31.0.0/16 with /20 subnets.
+# The CIDR and subnet prefix configuration here is only used by aegea when a default VPC is not found in your account in
+# a given region that you have logged in to. AWS automatically creates a default VPC the first time you access a
+# region. That VPC always has CIDR 172.31.0.0/16 with /20 subnets.
 vpc:
   cidr:
     us-east-1: 10.0.0.0/16

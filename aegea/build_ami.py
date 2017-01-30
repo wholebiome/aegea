@@ -3,13 +3,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys, json, time, base64
 from io import open
 
-from . import register_parser, logger, __version__
+from . import register_parser, logger, config, __version__
 from .util.aws import locate_ami, add_tags, get_bdm, resolve_instance_id, resources, clients
 from .util.crypto import get_ssh_key_filename
 from .util.printing import GREEN
 from .launch import launch, parser as launch_parser
 
 def build_ami(args):
+    for key, value in config.build_image.items():
+        getattr(args, key).extend(value)
     from .util.ssh import AegeaSSHClient
     ssh_key_filename = get_ssh_key_filename(args, base_name=__name__)
     if args.snapshot_existing_host:

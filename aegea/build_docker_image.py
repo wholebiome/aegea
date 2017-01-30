@@ -66,6 +66,8 @@ def ensure_ecr_repo(name):
         expect_error_codes(e, "RepositoryAlreadyExistsException")
 
 def build_docker_image(args):
+    for key, value in config.build_image.items():
+        getattr(args, key).extend(value)
     args.tags += ["AegeaVersion={}".format(__version__),
                   'description="Built by {} for {}"'.format(__name__, resources.iam.CurrentUser().user.name)]
     ensure_ecr_repo(args.name)
