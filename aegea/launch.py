@@ -78,7 +78,7 @@ def launch(args):
     else:
         security_groups = [ensure_security_group(__name__, vpc)]
 
-    ssh_host_key, iam_username = new_ssh_key(), None
+    ssh_host_key, iam_username = new_ssh_key(), "root"
     try:
         iam_username = resources.iam.CurrentUser().user.name
     except ClientError:
@@ -150,7 +150,7 @@ def launch(args):
     instance.wait_until_running()
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
     tags = dict(tag.split("=", 1) for tag in args.tags)
-    add_tags(instance, Name=args.hostname, Owner=resources.iam.CurrentUser().user.name,
+    add_tags(instance, Name=args.hostname, Owner=iam_username,
              SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:],
              OwnerSSHKeyName=args.ssh_key_name, **tags)
     if args.use_dns:
