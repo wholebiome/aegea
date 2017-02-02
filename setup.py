@@ -10,7 +10,7 @@ try:
     assert available_setuptools_version >= required_setuptools_version
 except (ImportError, AssertionError):
     msg = 'Error: Aegea failed to install because your version of setuptools is too old ({}; {} is required). Run "make install_venv" to install aegea in its own virtualenv, or upgrade your pip and setuptools to their latest versions.' # noqa
-    msg = msg.format(available_setuptools_version, required_setuptools_version)
+    msg = msg.format(setuptools.__version__, "20")
     exit(textwrap.fill(msg))
 
 try:
