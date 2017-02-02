@@ -1,3 +1,10 @@
+Changes for v1.8.0 (2017-02-01)
+===============================
+
+-  Installation documentation and robustness improvements
+
+-  Batch API and mission-specific improvements
+
 Changes for v1.7.4 (2017-01-26)
 ===============================
 
