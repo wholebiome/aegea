@@ -7,7 +7,7 @@ For help with individual commands, run ``aegea <command> --help``.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, logging, shutil, json, datetime, traceback, errno
+import os, sys, argparse, logging, shutil, json, datetime, traceback, errno, warnings
 from textwrap import fill
 import tweak
 from botocore.exceptions import NoRegionError
@@ -20,10 +20,14 @@ except Exception:
     __version__ = "0.0.0"
 
 if sys.version_info < (2, 7, 9): # See https://urllib3.readthedocs.io/en/latest/advanced-usage.html#sni-warning
-    import botocore.vendored.requests.packages.urllib3.contrib.pyopenssl as p
-    p.inject_into_urllib3()
-    import requests.packages.urllib3.contrib.pyopenssl as p
-    p.inject_into_urllib3()
+    try:
+        import botocore.vendored.requests.packages.urllib3.contrib.pyopenssl as p
+        p.inject_into_urllib3()
+        import requests.packages.urllib3.contrib.pyopenssl as p
+        p.inject_into_urllib3()
+    except ImportError:
+        msg = 'Your Python version is too old to support TLS SNI. Run "pip install pyopenssl ndg-httpsclient" to avoid connection issues.' # noqa
+        warnings.warn(msg)
 
 logger = logging.getLogger(__name__)
 
