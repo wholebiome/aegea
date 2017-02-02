@@ -10,20 +10,22 @@ Installation
 Run ``make install`` in this directory to install Aegea. Before you do this, you will also need to install some system
 library dependencies:
 
-+--------------+---------+-----------------------------------------------------------------------------------------+
-| OS           | Python  | Command                                                                                 |
-+==============+=========+=========================================================================================+
-| Ubuntu       | Python 2| apt-get update; apt-get install python-dev python-cffi libffi-dev libssl-dev moreutils  |
-+--------------+---------+-----------------------------------------------------------------------------------------+
-| Ubuntu       | Python 3| apt-get update; apt-get install python3-dev python3-cffi libffi-dev libssl-dev moreutils|
-+--------------+---------+-----------------------------------------------------------------------------------------+
-| Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel moreutils                            |
-+--------------+---------+-----------------------------------------------------------------------------------------+
-| Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel moreutils                          |
-+--------------+---------+-----------------------------------------------------------------------------------------+
-| OS X         |         | `Install Homebrew <http://brew.sh/>`_. Run                                              |
-|              |         | ``brew install openssl moreutils && brew link --force openssl``.                        |
-+--------------+---------+-----------------------------------------------------------------------------------------+
++--------------+---------+--------------------------------------------------------------------------------------------------+
+| OS           | Python  | Command                                                                                          |
++==============+=========+==================================================================================================+
+| Ubuntu       | Python 2| apt-get update;                                                                                  |
+|              |         | apt-get install build-essential python-pip python-dev python-cffi libffi-dev libssl-dev moreutils|
++--------------+---------+--------------------------------------------------------------------------------------------------+
+| Ubuntu       | Python 3| apt-get update;                                                                                  |
+|              |         | apt-get install build-essential python3-{pip,dev,cffi} libffi-dev libssl-dev moreutils           |
++--------------+---------+--------------------------------------------------------------------------------------------------+
+| Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel moreutils                                     |
++--------------+---------+--------------------------------------------------------------------------------------------------+
+| Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel moreutils                                   |
++--------------+---------+--------------------------------------------------------------------------------------------------+
+| OS X         |         | `Install Homebrew <http://brew.sh/>`_. Run                                                       |
+|              |         | ``brew install openssl moreutils && brew link --force openssl``.                                 |
++--------------+---------+--------------------------------------------------------------------------------------------------+
 
 Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access credentials that will be used by the
 ``aws`` and ``aegea`` commands. You can create a new IAM key at https://console.aws.amazon.com/iam/home#/users.
