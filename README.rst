@@ -13,9 +13,9 @@ library dependencies:
 +--------------+---------+-----------------------------------------------------------------------------------------+
 | OS           | Python  | Command                                                                                 |
 +==============+=========+=========================================================================================+
-| Ubuntu       | Python 2| apt-get install python-dev python-cffi libssl-dev moreutils                             |
+| Ubuntu       | Python 2| apt-get update; apt-get install python-dev python-cffi libffi-dev libssl-dev moreutils  |
 +--------------+---------+-----------------------------------------------------------------------------------------+
-| Ubuntu       | Python 3| apt-get install python3-dev python3-cffi libssl-dev moreutils                           |
+| Ubuntu       | Python 3| apt-get update; apt-get install python3-dev python3-cffi libffi-dev libssl-dev moreutils|
 +--------------+---------+-----------------------------------------------------------------------------------------+
 | Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel moreutils                            |
 +--------------+---------+-----------------------------------------------------------------------------------------+
