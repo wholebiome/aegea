@@ -1,3 +1,8 @@
+Changes for v1.8.3 (2017-02-01)
+===============================
+
+-  Don't symlink aegea in bin to avoid pip uninstall bugs
+
 Changes for v1.8.2 (2017-02-01)
 ===============================
 
