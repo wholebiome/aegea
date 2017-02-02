@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
-import os, sys, glob, subprocess
+import os, sys, glob, subprocess, textwrap
 
 try:
     import setuptools, packaging.version
     assert packaging.version.parse(setuptools.__version__) > packaging.version.parse("19")
 except (ImportError, AssertionError):
-    exit("Please install a recent version of pip using the instructions at https://pip.pypa.io/en/stable/installing")
+    msg = 'Error: Aegea failed to install because your version of setuptools is too old. Run "make install_venv" to install aegea in its own virtualenv, or upgrade your pip and setuptools to their latest versions.' # noqa
+    exit(textwrap.fill(msg))
 
 try:
     # Git version extraction logic designed to be compatible with both semver and PEP 440
