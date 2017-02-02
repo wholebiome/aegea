@@ -30,9 +30,19 @@ install: clean
 	python ./setup.py bdist_wheel
 	pip install --upgrade dist/*.whl
 
+install_venv: clean
+	virtualenv --prompt aegea .venv
+	source .venv/bin/activate; pip install --upgrade pip setuptools wheel
+	source .venv/bin/activate; python ./setup.py bdist_wheel
+	source .venv/bin/activate; pip install --upgrade dist/*.whl
+	for s in $$(pwd)/.venv/bin/aegea*; do ln -sf $$s /usr/local/bin || echo "Unable to link to $$s in /usr/local/bin"; done
+	-mkdir -p ~/bin
+	for s in $$(pwd)/.venv/bin/aegea*; do ln -sf $$s ~/bin || echo "Unable to link to $$s in ~/bin; run \". $$(pwd)/.venv/bin/activate\" to activate the aegea installation"; done
+
 clean:
 	-rm -rf build dist
 	-rm -rf *.egg-info
+	-rm -rf .venv
 
 .PHONY: wheel lint test test_deps docs install clean
 
