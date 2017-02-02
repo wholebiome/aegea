@@ -3,15 +3,11 @@
 import os, sys, glob, subprocess, textwrap
 
 try:
-    required_setuptools_version, available_setuptools_version = None, None
-    import setuptools, packaging.version
-    required_setuptools_version = packaging.version.parse("20")
-    available_setuptools_version = packaging.version.parse(setuptools.__version__)
-    assert available_setuptools_version >= required_setuptools_version
+    import setuptools
+    assert int(setuptools.__version__.split(".", 1)[0]) >= 19
 except (ImportError, AssertionError):
-    msg = 'Error: Aegea failed to install because your version of setuptools is too old ({}; {} is required). Run "make install_venv" to install aegea in its own virtualenv, or upgrade your pip and setuptools to their latest versions.' # noqa
-    msg = msg.format(setuptools.__version__, "20")
-    exit(textwrap.fill(msg))
+    msg = 'Error: Aegea failed to install because your version of setuptools is too old ({}; 19 is required). Run "make install_venv" to install aegea in its own virtualenv, or upgrade your pip and setuptools to their latest versions.' # noqa
+    exit(textwrap.fill(msg.format(setuptools.__version__)))
 
 try:
     # Git version extraction logic designed to be compatible with both semver and PEP 440
