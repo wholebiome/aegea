@@ -1,3 +1,10 @@
+Changes for v1.8.4 (2017-02-02)
+===============================
+
+-  Install process robustness improvements
+
+-  Install documentation improvements
+
 Changes for v1.8.3 (2017-02-01)
 ===============================
 
