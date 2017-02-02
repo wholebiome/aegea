@@ -30,6 +30,13 @@ library dependencies:
 Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access credentials that will be used by the
 ``aws`` and ``aegea`` commands. You can create a new IAM key at https://console.aws.amazon.com/iam/home#/users.
 
+**Ubuntu 12.04**: Use ``pip install cffi`` instead of ``apt-get install python-cffi``. Update your Python packaging utilities:
+``for p in six setuptools packaging pip setuptools; do pip install --upgrade $p; hash -r; done``.
+
+**No root access; user-local install**: Use ``make install_venv`` to install aegea in its own virtualenv. The last line of the 
+output shows how to activate the virtualenv. The version of virtualenv packaged in Ubuntu 12.04 is too old; use
+``pip install --upgrade --user virtualenv`` to upgrade it.
+
 Configuration management
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Aegea supports ingesting configuration from a configurable array of sources. Each source is a JSON or YAML file.
