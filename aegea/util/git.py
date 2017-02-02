@@ -7,7 +7,7 @@ class GitHub:
     @classmethod
     def session(cls):
         if cls._session is None:
-            import github3
+            from ..packages import github3
             try:
                 cls._session = github3.login(token=os.environ["GH_AUTH"])
             except Exception:
