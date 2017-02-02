@@ -7,7 +7,7 @@ functionality of the `AWS CLI <https://aws.amazon.com/cli/>`_.
 
 Installation
 ~~~~~~~~~~~~
-Run ``pip install .`` in this directory to install Aegea. Before you do this, you will also need to install some system
+Run ``make install`` in this directory to install Aegea. Before you do this, you will also need to install some system
 library dependencies:
 
 +--------------+---------+-----------------------------------------------------------------------------------------+
