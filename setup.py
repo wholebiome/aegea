@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
 import os, sys, glob, subprocess
-from setuptools import setup, find_packages
+
+try:
+    import setuptools, packaging.version
+    assert packaging.version.parse(setuptools.__version__) > packaging.version.parse("19")
+except (ImportError, AssertionError):
+    exit("Please install a recent version of pip using the instructions at https://pip.pypa.io/en/stable/installing")
 
 try:
     # Git version extraction logic designed to be compatible with both semver and PEP 440
@@ -10,7 +15,7 @@ try:
 except:
     version = "0.0.0"
 
-setup(
+setuptools.setup(
     name="aegea",
     version=version,
     url="https://github.com/kislyuk/aegea",
@@ -20,7 +25,6 @@ setup(
     description="Amazon Web Services Operator Interface",
     long_description=open("README.rst").read(),
     install_requires=[
-        "setuptools",
         "boto3 >= 1.4.2, < 2",
         "argcomplete >= 1.8.2, < 2",
         "paramiko >= 2.1.1, < 3",
@@ -49,7 +53,7 @@ setup(
         "coverage",
         "flake8"
     ],
-    packages=find_packages(exclude=["test"]),
+    packages=setuptools.find_packages(exclude=["test"]),
     scripts=glob.glob("scripts/*"),
     platforms=["MacOS X", "Posix"],
     test_suite="test",
