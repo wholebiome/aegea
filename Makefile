@@ -31,8 +31,10 @@ install: clean
 	pip install --upgrade dist/*.whl
 
 install_venv: clean
-	virtualenv --prompt aegea .venv
-	source .venv/bin/activate; pip install --upgrade pip setuptools wheel
+	virtualenv --prompt "(aegea-venv) " .venv
+	source .venv/bin/activate; pip install --upgrade pip
+	source .venv/bin/activate; pip install --upgrade setuptools
+	source .venv/bin/activate; pip install --upgrade wheel
 	source .venv/bin/activate; python ./setup.py bdist_wheel
 	source .venv/bin/activate; pip install --upgrade dist/*.whl
 	@echo "Run \". $$(pwd)/.venv/bin/activate\" to activate the aegea installation"
