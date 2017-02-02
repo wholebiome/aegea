@@ -35,9 +35,7 @@ install_venv: clean
 	source .venv/bin/activate; pip install --upgrade pip setuptools wheel
 	source .venv/bin/activate; python ./setup.py bdist_wheel
 	source .venv/bin/activate; pip install --upgrade dist/*.whl
-	for s in $$(pwd)/.venv/bin/aegea*; do ln -sf $$s /usr/local/bin || echo "Unable to link to $$s in /usr/local/bin"; done
-	-mkdir -p ~/bin
-	for s in $$(pwd)/.venv/bin/aegea*; do ln -sf $$s ~/bin || echo "Unable to link to $$s in ~/bin; run \". $$(pwd)/.venv/bin/activate\" to activate the aegea installation"; done
+	@echo "Run \". $$(pwd)/.venv/bin/activate\" to activate the aegea installation"
 
 clean:
 	-rm -rf build dist
