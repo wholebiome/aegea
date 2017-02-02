@@ -18,10 +18,14 @@ from . import register_parser
 from .util.aws import resolve_instance_id, resources
 from .util.crypto import add_ssh_host_key_to_known_hosts
 from .util.printing import BOLD
+from .util.exceptions import AegeaException
 
 def ssh(args):
     prefix, at, name = args.name.rpartition("@")
     instance = resources.ec2.Instance(resolve_instance_id(name))
+    if not instance.public_dns_name:
+        msg = "Unable to resolve public DNS name for {} (state: {})"
+        raise AegeaException(msg.format(instance, getattr(instance, "state", {}).get("Name")))
     tags = {tag["Key"]: tag["Value"] for tag in instance.tags or []}
     ssh_host_key = tags.get("SSHHostPublicKeyPart1", "") + tags.get("SSHHostPublicKeyPart2", "")
     if ssh_host_key:
