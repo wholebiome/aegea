@@ -3,10 +3,14 @@
 import os, sys, glob, subprocess, textwrap
 
 try:
+    required_setuptools_version, available_setuptools_version = None, None
     import setuptools, packaging.version
-    assert packaging.version.parse(setuptools.__version__) > packaging.version.parse("19")
+    required_setuptools_version = packaging.version.parse("20")
+    available_setuptools_version = packaging.version.parse(setuptools.__version__)
+    assert available_setuptools_version >= required_setuptools_version
 except (ImportError, AssertionError):
-    msg = 'Error: Aegea failed to install because your version of setuptools is too old. Run "make install_venv" to install aegea in its own virtualenv, or upgrade your pip and setuptools to their latest versions.' # noqa
+    msg = 'Error: Aegea failed to install because your version of setuptools is too old ({}; {} is required). Run "make install_venv" to install aegea in its own virtualenv, or upgrade your pip and setuptools to their latest versions.' # noqa
+    msg = msg.format(available_setuptools_version, required_setuptools_version)
     exit(textwrap.fill(msg))
 
 try:
