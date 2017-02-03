@@ -74,7 +74,7 @@ parser = register_listing_parser(compute_environments, parent=batch_parser, help
 def create_compute_environment(args):
     batch_iam_role = ARN(service="iam", region="", resource="role/service-role/AWSBatchServiceRole")
     vpc = ensure_vpc()
-    ensure_ssh_key(args.ssh_key_name)
+    ssh_key_name = ensure_ssh_key(args.ssh_key_name, base_name=__name__)
     instance_profile = ensure_instance_profile(args.instance_role,
                                                policies={"service-role/AmazonAPIGatewayPushToCloudWatchLogs",
                                                          "service-role/AmazonEC2ContainerServiceforEC2Role"})
@@ -86,7 +86,7 @@ def create_compute_environment(args):
                              instanceRole=instance_profile.name,
                              bidPercentage=100,
                              spotIamFleetRole=SpotFleetBuilder.get_iam_fleet_role().name,
-                             ec2KeyPair=args.ssh_key_name)
+                             ec2KeyPair=ssh_key_name)
     logger.info("Creating compute environment %s in %s", args.name, vpc)
     compute_environment = clients.batch.create_compute_environment(computeEnvironmentName=args.name,
                                                                    type=args.type,
@@ -105,7 +105,7 @@ cce_parser.add_argument("--min-vcpus", type=int)
 cce_parser.add_argument("--desired-vcpus", type=int)
 cce_parser.add_argument("--max-vcpus", type=int)
 cce_parser.add_argument("--instance-types", nargs="+")
-cce_parser.add_argument("--ssh-key-name", default=__name__)
+cce_parser.add_argument("--ssh-key-name")
 cce_parser.add_argument("--instance-role", default=__name__)
 
 def delete_compute_environment(args):

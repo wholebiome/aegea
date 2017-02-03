@@ -49,7 +49,8 @@ def launch(args):
     if args.use_dns:
         dns_zone = DNSZone(config.dns.get("private_zone"))
         config.dns.private_zone = dns_zone.zone["Name"]
-    ensure_ssh_key(args.ssh_key_name, verify_pem_file=args.verify_ssh_key_pem_file)
+    ssh_key_name = ensure_ssh_key(name=args.ssh_key_name, base_name=__name__,
+                                  verify_pem_file=args.verify_ssh_key_pem_file)
     # TODO: move all account init checks into init helper with region-specific semaphore on s3
     try:
         ensure_log_group("syslog")
@@ -84,7 +85,7 @@ def launch(args):
                           packages=args.packages)
     user_data_args.update(dict(args.cloud_config_data))
     launch_spec = dict(ImageId=args.ami,
-                       KeyName=args.ssh_key_name,
+                       KeyName=ssh_key_name,
                        SecurityGroupIds=[sg.id for sg in security_groups],
                        InstanceType=args.instance_type,
                        BlockDeviceMappings=get_bdm(),
@@ -148,7 +149,7 @@ def launch(args):
     tags = dict(tag.split("=", 1) for tag in args.tags)
     add_tags(instance, Name=args.hostname, Owner=ARN.get_iam_username(),
              SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:],
-             OwnerSSHKeyName=args.ssh_key_name, **tags)
+             OwnerSSHKeyName=ssh_key_name, **tags)
     if args.use_dns:
         dns_zone.update(args.hostname, instance.private_dns_name)
     while not instance.public_dns_name:
@@ -170,7 +171,7 @@ parser = register_parser(launch, help="Launch a new EC2 instance", description=_
 parser.add_argument("hostname")
 parser.add_argument("--commands", nargs="+", metavar="COMMAND", help="Commands to run on host upon startup")
 parser.add_argument("--packages", nargs="+", metavar="PACKAGE", help="APT packages to install on host upon startup")
-parser.add_argument("--ssh-key-name", default=__name__)
+parser.add_argument("--ssh-key-name")
 parser.add_argument("--no-verify-ssh-key-pem-file", dest="verify_ssh_key_pem_file", action="store_false")
 parser.add_argument("--ami", help="AMI to use for the instance. Default: the most recently built AMI in the account")
 parser.add_argument("--ami-tags", nargs="+", metavar="NAME=VALUE", help="Use the most recent AMI with these tags")

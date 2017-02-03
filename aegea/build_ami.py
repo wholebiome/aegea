@@ -5,7 +5,7 @@ from io import open
 
 from . import register_parser, logger, config, __version__
 from .util.aws import locate_ami, add_tags, get_bdm, resolve_instance_id, resources, clients, ARN
-from .util.crypto import get_ssh_key_filename
+from .util.crypto import ensure_ssh_key, get_ssh_key_path
 from .util.printing import GREEN
 from .launch import launch, parser as launch_parser
 
@@ -13,7 +13,8 @@ def build_ami(args):
     for key, value in config.build_image.items():
         getattr(args, key).extend(value)
     from .util.ssh import AegeaSSHClient
-    ssh_key_filename = get_ssh_key_filename(args, base_name=__name__)
+    ssh_key_name = ensure_ssh_key(name=args.ssh_key_name, base_name=__name__,
+                                  verify_pem_file=args.verify_ssh_key_pem_file)
     if args.snapshot_existing_host:
         instance = resources.ec2.Instance(resolve_instance_id(args.snapshot_existing_host))
         args.ami = instance.image_id
@@ -30,7 +31,7 @@ def build_ami(args):
         instance = resources.ec2.Instance(launch(launch_args)["instance_id"])
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
-    ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=ssh_key_filename)
+    ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=get_ssh_key_path(ssh_key_name))
     sys.stderr.write("Waiting for cloud-init...")
     sys.stderr.flush()
     devnull = open(os.devnull, "w")
