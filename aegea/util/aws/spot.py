@@ -10,7 +10,8 @@ from . import ensure_iam_role, clients
 class SpotFleetBuilder(VerboseRepr):
     # TODO: vivify from toolspec; vivify from SFR ID; update with incremental cores/memory requirements
     def __init__(self, launch_spec, cores=1, min_cores_per_instance=1, min_mem_per_core_gb=1.5, gpus_per_instance=0,
-                 min_ephemeral_storage_gb=0, spot_price=None, duration_hours=None, client_token=None, dry_run=False):
+                 min_ephemeral_storage_gb=0, spot_price=None, duration_hours=None, client_token=None,
+                 instance_type_prefixes=None, dry_run=False):
         if spot_price is None:
             spot_price = 1
         if "SecurityGroupIds" in launch_spec:
@@ -24,6 +25,7 @@ class SpotFleetBuilder(VerboseRepr):
             raise AegeaException("SpotFleetBuilder: min_cores_per_instance cannot exceed cores")
         self.min_mem_per_core_gb = min_mem_per_core_gb
         self.gpus_per_instance = gpus_per_instance
+        self.instance_type_prefixes = instance_type_prefixes
         self.dry_run = dry_run
         self.iam_fleet_role = self.get_iam_fleet_role()
         self.spot_fleet_request_config = dict(SpotPrice=str(spot_price),
@@ -42,7 +44,7 @@ class SpotFleetBuilder(VerboseRepr):
                                policies=["service-role/AmazonEC2SpotFleetRole"],
                                trust=["spotfleet"])
 
-    def instance_types(self, max_overprovision=3, restrict_to_families=None):
+    def instance_types(self, max_overprovision=3):
         def compute_ephemeral_storage_gb(instance_data):
             if instance_data["storage"] == "EBS only":
                 return 0
@@ -63,7 +65,7 @@ class SpotFleetBuilder(VerboseRepr):
                 continue
             if gpus < self.gpus_per_instance or gpus > max_gpus:
                 continue
-            if restrict_to_families and not any(instance_type.startswith(fam + ".") for fam in restrict_to_families):
+            if not any(instance_type.startswith(i) for i in self.instance_type_prefixes or [""]):
                 continue
             yield instance_type, int(instance_data["vcpu"])
 

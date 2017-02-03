@@ -110,7 +110,16 @@ def launch(args):
                         spot_fleet_args[arg] = getattr(args, arg)
                 if "cores" in spot_fleet_args:
                     spot_fleet_args["min_cores_per_instance"] = spot_fleet_args["cores"]
-                spot_fleet_builder = SpotFleetBuilder(**spot_fleet_args)
+                if args.instance_type != parser.get_default("instance_type"):
+                    msg = "Using --instance-type with spot fleet may unnecessarily constrain available instances. Consider using --cores and --min-mem-per-core-gb instead" # noqa
+                    logger.warn(msg)
+
+                    class InstanceSpotFleetBuilder(SpotFleetBuilder):
+                        def instance_types(self, **kwargs):
+                            yield args.instance_type, 1
+                    spot_fleet_builder = InstanceSpotFleetBuilder(**spot_fleet_args)
+                else:
+                    spot_fleet_builder = SpotFleetBuilder(**spot_fleet_args)
                 logger.info("Launching {}".format(spot_fleet_builder))
                 sfr_id = spot_fleet_builder()
                 instances = []
@@ -179,7 +188,6 @@ parser.add_argument("--spot", action="store_true")
 parser.add_argument("--duration-hours", type=float, help="Terminate the spot instance after this number of hours")
 parser.add_argument("--cores", type=int, help="Minimum number of cores to request (spot fleet API)")
 parser.add_argument("--min-mem-per-core-gb", type=float)
-# FIXME: mutex or support options in spot fleet
 parser.add_argument("--instance-type", "-t", default="t2.micro")
 parser.add_argument("--spot-price", type=float,
                     help="Maximum bid price for spot instances. Defaults to 1.2x the ondemand price.")
