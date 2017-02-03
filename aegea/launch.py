@@ -24,7 +24,7 @@ from .util import wait_for_port, validate_hostname, paginate
 from .util.cloudinit import get_user_data
 from .util.aws import (ensure_vpc, ensure_subnet, ensure_security_group, DNSZone, get_client_token, ensure_log_group,
                        ensure_instance_profile, add_tags, resolve_security_group, get_bdm, resolve_instance_id,
-                       expect_error_codes, resolve_ami, get_ondemand_price_usd, resources, clients)
+                       expect_error_codes, resolve_ami, get_ondemand_price_usd, resources, clients, ARN)
 from .util.aws.spot import SpotFleetBuilder
 from .util.crypto import new_ssh_key, add_ssh_host_key_to_known_hosts, ensure_ssh_key, hostkey_line
 from .util.exceptions import AegeaException
@@ -78,13 +78,9 @@ def launch(args):
     else:
         security_groups = [ensure_security_group(__name__, vpc)]
 
-    ssh_host_key, iam_username = new_ssh_key(), "root"
-    try:
-        iam_username = resources.iam.CurrentUser().user.name
-    except ClientError:
-        logger.warn("Unable to retrieve IAM username for current user")
+    ssh_host_key = new_ssh_key()
     user_data_args = dict(host_key=ssh_host_key,
-                          commands=get_startup_commands(args, iam_username),
+                          commands=get_startup_commands(args, ARN.get_iam_username()),
                           packages=args.packages)
     user_data_args.update(dict(args.cloud_config_data))
     launch_spec = dict(ImageId=args.ami,
@@ -102,7 +98,7 @@ def launch(args):
     if args.availability_zone:
         launch_spec["Placement"] = dict(AvailabilityZone=args.availability_zone)
     if args.client_token is None:
-        args.client_token = get_client_token(iam_username, __name__)
+        args.client_token = get_client_token(ARN.get_iam_username(), __name__)
     try:
         if args.spot:
             launch_spec["UserData"] = base64.b64encode(launch_spec["UserData"]).decode()
@@ -150,7 +146,7 @@ def launch(args):
     instance.wait_until_running()
     hkl = hostkey_line(hostnames=[], key=ssh_host_key).strip()
     tags = dict(tag.split("=", 1) for tag in args.tags)
-    add_tags(instance, Name=args.hostname, Owner=iam_username,
+    add_tags(instance, Name=args.hostname, Owner=ARN.get_iam_username(),
              SSHHostPublicKeyPart1=hkl[:255], SSHHostPublicKeyPart2=hkl[255:],
              OwnerSSHKeyName=args.ssh_key_name, **tags)
     if args.use_dns:

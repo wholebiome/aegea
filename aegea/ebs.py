@@ -35,8 +35,7 @@ def ls(args):
 parser = register_filtering_parser(ls, parent=ebs_parser, help="List EC2 EBS volumes")
 
 def snapshots(args):
-    account_id = ARN(resources.iam.CurrentUser().arn).account_id
-    page_output(filter_and_tabulate(resources.ec2.snapshots.filter(OwnerIds=[account_id]), args))
+    page_output(filter_and_tabulate(resources.ec2.snapshots.filter(OwnerIds=[ARN.get_account_id()]), args))
 
 parser = register_filtering_parser(snapshots, parent=ebs_parser, help="List EC2 EBS snapshots")
 

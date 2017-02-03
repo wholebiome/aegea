@@ -4,7 +4,7 @@ import os, sys, json, time, base64
 from io import open
 
 from . import register_parser, logger, config, __version__
-from .util.aws import locate_ami, add_tags, get_bdm, resolve_instance_id, resources, clients
+from .util.aws import locate_ami, add_tags, get_bdm, resolve_instance_id, resources, clients, ARN
 from .util.crypto import get_ssh_key_filename
 from .util.printing import GREEN
 from .launch import launch, parser as launch_parser
@@ -51,11 +51,11 @@ def build_ami(args):
     else:
         raise Exception("cloud-init encountered errors")
     sys.stderr.write(GREEN("OK") + "\n")
-    description = "Built by {} for {}".format(__name__, resources.iam.CurrentUser().user.name)
+    description = "Built by {} for {}".format(__name__, ARN.get_iam_username())
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     tags = dict(tag.split("=", 1) for tag in args.tags)
     base_ami = resources.ec2.Image(args.ami)
-    tags.update(Owner=resources.iam.CurrentUser().user.name, AegeaVersion=__version__,
+    tags.update(Owner=ARN.get_iam_username(), AegeaVersion=__version__,
                 Base=base_ami.id, BaseName=base_ami.name, BaseDescription=base_ami.description or "")
     add_tags(image, **tags)
     logger.info("Waiting for %s to become available...", image.id)

@@ -216,7 +216,7 @@ class DNSZone(VerboseRepr):
 
 class ARN:
     fields = "arn partition service region account_id resource".split()
-    _default_region, _default_account_id = None, None
+    _default_region, _default_account_id, _default_iam_username = None, None, None
     def __init__(self, arn="arn:aws::::", **kwargs):
         self.__dict__.update(dict(zip(self.fields, arn.split(":", 5)), **kwargs))
         if "region" not in kwargs and not self.region:
@@ -230,12 +230,25 @@ class ARN:
             cls._default_region = botocore.session.Session().get_config_variable("region")
         return cls._default_region
 
+    # TODO: for these two methods, introspect instance metadata without hanging if API not available
     @classmethod
     def get_account_id(cls):
         if cls._default_account_id is None:
-            # TODO: call json.loads(get_metadata("iam/info"))["InstanceProfileArn"] as backup without hanging
             cls._default_account_id = clients.sts.get_caller_identity()["Account"]
         return cls._default_account_id
+
+    @classmethod
+    def get_iam_username(cls):
+        if cls._default_iam_username is None:
+            try:
+                user = resources.iam.CurrentUser().user
+                cls._default_iam_username = getattr(user, "name", ARN(user.arn).resource.split("/")[-1])
+            except:
+                try:
+                    cls._default_iam_username = ARN(clients.sts.get_caller_identity()["Arn"]).resource.split("/")[-1]
+                except:
+                    cls._default_iam_username = "unknown"
+        return cls._default_iam_username
 
     def __str__(self):
         return ":".join(getattr(self, field) for field in self.fields)

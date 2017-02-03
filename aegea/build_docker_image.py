@@ -32,7 +32,7 @@ def get_dockerfile(args):
             "cloud-init modules --mode=final"
         ]
         return dockerfile.format(base_image=args.base_image,
-                                 maintainer=resources.iam.CurrentUser().user.name,
+                                 maintainer=ARN.get_iam_username(),
                                  label=" ".join(args.tags),
                                  cloud_config_b64=base64.b64encode(get_cloud_config(args)).decode(),
                                  run=json.dumps(cmd)).encode()
@@ -69,7 +69,7 @@ def build_docker_image(args):
     for key, value in config.build_image.items():
         getattr(args, key).extend(value)
     args.tags += ["AegeaVersion={}".format(__version__),
-                  'description="Built by {} for {}"'.format(__name__, resources.iam.CurrentUser().user.name)]
+                  'description="Built by {} for {}"'.format(__name__, ARN.get_iam_username())]
     ensure_ecr_repo(args.name)
     submit_args = submit_parser.parse_args([
         "--command",
