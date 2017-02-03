@@ -3,10 +3,11 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, subprocess, argparse, base64
+import os, sys, subprocess, argparse, base64, shutil
 import argcomplete
 import aegea
 from aegea.util.aws import ARN
+from aegea.util.compat import TemporaryDirectory
 
 default_missions_dir = os.path.join(os.path.dirname(aegea.__file__), "missions")
 
@@ -22,15 +23,21 @@ parser.add_argument("build_args", nargs=argparse.REMAINDER, default=[])
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
-if os.path.exists(os.path.join(args.mission_dir, args.mission, "Makefile")):
-    subprocess.check_call(["make", "-C", os.path.join(args.mission_dir, args.mission)])
-
 if args.image_type == "docker":
-    command = "build_docker_image"
+    command = "build_docker_image" if args.image_type == "docker" else "build_ami"
 else:
     command = "build_ami"
 
+mission_wd = os.path.join(args.mission_dir, args.mission)
+
+with TemporaryDirectory() as tmp_wd:
+    if os.path.exists(os.path.join(mission_wd, "Makefile")):
+        if not os.access(mission_wd, os.W_OK | os.X_OK):
+            shutil.copytree(mission_wd, os.path.join(tmp_wd, args.mission), symlinks=True)
+            mission_wd = os.path.join(tmp_wd, args.mission)
+        subprocess.check_call(["make", "-C", mission_wd])
+
 subprocess.check_call(
     ["aegea", command, args.image_name, "--tags", "AegeaMission=" + args.mission] + args.build_args,
-    env=dict(os.environ, AEGEA_CONFIG_FILE=os.path.join(args.mission_dir, args.mission, "config.yml"))
+    env=dict(os.environ, AEGEA_CONFIG_FILE=os.path.join(mission_wd, "config.yml"))
 )

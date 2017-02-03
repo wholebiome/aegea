@@ -119,9 +119,10 @@ def ensure_ingress_rule(security_group, **kwargs):
 def resolve_security_group(name, vpc=None):
     if vpc is None:
         vpc = ensure_vpc()
-    for security_group in vpc.security_groups.filter(GroupNames=[name]):
-        assert security_group.group_name == name
-        return security_group
+    sgs = vpc.security_groups.filter(GroupNames=[name]) if vpc.is_default else vpc.security_groups.all()
+    for security_group in sgs:
+        if security_group.group_name == name:
+            return security_group
     raise KeyError(name)
 
 def ensure_security_group(name, vpc, tcp_ingress=[dict(port=22, cidr="0.0.0.0/0")]):

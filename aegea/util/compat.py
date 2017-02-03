@@ -10,6 +10,7 @@ if USING_PYTHON2:
     str = unicode # noqa
     from backports.functools_lru_cache import lru_cache
     from backports.shutil_get_terminal_size import get_terminal_size
+    from backports.tempfile import TemporaryDirectory
     import subprocess32 as subprocess
     def median(data):
         data = sorted(data)
@@ -34,6 +35,7 @@ else:
     str = str
     from functools import lru_cache
     from shutil import get_terminal_size
+    from tempfile import TemporaryDirectory
     import subprocess
     from statistics import median
     timestamp = datetime.datetime.timestamp

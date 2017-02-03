@@ -45,7 +45,8 @@ setuptools.setup(
             "ipaddress >= 1.0.17, < 2",
             "subprocess32 >= 3.2.7, < 4",
             "backports.shutil_get_terminal_size >= 1.0.0, < 2",
-            "backports.functools_lru_cache >= 1.2.1, < 2"
+            "backports.functools_lru_cache >= 1.2.1, < 2",
+            "backports.tempfile"
         ]
     },
     tests_require=[
