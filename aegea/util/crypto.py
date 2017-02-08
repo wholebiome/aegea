@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 
 from .. import logger
 from .aws import resources, expect_error_codes
-from .compat import subprocess
+from .compat import subprocess, makedirs
 
 def new_ssh_key(bits=2048):
     from paramiko import RSAKey
@@ -44,6 +44,7 @@ def ensure_ssh_key(name=None, base_name=__name__, verify_pem_file=True):
         else:
             logger.info("Creating key pair %s", name)
             ssh_key = new_ssh_key()
+            makedirs(os.path.dirname(get_ssh_key_path(name)), exist_ok=True)
             ssh_key.write_private_key_file(get_ssh_key_path(name))
         resources.ec2.import_key_pair(KeyName=name,
                                       PublicKeyMaterial=get_public_key_from_pair(ssh_key))

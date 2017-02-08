@@ -16,7 +16,8 @@ from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.exceptions import AegeaException
 from .util.crypto import ensure_ssh_key
 from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_role, ensure_instance_profile,
-                       make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket, ensure_log_group)
+                       make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket, ensure_log_group,
+                       IAMPolicyBuilder)
 from .util.aws.spot import SpotFleetBuilder
 
 bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
@@ -77,7 +78,8 @@ def create_compute_environment(args):
     ssh_key_name = ensure_ssh_key(args.ssh_key_name, base_name=__name__)
     instance_profile = ensure_instance_profile(args.instance_role,
                                                policies={"service-role/AmazonAPIGatewayPushToCloudWatchLogs",
-                                                         "service-role/AmazonEC2ContainerServiceforEC2Role"})
+                                                         "service-role/AmazonEC2ContainerServiceforEC2Role",
+                                                         IAMPolicyBuilder(action="sts:AssumeRole", resource="*")})
     compute_resources = dict(type=args.compute_type,
                              minvCpus=args.min_vcpus, desiredvCpus=args.desired_vcpus, maxvCpus=args.max_vcpus,
                              instanceTypes=args.instance_types,

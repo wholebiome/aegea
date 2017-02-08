@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, datetime
+import os, sys, datetime, errno
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
 
@@ -12,6 +12,12 @@ if USING_PYTHON2:
     from backports.shutil_get_terminal_size import get_terminal_size
     from backports.tempfile import TemporaryDirectory
     import subprocess32 as subprocess
+    def makedirs(name, mode=0o777, exist_ok=False):
+        try:
+            os.makedirs(name, mode)
+        except OSError as e:
+            if not (exist_ok and e.errno == errno.EEXIST and os.path.isdir(name)):
+                raise
     def median(data):
         data = sorted(data)
         n = len(data)
@@ -37,5 +43,6 @@ else:
     from shutil import get_terminal_size
     from tempfile import TemporaryDirectory
     import subprocess
+    from os import makedirs
     from statistics import median
     timestamp = datetime.datetime.timestamp

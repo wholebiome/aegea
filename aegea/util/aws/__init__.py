@@ -290,9 +290,12 @@ def ensure_iam_role(iam_role_name, policies=frozenset(), trust=frozenset()):
                                          AssumeRolePolicyDocument=get_assume_role_policy_doc(*trust))
     attached_policies = [policy.arn for policy in role.attached_policies.all()]
     for policy in policies:
-        policy_arn = "arn:aws:iam::aws:policy/{}".format(policy)
-        if policy_arn not in attached_policies:
-            role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
+        if isinstance(policy, IAMPolicyBuilder):
+            role.Policy(__name__).put(PolicyDocument=str(policy))
+        else:
+            policy_arn = "arn:aws:iam::aws:policy/{}".format(policy)
+            if policy_arn not in attached_policies:
+                role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
     # TODO: accommodate IAM eventual consistency
     return role
 
