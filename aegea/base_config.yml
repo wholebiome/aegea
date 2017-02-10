@@ -246,6 +246,7 @@ buckets_ls:
   columns:
     - name
     - creation_date
+    - LocationConstraint
 
 images:
   resource: ec2

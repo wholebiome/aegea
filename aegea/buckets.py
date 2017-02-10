@@ -6,7 +6,7 @@ from collections import defaultdict
 from botocore.exceptions import ClientError
 
 from . import register_parser, logger
-from .ls import filter_and_tabulate, register_filtering_parser
+from .ls import filter_collection, register_filtering_parser
 from .util.aws import ARN, resolve_instance_id, resources, clients, expect_error_codes
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE
 
@@ -20,7 +20,11 @@ def ls(args):
     """
     List S3 buckets. See also "aws s3 ls". Use "aws s3 ls NAME" to list bucket contents.
     """
-    page_output(filter_and_tabulate(resources.s3.buckets, args))
+    table = []
+    for bucket in filter_collection(resources.s3.buckets, args):
+        bucket.LocationConstraint = clients.s3.get_bucket_location(Bucket=bucket.name)["LocationConstraint"]
+        table.append(bucket)
+    page_output(tabulate(table, args))
 
 parser = register_filtering_parser(ls, parent=buckets_parser)
 
