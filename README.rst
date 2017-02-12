@@ -74,7 +74,7 @@ and executes two commands as listed after --command, using "bash -euo pipefail -
 You can also use ``aegea batch submit --execute FILE``. This will slurp up FILE (any type of shell script or ELF
 executable) and execute it in the job's Docker container.
 
-The concurrency and cost of your Batch jobs is governed by the "Max vCPUs" setting in your compute environment. To
+The concurrency and cost of your Batch jobs is governed by the "Max vCPUs" setting in your compute environment.
 To change the capacity or other settings of your compute environment, go to
 https://console.aws.amazon.com/batch/home?region=us-east-1#/compute-environments, select "aegea_batch", and click "Edit".
 
