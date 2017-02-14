@@ -53,6 +53,9 @@ def build_ami(args):
         raise Exception("cloud-init encountered errors")
     sys.stderr.write(GREEN("OK") + "\n")
     description = "Built by {} for {}".format(__name__, ARN.get_iam_username())
+    for existing_ami in resources.ec2.images.filter(Owners=["self"], Filters=[{"Name": "name", "Values": [args.name]}]):
+        logger.info("Deleting existing image {}".format(existing_ami))
+        existing_ami.deregister()
     image = instance.create_image(Name=args.name, Description=description, BlockDeviceMappings=get_bdm())
     tags = dict(tag.split("=", 1) for tag in args.tags)
     base_ami = resources.ec2.Image(args.ami)
