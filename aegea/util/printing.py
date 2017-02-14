@@ -91,24 +91,26 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
         col_widths = [0] * (len(column_specs) + 1)
     elif column_names is not None:
         col_widths = [0] * len(column_names)
-    my_col_names = []
+    my_col_names, id_column = [], None
     if column_specs is not None:
         column_names = ["Row"]
         column_names.extend([col["name"] for col in column_specs])
         column_specs = [{"name": "Row", "type": "float"}] + column_specs
     if column_names is not None:
         for i in range(len(column_names)):
-            my_col = ansi_truncate(str(column_names[i]), max_col_width)
+            if column_names[i].lower() == "id":
+                id_column = i
+            my_col = ansi_truncate(str(column_names[i]), max_col_width if i not in {0, id_column} else 99)
             my_col_names.append(my_col)
             col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_col)))
-    my_table = []
+    trunc_table = []
     for row in table:
         my_row = []
         for i in range(len(row)):
-            my_item = ansi_truncate(str(row[i]), max_col_width)
+            my_item = ansi_truncate(str(row[i]), max_col_width if i not in {0, id_column} else 99)
             my_row.append(my_item)
             col_widths[i] = max(col_widths[i], len(strip_ansi_codes(my_item)))
-        my_table.append(my_row)
+        trunc_table.append(my_row)
 
     type_colormap = {"boolean": BLUE(),
                      "integer": YELLOW(),
@@ -130,7 +132,7 @@ def format_table(table, column_names=None, column_specs=None, max_col_width=32, 
         formatted_table.append(border("│") + border("│").join(padded_column_names) + border("│"))
         formatted_table.append(border("├") + border("┼").join(border("─")*i for i in col_widths) + border("┤"))
 
-    for row in my_table:
+    for row in trunc_table:
         padded_row = [row[i] + " "*(col_widths[i]-len(strip_ansi_codes(row[i]))) for i in range(len(row))]
         formatted_table.append(border("│") + border("│").join(padded_row) + border("│"))
     formatted_table.append(border("└") + border("┴").join(border("─")*i for i in col_widths) + border("┘"))
