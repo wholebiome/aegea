@@ -8,9 +8,9 @@ if USING_PYTHON2:
     from StringIO import StringIO
     from repr import Repr
     str = unicode # noqa
-    from backports.functools_lru_cache import lru_cache
-    from backports.shutil_get_terminal_size import get_terminal_size
-    from backports.tempfile import TemporaryDirectory
+    from ..packages.backports.functools_lru_cache import lru_cache
+    from ..packages.backports.shutil_get_terminal_size import get_terminal_size
+    from ..packages.backports.tempfile import TemporaryDirectory
     import subprocess32 as subprocess
     def makedirs(name, mode=0o777, exist_ok=False):
         try:
