@@ -9,8 +9,10 @@ existing functionality of the `AWS CLI <https://aws.amazon.com/cli/>`_ and `boto
 
 Installation
 ~~~~~~~~~~~~
-Run ``make install`` in this directory to install Aegea. Before you do this, you will also need to install some system
-library dependencies:
+::
+   pip install aegea
+
+Before you do this, you will also need to install some system library dependencies:
 
 +--------------+---------+--------------------------------------------------------------------------------------------------+
 | OS           | Python  | Command                                                                                          |
@@ -34,6 +36,8 @@ Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access c
 
 **Ubuntu 12.04**: Use ``pip install cffi`` instead of ``apt-get install python-cffi``. Update your Python packaging utilities:
 ``for p in six setuptools packaging pip setuptools; do pip install --upgrade $p; hash -r; done``.
+
+**Local install**: run ``make install`` in this directory.
 
 **No root access; user-local install**: Use ``make install_venv`` to install aegea in its own virtualenv. The last line of the 
 output shows how to activate the virtualenv. The version of virtualenv packaged in Ubuntu 12.04 is too old; use
