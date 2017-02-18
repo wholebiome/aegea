@@ -4,7 +4,7 @@
 Helper utility that lists and mounts AWS EFS filesystems.
 """
 
-import os, sys, subprocess, argparse, logging
+import os, sys, subprocess, argparse, logging, collections
 
 import boto3, requests
 
@@ -32,20 +32,22 @@ for filesystem in efs.describe_file_systems()["FileSystems"]:
 else:
     logger.info("No EFS filesystems found")
 
-mount_procs = []
+mount_procs = collections.OrderedDict()
 for mountpoint, filesystem in mountpoints.items():
     logging.info("Mounting %s on %s", filesystem["FileSystemId"], mountpoint)
     fs_url = "{az}.{fs}.efs.{region}.{domain}:/".format(az=az,
                                                         fs=filesystem["FileSystemId"],
                                                         region=efs.meta.region_name,
                                                         domain=services_domain)
-    mount_procs.append(subprocess.Popen(["mount", "-t", "nfs4", fs_url, mountpoint]))
+    mount_procs[mountpoint] = subprocess.Popen(["mount", "-t", "nfs4", fs_url, mountpoint])
 
-for p in mount_procs:
+for m, p in mount_procs.items():
+    if not os.path.isdir(m):
+        os.makedirs(m)
     try:
         p.wait(timeout=args.timeout)
     except Exception:
         p.terminate()
         logger.error("Error while mounting EFS filesystem")
 
-exit(sum([getattr(p, "exitcode", 1) for p in mount_procs]))
+exit(sum([getattr(p, "exitcode", 1) for p in mount_procs.values()]))
