@@ -108,7 +108,7 @@ cce_parser.add_argument("--desired-vcpus", type=int)
 cce_parser.add_argument("--max-vcpus", type=int)
 cce_parser.add_argument("--instance-types", nargs="+")
 cce_parser.add_argument("--ssh-key-name")
-cce_parser.add_argument("--instance-role", default=__name__)
+cce_parser.add_argument("--instance-role", default=__name__ + ".ecs_instance")
 
 def delete_compute_environment(args):
     clients.batch.update_compute_environment(computeEnvironment=args.name, state="DISABLED")

@@ -71,38 +71,6 @@ def ls(args):
 parser = register_filtering_parser(ls, help="List EC2 instances")
 parser.add_argument("--sort-by")
 
-def get_policies_for_principal(cell, row):
-    return ", ".join([p.policy_name for p in row.policies.all()] + [p.policy_name for p in row.attached_policies.all()])
-
-def users(args):
-    current_user = resources.iam.CurrentUser()
-
-    def mark_cur_user(cell, row):
-        return ">>>" if row.user_id == current_user.user_id else ""
-    users = list(resources.iam.users.all())
-    for user in users:
-        user.cur = ""
-    cell_transforms = {"cur": mark_cur_user, "policies": get_policies_for_principal}
-    page_output(tabulate(users, args, cell_transforms=cell_transforms))
-
-parser = register_listing_parser(users, help="List IAM users")
-
-def groups(args):
-    page_output(tabulate(resources.iam.groups.all(), args, cell_transforms={"policies": get_policies_for_principal}))
-
-parser = register_listing_parser(groups, help="List IAM groups")
-
-def roles(args):
-    page_output(tabulate(resources.iam.roles.all(), args, cell_transforms={"policies": get_policies_for_principal}))
-
-parser = register_listing_parser(roles, help="List IAM roles")
-
-def policies(args):
-    page_output(tabulate(resources.iam.policies.all(), args))
-
-parser = register_listing_parser(policies, help="List IAM policies")
-parser.add_argument("--sort-by")
-
 def console(args):
     instance_id = resolve_instance_id(args.instance)
     err = "[No console output received for {}. Console output may lag by several minutes.]".format(instance_id)

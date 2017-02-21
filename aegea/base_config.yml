@@ -166,7 +166,7 @@ ls:
     - iam_instance_profile
     - security_groups
 
-users:
+iam_users:
   resource: iam
   subresource: User
   columns:
@@ -178,7 +178,7 @@ users:
     - groups
     - policies
 
-groups:
+iam_groups:
   resource: iam
   subresource: Group
   columns:
@@ -188,7 +188,7 @@ groups:
     - users
     - policies
 
-roles:
+iam_roles:
   resource: iam
   subresource: Role
   columns:
@@ -198,7 +198,7 @@ roles:
     - instance_profiles
     - policies
 
-policies:
+iam_policies:
   resource: iam
   subresource: Policy
   columns:

@@ -208,7 +208,7 @@ class DNSZone(VerboseRepr):
                 msg = "Could not find {t} record {n} in Route53 zone {z}"
                 msg = msg.format(t=record_type, n=name, z=self.zone["Name"])
                 if missing_ok:
-                    warn(msg)
+                    logger.warn(msg)
                     return
                 else:
                     raise AegeaException(msg)
@@ -266,9 +266,9 @@ class IAMPolicyBuilder:
                 principal = dict(AWS=principal)
             statement["Principal"] = principal
         self.policy["Statement"].append(statement)
-        if action:
+        for action in (action if isinstance(action, list) else [action]):
             self.add_action(action)
-        if resource:
+        for resource in (resource if isinstance(resource, list) else [resource]):
             self.add_resource(resource)
 
     def add_action(self, action):
@@ -281,23 +281,31 @@ class IAMPolicyBuilder:
     def __str__(self):
         return json.dumps(self.policy)
 
-def ensure_iam_role(iam_role_name, policies=frozenset(), trust=frozenset()):
-    for role in resources.iam.roles.all():
-        if role.name == iam_role_name:
+def ensure_iam_role(name, policies=frozenset(), trust=frozenset()):
+    return ensure_iam_entity(name, policies=policies, collection=resources.iam.roles,
+                             constructor=resources.iam.create_role, RoleName=name,
+                             AssumeRolePolicyDocument=get_assume_role_policy_doc(*trust))
+
+def ensure_iam_group(name, policies=frozenset()):
+    return ensure_iam_entity(name, policies=policies, collection=resources.iam.groups,
+                             constructor=resources.iam.create_group, GroupName=name)
+
+def ensure_iam_entity(iam_entity_name, policies, collection, constructor, **constructor_args):
+    for entity in collection.all():
+        if entity.name == iam_entity_name:
             break
     else:
-        role = resources.iam.create_role(RoleName=iam_role_name,
-                                         AssumeRolePolicyDocument=get_assume_role_policy_doc(*trust))
-    attached_policies = [policy.arn for policy in role.attached_policies.all()]
+        entity = constructor(**constructor_args)
+    attached_policies = [policy.arn for policy in entity.attached_policies.all()]
     for policy in policies:
         if isinstance(policy, IAMPolicyBuilder):
-            role.Policy(__name__).put(PolicyDocument=str(policy))
+            entity.Policy(__name__).put(PolicyDocument=str(policy))
         else:
             policy_arn = "arn:aws:iam::aws:policy/{}".format(policy)
             if policy_arn not in attached_policies:
-                role.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
+                entity.attach_policy(PolicyArn="arn:aws:iam::aws:policy/{}".format(policy))
     # TODO: accommodate IAM eventual consistency
-    return role
+    return entity
 
 def ensure_instance_profile(iam_role_name, policies=frozenset()):
     for instance_profile in resources.iam.instance_profiles.all():
@@ -451,8 +459,19 @@ def make_waiter(op, path, expected, matcher="path", delay=1, max_attempts=30):
     waiter_cfg = dict(operation=op.__name__, delay=delay, maxAttempts=max_attempts, acceptors=[acceptor])
     return Waiter(op.__name__, SingleWaiterConfig(waiter_cfg), op)
 
+def resolve_log_group(name):
+    for log_group in paginate(clients.logs.get_paginator("describe_log_groups"), logGroupNamePrefix=name):
+        if log_group["logGroupName"] == name:
+            return log_group
+    else:
+        raise AegeaException("Log group {} not found".format(name))
+
 def ensure_log_group(name):
     try:
-        clients.logs.create_log_group(logGroupName=name)
-    except clients.logs.exceptions.ResourceAlreadyExistsException:
-        pass
+        return resolve_log_group(name)
+    except AegeaException:
+        try:
+            clients.logs.create_log_group(logGroupName=name)
+        except clients.logs.exceptions.ResourceAlreadyExistsException:
+            pass
+        return resolve_log_group(name)

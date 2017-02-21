@@ -66,6 +66,8 @@ class TestAegea(unittest.TestCase):
                 args += ["--dry-run", "docker-example"]
             elif subcommand == "console":
                 args += [instance_id]
+            elif subcommand == "iam":
+                args += ["users"]
             elif subcommand in ("start", "stop", "reboot", "terminate", "rename"):
                 args += [instance_id, instance_id, "--dry-run"]
             elif subcommand == "grep":
