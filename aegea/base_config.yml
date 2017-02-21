@@ -531,6 +531,18 @@ launch:
   packages: []
   cloud_config_data: {}
 
+managed_iam_groups:
+  aegea.launch:
+    - AmazonEC2FullAccess
+    - CloudWatchLogsReadOnlyAccess
+    - IAMReadOnlyAccess
+    - {"action": ["iam:PassRole", "route53:*"], "resource": "*"}
+  aegea.batch:
+    - CloudWatchLogsReadOnlyAccess
+    - IAMReadOnlyAccess
+    - AmazonEC2ContainerRegistryFullAccess
+    - {"action": ["iam:PassRole", "batch:*"], "resource": "*"}
+
 log_level: "INFO"
 
 audit:

@@ -4,8 +4,9 @@ Manage IAM users, groups, roles, and policies
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse
+import os, sys, argparse, collections
 
+from . import config
 from .ls import register_parser, register_listing_parser
 from .util import Timestamp, paginate, hashabledict
 from .util.printing import page_output, tabulate, BOLD
@@ -16,25 +17,10 @@ def iam(args):
 
 iam_parser = register_parser(iam, help=__doc__.strip())
 
-aegea_managed_groups = {
-    "aegea.launch": [
-        "AmazonEC2FullAccess",
-        "CloudWatchLogsReadOnlyAccess",
-        "IAMReadOnlyAccess",
-        IAMPolicyBuilder(action=["iam:PassRole", "route53:*"], resource="*")
-    ],
-    "aegea.batch": [
-        "CloudWatchLogsReadOnlyAccess",
-        "IAMReadOnlyAccess",
-        "AmazonEC2ContainerRegistryFullAccess",
-        IAMPolicyBuilder(action=["iam:PassRole", "batch:*"], resource="*")
-    ]
-}
-
 def configure(args):
-    for group, policies in aegea_managed_groups.items():
+    for group, policies in config.managed_iam_groups.items():
         print("Creating group", group)
-        ensure_iam_group(group, policies=policies)
+        ensure_iam_group(group, policies=[(IAMPolicyBuilder(**p) if isinstance(p, collections.Mapping) else p) for p in policies])
         msg = 'Created group {g}. Use the AWS console or "aws iam add-user-to-group --user-name USER --group-name {g}" to add users to it.' # noqa
         print(BOLD(msg.format(g=group)))
 
