@@ -11,10 +11,11 @@ import yaml
 
 from . import logger
 from .ls import register_parser, register_listing_parser
+from .ecr import ecr_image_name_completer
 from .util import Timestamp, paginate
-from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
-from .util.exceptions import AegeaException
 from .util.crypto import ensure_ssh_key
+from .util.exceptions import AegeaException
+from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_role, ensure_instance_profile,
                        make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket, ensure_log_group,
                        IAMPolicyBuilder)
@@ -261,8 +262,9 @@ group = submit_parser.add_argument_group(title="job definition parameters", desc
 See http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html""")
 img_group = group.add_mutually_exclusive_group()
 img_group.add_argument("--image", default="ubuntu", help="Docker image URL to use for running Batch job")
-img_group.add_argument("--ecs-image", "--ecr-image", metavar="REPO[:TAG]",
-                       help="Name of Docker image residing in this account's Elastic Container Registry")
+ecs_img_arg = img_group.add_argument("--ecs-image", "--ecr-image", "-i", metavar="REPO[:TAG]",
+                                     help="Name of Docker image residing in this account's Elastic Container Registry")
+ecs_img_arg.completer = ecr_image_name_completer
 group.add_argument("--vcpus", type=int, default=1)
 group.add_argument("--memory", type=int, default=1024)
 group.add_argument("--privileged", action="store_true", default=False)
@@ -352,4 +354,10 @@ def watch(args):
             logger.info("Job %s: %s", args.job_id, job_desc["statusReason"])
 
 watch_parser = register_parser(watch, parent=batch_parser, help="Monitor a running Batch job and stream its logs")
+watch_parser.add_argument("job_id")
+
+def ssh(args):
+    pass
+
+watch_parser = register_parser(ssh, parent=batch_parser, help="Attach to a running Batch job via SSH")
 watch_parser.add_argument("job_id")

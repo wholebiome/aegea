@@ -37,3 +37,6 @@ def ls(args):
 
 parser = register_listing_parser(ls, parent=ecr_parser, help="List ECR repos and images")
 parser.add_argument("repositories", nargs="*")
+
+def ecr_image_name_completer(**kwargs):
+    return (r["repositoryName"] for r in paginate(clients.ecr.get_paginator("describe_repositories")))
