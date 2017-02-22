@@ -20,7 +20,8 @@ iam_parser = register_parser(iam, help=__doc__.strip())
 def configure(args):
     for group, policies in config.managed_iam_groups.items():
         print("Creating group", group)
-        ensure_iam_group(group, policies=[(IAMPolicyBuilder(**p) if isinstance(p, collections.Mapping) else p) for p in policies])
+        formatted_policies = [(IAMPolicyBuilder(**p) if isinstance(p, collections.Mapping) else p) for p in policies]
+        ensure_iam_group(group, policies=formatted_policies)
         msg = 'Created group {g}. Use the AWS console or "aws iam add-user-to-group --user-name USER --group-name {g}" to add users to it.' # noqa
         print(BOLD(msg.format(g=group)))
 
