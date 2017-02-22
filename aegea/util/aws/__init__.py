@@ -266,10 +266,12 @@ class IAMPolicyBuilder:
                 principal = dict(AWS=principal)
             statement["Principal"] = principal
         self.policy["Statement"].append(statement)
-        for action in (action if isinstance(action, list) else [action]):
-            self.add_action(action)
-        for resource in (resource if isinstance(resource, list) else [resource]):
-            self.add_resource(resource)
+        if action:
+            for action in (action if isinstance(action, list) else [action]):
+                self.add_action(action)
+        if resource:
+            for resource in (resource if isinstance(resource, list) else [resource]):
+                self.add_resource(resource)
 
     def add_action(self, action):
         self.policy["Statement"][-1]["Action"].append(action)
