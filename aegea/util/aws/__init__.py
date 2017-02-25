@@ -411,8 +411,9 @@ def get_ec2_products(region=None, instance_type=None, tenancy="Shared", operatin
     for product in pricing_data["products"].values():
         if not all(product["attributes"].get(i) == required_attributes[i] for i in required_attributes):
             continue
-        ondemand_terms = list(pricing_data["terms"]["OnDemand"][product["sku"]].values())[0]
-        product.update(list(ondemand_terms["priceDimensions"].values())[0])
+        if product["sku"] in pricing_data["terms"]["OnDemand"]:
+            ondemand_terms = list(pricing_data["terms"]["OnDemand"][product["sku"]].values())[0]
+            product.update(list(ondemand_terms["priceDimensions"].values())[0])
         yield product
 
 def get_ondemand_price_usd(region, instance_type, **kwargs):
