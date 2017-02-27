@@ -53,18 +53,13 @@ def create(args):
         add_tags(resources.ec2.Volume(res["VolumeId"]), **tags)
     return res
 
-parser = register_parser(create, parent=ebs_parser, help="Create an EBS volume")
-parser.add_argument("--size-gb", dest="size", type=int, help="Volume size in gigabytes", required=True)
-parser.add_argument("--dry-run", action="store_true")
-parser.add_argument("--snapshot-id")
-parser.add_argument("--availability-zone")
-parser.add_argument("--volume-type", choices={"standard", "io1", "gp2", "sc1", "st1"},
-                    help="io1, PIOPS SSD; gp2, general purpose SSD; sc1, cold HDD; st1, throughput optimized HDD")
-parser.add_argument("--storage", type=int)
-parser.add_argument("--iops", type=int)
-parser.add_argument("--encrypted", action="store_true")
-parser.add_argument("--kms-key-id")
-parser.add_argument("--tags", nargs="+", default=[], metavar="TAG_NAME=VALUE")
+parser_create = register_parser(create, parent=ebs_parser, help="Create an EBS volume")
+parser_create.add_argument("--dry-run", action="store_true")
+parser_create.add_argument("--snapshot-id")
+parser_create.add_argument("--availability-zone")
+parser_create.add_argument("--encrypted", action="store_true")
+parser_create.add_argument("--kms-key-id")
+parser_create.add_argument("--tags", nargs="+", default=[], metavar="TAG_NAME=VALUE")
 
 def snapshot(args):
     return clients.ec2.create_snapshot(DryRun=args.dry_run, VolumeId=args.volume_id)
@@ -89,10 +84,32 @@ def detach(args):
     return res
 parser_detach = register_parser(detach, parent=ebs_parser, help="Detach an EBS volume from an EC2 instance")
 
+def modify(args):
+    modify_args = dict(VolumeId=args.volume_id, DryRun=args.dry_run)
+    if args.size:
+        modify_args.update(Size=args.size)
+    if args.volume_type:
+        modify_args.update(VolumeType=args.volume_type)
+    if args.iops:
+        modify_args.update(Iops=args.iops)
+    res = clients.ec2.modify_volume(**modify_args)["VolumeModification"]
+    #if args.wait:
+    #    waiter = make_waiter(clients.ec2.describe_volumes_modifications, "VolumesModifications[].ModificationState",
+    #                         "optimizing", "pathAny")
+    #    waiter.wait(VolumeIds=[args.volume_id])
+    return res
+parser_modify = register_parser(modify, parent=ebs_parser, help="Change the size, type, or IOPS of an EBS volume")
+
+for parser in parser_create, parser_modify:
+    parser.add_argument("--size-gb", dest="size", type=int, help="Volume size in gigabytes")
+    parser.add_argument("--volume-type", choices={"standard", "io1", "gp2", "sc1", "st1"},
+                        help="io1, PIOPS SSD; gp2, general purpose SSD; sc1, cold HDD; st1, throughput optimized HDD")
+    parser.add_argument("--iops", type=int)
+
 def complete_volume_id(**kwargs):
     return [i["VolumeId"] for i in clients.ec2.describe_volumes()["Volumes"]]
 
-for parser in parser_snapshot, parser_attach, parser_detach:
+for parser in parser_snapshot, parser_attach, parser_detach, parser_modify:
     parser.add_argument("volume_id").completer = complete_volume_id
     parser.add_argument("--dry-run", action="store_true")
     if parser in (parser_attach, parser_detach):
