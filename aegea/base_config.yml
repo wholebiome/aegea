@@ -247,6 +247,8 @@ buckets_ls:
     - name
     - creation_date
     - LocationConstraint
+    - NumberOfObjects
+    - BucketSizeBytes
 
 images:
   resource: ec2
@@ -537,11 +539,14 @@ managed_iam_groups:
     - CloudWatchLogsReadOnlyAccess
     - IAMReadOnlyAccess
     - {"action": ["iam:PassRole", "route53:*"], "resource": "*"}
-  aegea.batch:
+  aegea.batch.submit:
     - CloudWatchLogsReadOnlyAccess
     - IAMReadOnlyAccess
     - AmazonEC2ContainerRegistryFullAccess
     - {"action": ["iam:PassRole", "batch:*"], "resource": "*"}
+#  aegea.batch.worker:
+#  aegea.build_ami:
+#  aegea.secrets.put:
 
 log_level: "INFO"
 

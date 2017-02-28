@@ -230,6 +230,24 @@ def trim_names(names, *prefixes):
                 name = name[len(prefix):]
         yield name
 
+def format_number(n, fractional_digits=2):
+    B = n
+    KB = float(1024)
+    MB = float(KB * 1024)
+    GB = float(MB * 1024)
+    TB = float(GB * 1024)
+
+    if B < KB:
+        return '{0}'.format(B)
+    elif KB <= B < MB:
+        return '{0:.{precision}f}K'.format(B/KB, precision=fractional_digits)
+    elif MB <= B < GB:
+        return '{0:.{precision}f}M'.format(B/MB, precision=fractional_digits)
+    elif GB <= B < TB:
+        return '{0:.{precision}f}G'.format(B/GB, precision=fractional_digits)
+    elif TB <= B:
+        return '{0:.{precision}f}T'.format(B/TB, precision=fractional_digits)
+
 def tabulate(collection, args, cell_transforms=None):
     if cell_transforms is None:
         cell_transforms = {}
