@@ -4,7 +4,7 @@ Manage AWS Batch jobs, queues, and compute environments.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, base64, collections, io
+import os, sys, argparse, base64, collections, io, subprocess
 
 from botocore.exceptions import ClientError
 import yaml
@@ -109,7 +109,7 @@ cce_parser.add_argument("--desired-vcpus", type=int)
 cce_parser.add_argument("--max-vcpus", type=int)
 cce_parser.add_argument("--instance-types", nargs="+")
 cce_parser.add_argument("--ssh-key-name")
-cce_parser.add_argument("--instance-role", default=__name__ + ".ecs_instance")
+cce_parser.add_argument("--instance-role", default=__name__ + ".ecs_container_instance")
 
 def delete_compute_environment(args):
     clients.batch.update_compute_environment(computeEnvironment=args.name, state="DISABLED")
@@ -266,7 +266,7 @@ ecs_img_arg = img_group.add_argument("--ecs-image", "--ecr-image", "-i", metavar
                                      help="Name of Docker image residing in this account's Elastic Container Registry")
 ecs_img_arg.completer = ecr_image_name_completer
 group.add_argument("--vcpus", type=int, default=1)
-group.add_argument("--memory", type=int, default=1024)
+group.add_argument("--memory-mb", type=int, default=1024)
 group.add_argument("--privileged", action="store_true", default=False)
 group.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=lambda x: x.split("=", 1), default=[])
 group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
@@ -274,7 +274,8 @@ group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
 group.add_argument("--parameters", nargs="+", metavar="NAME=VALUE", type=lambda x: x.split("=", 1), default=[])
 group.add_argument("--job-role", metavar="IAM_ROLE", default=__name__ + ".worker",
                    help="Name of IAM role to grant to the job")
-group.add_argument("--storage", nargs="+", metavar="MOUNTPOINT=SIZE_GB", type=lambda x: x.split("=", 1), default=[])
+group.add_argument("--storage", nargs="+", metavar="MOUNTPOINT=SIZE_GB",
+                   type=lambda x: x.rstrip("GBgb").split("=", 1), default=[])
 submit_parser.add_argument("--dry-run", action="store_true", help="Gather arguments and stop short of submitting job")
 
 def terminate(args):
@@ -307,10 +308,11 @@ def format_job_status(status):
 class LogReader:
     log_group_name, start_time = "/aws/batch/job", 0
     seen_events, next_seen_events = collections.deque(), collections.deque()
-    def __init__(self, job_name, job_id):
+    def __init__(self, job_name, job_id, head=None, tail=None):
         self.log_stream_name_prefix = "{}/{}".format(job_name, job_id)
         self.describe_log_streams = clients.logs.get_paginator("describe_log_streams")
         self.filter_log_events = clients.logs.get_paginator("filter_log_events")
+        self.head, self.tail = head, tail
 
     def __iter__(self):
         log_stream_args = dict(logGroupName=self.log_group_name, logStreamNamePrefix=self.log_stream_name_prefix)
@@ -327,37 +329,62 @@ class LogReader:
                         self.seen_events.popleft()
                         continue
                     yield event
+                    if self.head is not None:
+                        self.head -= 1
+                        if self.head <= 0:
+                            break
+                    if self.tail is not None:
+                        raise NotImplementedError()
         self.seen_events.clear()
         LogReader.next_seen_events, LogReader.seen_events = LogReader.seen_events, LogReader.next_seen_events
 
 def get_logs(args):
-    for event in LogReader(args.job_name, args.job_id):
+    for event in LogReader(args.job_name, args.job_id, head=args.head, tail=args.tail):
         print(str(Timestamp(event["timestamp"])), event["message"])
 
-get_logs_parser = register_parser(get_logs, parent=batch_parser, help="Retrieve logs for a Batch job")
-get_logs_parser.add_argument("job_id")
-get_logs_parser.add_argument("job_name", nargs="?", default=__name__.replace(".", "_"))
-
 def watch(args):
-    job_name = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["jobName"]
-    logger.info("Watching job %s (%s)", args.job_id, job_name)
+    args.job_name = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]["jobName"]
+    logger.info("Watching job %s (%s)", args.job_id, args.job_name)
     last_status = None
-    get_logs_args = get_logs_parser.parse_args([args.job_id, job_name])
     while last_status not in {"SUCCEEDED", "FAILED"}:
         job_desc = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
         if job_desc["status"] != last_status:
             logger.info("Job %s %s", args.job_id, format_job_status(job_desc["status"]))
             last_status = job_desc["status"]
         if job_desc["status"] in {"RUNNING", "SUCCEEDED", "FAILED"}:
-            get_logs(get_logs_args)
+            get_logs(args)
         if "statusReason" in job_desc:
             logger.info("Job %s: %s", args.job_id, job_desc["statusReason"])
 
+get_logs_parser = register_parser(get_logs, parent=batch_parser, help="Retrieve logs for a Batch job")
+get_logs_parser.add_argument("job_id")
+get_logs_parser.add_argument("job_name", nargs="?", default=__name__.replace(".", "_"))
 watch_parser = register_parser(watch, parent=batch_parser, help="Monitor a running Batch job and stream its logs")
 watch_parser.add_argument("job_id")
+for parser in get_logs_parser, watch_parser:
+    lines_group = parser.add_mutually_exclusive_group()
+    lines_group.add_argument("--head", type=int, nargs="?", const=10,
+                             help="Retrieve this number of lines from the beginning of the log (default 10)")
+    lines_group.add_argument("--tail", type=int, nargs="?", const=10,
+                             help="Retrieve this number of lines from the end of the log (default 10)")
 
 def ssh(args):
-    pass
+    job_desc = clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
+    job_queue_desc = clients.batch.describe_job_queues(jobQueues=[job_desc["jobQueue"]])["jobQueues"][0]
+    ce = job_queue_desc["computeEnvironmentOrder"][0]["computeEnvironment"]
+    ce_desc = clients.batch.describe_compute_environments(computeEnvironments=[ce])["computeEnvironments"][0]
+    ecs_ci_arn = job_desc["container"]["containerInstanceArn"]
+    ecs_ci_desc = clients.ecs.describe_container_instances(cluster=ce_desc["ecsClusterArn"],
+                                                           containerInstances=[ecs_ci_arn])["containerInstances"][0]
+    ecs_ci_ec2_id = ecs_ci_desc["ec2InstanceId"]
+    for reservation in paginate(clients.ec2.get_paginator("describe_instances"), InstanceIds=[ecs_ci_ec2_id]):
+        ecs_ci_address = reservation["Instances"][0]["PublicDnsName"]
+    ssh_args = ["ssh", "-l", "ec2-user", ecs_ci_address,
+                "docker", "ps", "--filter", "name=" + args.job_id, "--format", "{{.ID}}"]
+    container_id = subprocess.check_output(ssh_args).decode().strip()
+    subprocess.call(["ssh", "-t", "-l", "ec2-user", ecs_ci_address,
+                     "docker", "exec", "--interactive", "--tty", container_id] + args.ssh_args)
 
-watch_parser = register_parser(ssh, parent=batch_parser, help="Attach to a running Batch job via SSH")
-watch_parser.add_argument("job_id")
+ssh_parser = register_parser(ssh, parent=batch_parser, help="Attach to a running Batch job via SSH")
+ssh_parser.add_argument("job_id")
+ssh_parser.add_argument("ssh_args", nargs=argparse.REMAINDER, default=["/bin/bash", "-l"])
