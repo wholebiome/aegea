@@ -121,10 +121,12 @@ class TestAegea(unittest.TestCase):
                          {'c3.4xlarge', 'c4.8xlarge', 'c4.4xlarge', 'm4.10xlarge', 'c3.8xlarge', 'm4.4xlarge'})
         builder = SpotFleetBuilder(launch_spec={}, cores=16, min_cores_per_instance=16, min_mem_per_core_gb=6)
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()),
-                         {'r3.4xlarge', 'r3.8xlarge', 'd2.4xlarge', 'i2.8xlarge', 'd2.8xlarge', 'i2.4xlarge'})
+                         {'r3.4xlarge', 'r3.8xlarge', 'd2.4xlarge', 'i2.8xlarge', 'd2.8xlarge', 'i2.4xlarge',
+                          'i3.4xlarge', 'r4.4xlarge', 'i3.8xlarge', 'r4.8xlarge'})
         builder = SpotFleetBuilder(launch_spec={}, cores=32, min_cores_per_instance=32, min_mem_per_core_gb=6)
         self.assertEqual(set(spec["InstanceType"] for spec in builder.launch_specs()),
-                         {'r3.8xlarge', 'i2.8xlarge', 'd2.8xlarge'})
+                         {'r3.8xlarge', 'i2.8xlarge', 'd2.8xlarge', 'i3.8xlarge', 'r4.16xlarge', 'i3.16xlarge',
+                          'r4.8xlarge'})
         # TODO: This will need updating when X1s come out
         builder = SpotFleetBuilder(launch_spec={}, cores=32, min_cores_per_instance=16, min_mem_per_core_gb=8)
         self.assertFalse(set(spec["InstanceType"] for spec in builder.launch_specs()))

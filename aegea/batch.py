@@ -266,7 +266,7 @@ ecs_img_arg = img_group.add_argument("--ecs-image", "--ecr-image", "-i", metavar
                                      help="Name of Docker image residing in this account's Elastic Container Registry")
 ecs_img_arg.completer = ecr_image_name_completer
 group.add_argument("--vcpus", type=int, default=1)
-group.add_argument("--memory-mb", type=int, default=1024)
+group.add_argument("--memory-mb", dest="memory", type=int, default=1024)
 group.add_argument("--privileged", action="store_true", default=False)
 group.add_argument("--volumes", nargs="+", metavar="HOST_PATH=GUEST_PATH", type=lambda x: x.split("=", 1), default=[])
 group.add_argument("--environment", nargs="+", metavar="NAME=VALUE",
