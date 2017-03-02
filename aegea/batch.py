@@ -26,6 +26,7 @@ ebs_vol_mgr_shellcode = """iid=$(http http://169.254.169.254/latest/dynamic/inst
 aws configure set default.region $(echo "$iid" | jq -r .region)
 az=$(echo "$iid" | jq -r .availabilityZone)
 vid=$(aws ec2 create-volume --availability-zone $az --size %s --volume-type st1 | jq -r .VolumeId)
+aws ec2 create-tags --resource $vid --tags Key=Name,Value=aegea_batch_volume
 trap "umount /mnt || umount -l /mnt; aws ec2 detach-volume --volume-id $vid; while ! aws ec2 describe-volumes --volume-ids $vid | jq -re .Volumes[0].Attachments==[]; do sleep 1; done; aws ec2 delete-volume --volume-id $vid" EXIT
 while [[ $(aws ec2 describe-volumes --volume-ids $vid | jq -r .Volumes[0].State) != available ]]; do sleep 1; done
 for devnode in /dev/xvd{a..z}; do [[ -e $devnode ]] || break; done
