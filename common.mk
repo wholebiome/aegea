@@ -35,6 +35,7 @@ release:
 	$(MAKE) install
 	http --auth ${GH_AUTH} POST ${UPLOADS_API}/$$(http --auth ${GH_AUTH} ${RELEASES_API}/latest | jq .id)/assets \
 	    name==$$(basename dist/*.whl) label=="Python Wheel" < dist/*.whl
+	$(MAKE) pypi_release
 
 pypi_release:
 	python setup.py sdist bdist_wheel upload --sign
