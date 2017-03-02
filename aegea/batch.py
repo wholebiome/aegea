@@ -385,6 +385,6 @@ def ssh(args):
     subprocess.call(["ssh", "-t", "-l", "ec2-user", ecs_ci_address,
                      "docker", "exec", "--interactive", "--tty", container_id] + args.ssh_args)
 
-ssh_parser = register_parser(ssh, parent=batch_parser, help="Attach to a running Batch job via SSH")
+ssh_parser = register_parser(ssh, parent=batch_parser, help="Log in to a running Batch job via SSH")
 ssh_parser.add_argument("job_id")
 ssh_parser.add_argument("ssh_args", nargs=argparse.REMAINDER, default=["/bin/bash", "-l"])
