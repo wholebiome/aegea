@@ -4,9 +4,9 @@ Manage IAM users, groups, roles, and policies
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, collections
+import os, sys, argparse, collections, random, string
 
-from . import config
+from . import config, logger
 from .ls import register_parser, register_listing_parser
 from .util import Timestamp, paginate, hashabledict
 from .util.printing import page_output, tabulate, BOLD
@@ -58,3 +58,51 @@ def policies(args):
 
 parser = register_listing_parser(policies, parent=iam_parser, help="List IAM policies")
 parser.add_argument("--sort-by")
+
+def generate_password(length=16):
+    while True:
+        password = [random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(length)]
+        password.insert(8, "-")
+        if not any(c in string.ascii_uppercase for c in password):
+            continue
+        if not any(c in string.ascii_lowercase for c in password):
+            continue
+        if not any(c in string.digits for c in password):
+            continue
+        return ''.join(password)
+
+def create_user(args):
+    if args.prompt_for_password:
+        from getpass import getpass
+        args.password = getpass(prompt="Password for IAM user {}:".format(args.username))
+    else:
+        args.password = generate_password()
+    try:
+        user = resources.iam.create_user(UserName=args.username)
+        clients.iam.get_waiter('user_exists').wait(UserName=args.username)
+        logger.info("Created new IAM user %s", user)
+        print(BOLD("Generated new password for IAM user {}: {}".format(args.username, args.password)))
+    except resources.iam.meta.client.exceptions.EntityAlreadyExistsException:
+        user = resources.iam.User(args.username)
+        logger.info("Updating existing IAM user %s", user)
+    try:
+        user.create_login_profile(UserName=user.name, Password=args.password, PasswordResetRequired=True)
+    except resources.iam.meta.client.exceptions.EntityAlreadyExistsException:
+        if args.reset_password:
+            clients.iam.update_login_profile(UserName=user.name, Password=args.password, PasswordResetRequired=True)
+            print(BOLD("Generated reset password for IAM user {}: {}".format(args.username, args.password)))
+    for group in args.groups:
+        try:
+            group = resources.iam.create_group(GroupName=group)
+            logger.info("Created new IAM group %s", group)
+        except resources.iam.meta.client.exceptions.EntityAlreadyExistsException:
+            group = resources.iam.Group(group)
+        user.add_group(GroupName=group.name)
+        logger.info("Added %s to %s", user, group)
+
+parser = register_listing_parser(create_user, parent=iam_parser, help="Create a new IAM user")
+parser.add_argument("username")
+parser.add_argument("--reset-password", action="store_true")
+parser.add_argument("--prompt-for-password",
+                    help="Display an interactive prompt for new user password instead of autogenerating")
+parser.add_argument("--groups", nargs="*", default=[], help="IAM groups to add the user to")
