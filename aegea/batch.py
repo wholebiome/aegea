@@ -299,6 +299,12 @@ parser.add_argument("--queues", nargs="+")
 parser.add_argument("--status", nargs="+",
                     default="SUBMITTED PENDING RUNNABLE STARTING RUNNING SUCCEEDED FAILED".split())
 
+def describe(args):
+    return clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
+
+parser = register_parser(describe, parent=batch_parser, help="Describe a Batch job")
+parser.add_argument("job_id")
+
 job_status_colors = dict(SUBMITTED=YELLOW(), PENDING=YELLOW(), RUNNABLE=BOLD()+YELLOW(),
                          STARTING=GREEN(), RUNNING=GREEN(),
                          SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
