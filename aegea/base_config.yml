@@ -390,15 +390,24 @@ alarms:
     - state_updated_timestamp
     - alarm_actions
 
-billing:
-  detailed_billing_reports_bucket: "detailed-billing-reports-{account_id}"
+billing_configure:
+  billing_reports_bucket: "{account_id}-billing-reports"
+
+billing_ls:
   columns:
-    - ProductName
-    - UsageType
-    - UsageQuantity
-    - UsageStartDate
-    - UsageEndDate
-    - Cost
+    - lineItem/UsageStartDate
+    - lineItem/UsageEndDate
+    - lineItem/ProductCode
+    - lineItem/UsageType
+    - lineItem/Operation
+    - lineItem/ResourceId
+    - lineItem/UsageAmount
+    - lineItem/UnblendedRate
+    - lineItem/UnblendedCost
+    - lineItem/BlendedRate
+    - lineItem/BlendedCost
+    - lineItem/LineItemDescription
+    - resourceTags/aws:createdBy
 
 limits:
   columns:

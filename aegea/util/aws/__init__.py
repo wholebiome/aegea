@@ -141,12 +141,14 @@ def ensure_security_group(name, vpc, tcp_ingress=[dict(port=22, cidr="0.0.0.0/0"
                             CidrIp=rule["cidr"])
     return security_group
 
-def ensure_s3_bucket(name=None):
+def ensure_s3_bucket(name=None, policy=None):
     if name is None:
         name = "aegea-assets-{}".format(ARN.get_account_id())
     bucket = resources.s3.Bucket(name)
     bucket.create()
     bucket.wait_until_exists()
+    if policy:
+        bucket.Policy().put(Policy=str(policy))
     return bucket
 
 def get_client_token(iam_username, service):

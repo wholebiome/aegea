@@ -82,9 +82,9 @@ class TestAegea(unittest.TestCase):
             elif subcommand == "pricing":
                 args += ["AmazonEC2", "--json"]
             elif subcommand == "billing":
-                args += ["--min-cost", "0.1"]
-                if "AWS_DETAILED_BILLING_REPORTS_BUCKET" in os.environ:
-                    args += ["--detailed-billing-reports-bucket", os.environ["AWS_DETAILED_BILLING_REPORTS_BUCKET"]]
+                args += ["ls", "--min-cost", "0.1"]
+                if "AWS_BILLING_REPORTS_BUCKET" in os.environ:
+                    args += ["--billing-reports-bucket", os.environ["AWS_BILLING_REPORTS_BUCKET"]]
             elif subcommand == "ls":
                 args += ["--filter", "state=running"]
             elif subcommand == "tag":

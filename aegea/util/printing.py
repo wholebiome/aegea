@@ -1,7 +1,7 @@
 # coding: utf-8
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, json, shutil, subprocess, re
+import os, sys, json, shutil, subprocess, re, errno
 from datetime import datetime, timedelta
 from .exceptions import GetFieldError, AegeaException
 from .compat import str, get_terminal_size
@@ -176,8 +176,9 @@ def page_output(content, pager=None, file=None):
         pager_process.wait()
         if pager_process.returncode != os.EX_OK:
             raise AegeaException()
-    except Exception:
-        file.write(content.encode("utf-8") if USING_PYTHON2 else content)
+    except Exception as e:
+        if not (isinstance(e, IOError) and e.errno == errno.EPIPE):
+            file.write(content.encode("utf-8") if USING_PYTHON2 else content)
     finally:
         try:
             pager_process.terminate()
