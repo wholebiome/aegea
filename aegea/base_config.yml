@@ -165,6 +165,7 @@ ls:
     - tags
     - iam_instance_profile
     - security_groups
+    - state_reason
 
 iam_users:
   resource: iam
@@ -314,6 +315,7 @@ ecr_ls:
     - imageDigest
     - imagePushedAt
     - imageSizeInBytes
+    - policy
 
 sirs:
   columns:

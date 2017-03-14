@@ -127,7 +127,7 @@ def register_parser(function, parent=None, name=None, **add_parser_args):
     subparser.set_defaults(entry_point=function)
     if parent and sys.version_info < (2, 7, 9): # See https://bugs.python.org/issue9351
         parent._defaults.pop("entry_point", None)
-    command = subparser.prog[len(parser.prog)+1:].replace(" ", "_")
+    command = subparser.prog[len(parser.prog)+1:].replace("-", "_").replace(" ", "_")
     subparser.set_defaults(**config.get(command, {}))
     if subparser.description is None:
         subparser.description = add_parser_args.get("help", function.__doc__)

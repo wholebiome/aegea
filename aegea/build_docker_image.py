@@ -6,7 +6,7 @@ from collections import OrderedDict
 from botocore.exceptions import ClientError
 
 from . import register_parser, logger, config, __version__
-from .util.aws import ARN, clients, resources, expect_error_codes, ensure_iam_role
+from .util.aws import ARN, clients, resources, expect_error_codes, ensure_iam_role, IAMPolicyBuilder
 from .util.cloudinit import get_bootstrap_files, encode_cloud_config_payload
 from .batch import submit, submit_parser, bash_cmd_preamble
 
@@ -58,18 +58,24 @@ def get_cloud_config(args):
     }
     return json.dumps(cloud_cfg_d).encode()
 
-def ensure_ecr_repo(name):
+def ensure_ecr_repo(name, read_access=None):
     try:
         clients.ecr.create_repository(repositoryName=name)
-    except ClientError as e:
-        expect_error_codes(e, "RepositoryAlreadyExistsException")
+    except clients.ecr.exceptions.RepositoryAlreadyExistsException:
+        pass
+    policy = IAMPolicyBuilder(principal=dict(AWS=read_access),
+                              action=["ecr:GetDownloadUrlForLayer",
+                                      "ecr:BatchGetImage",
+                                      "ecr:BatchCheckLayerAvailability"])
+    clients.ecr.set_repository_policy(repositoryName=name, policyText=str(policy))
+
 
 def build_docker_image(args):
     for key, value in config.build_image.items():
         getattr(args, key).extend(value)
     args.tags += ["AegeaVersion={}".format(__version__),
                   'description="Built by {} for {}"'.format(__name__, ARN.get_iam_username())]
-    ensure_ecr_repo(args.name)
+    ensure_ecr_repo(args.name, read_access=args.read_access)
     submit_args = submit_parser.parse_args([
         "--command",
         "set -euo pipefail",
@@ -103,6 +109,8 @@ def build_docker_image(args):
 
 parser = register_parser(build_docker_image, help="Build an Elastic Container Registry Docker image")
 parser.add_argument("name")
+parser.add_argument("--read-access", nargs="*",
+                    help="AWS account IDs or IAM principal ARNs to grant read access. Use '*' to grant to all.")
 # Using 14.04 here to prevent "client version exceeds server version" error because ECS host docker is too old
 parser.add_argument("--builder-image", default="ubuntu:14.04", help=argparse.SUPPRESS)
 parser.add_argument("--builder-iam-policies", nargs="+",

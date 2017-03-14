@@ -6,7 +6,7 @@ Use ``aws ecr create-repository`` and ``aws ecr delete-repository`` to manage EC
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse
+import os, sys, argparse, json
 
 from botocore.exceptions import ClientError
 
@@ -16,7 +16,7 @@ from .util.printing import format_table, page_output, get_field, get_cell, tabul
 from .util.exceptions import AegeaException
 from .util.compat import lru_cache
 from .util.aws import (ARN, resources, clients, resolve_instance_id, resolve_security_group, get_elb_dns_aliases,
-                       DNSZone, ensure_vpc, expect_error_codes)
+                       DNSZone, ensure_vpc, expect_error_codes, IAMPolicyBuilder)
 
 def ecr(args):
     ecr_parser.print_help()
@@ -28,6 +28,11 @@ def ls(args):
     table = []
     describe_repositories_args = dict(repositoryNames=args.repositories) if args.repositories else {}
     for repo in paginate(clients.ecr.get_paginator("describe_repositories"), **describe_repositories_args):
+        try:
+            res = clients.ecr.get_repository_policy(repositoryName=repo["repositoryName"])
+            repo["policy"] = json.loads(res["policyText"])
+        except clients.ecr.exceptions.RepositoryPolicyNotFoundException:
+            pass
         orig_len = len(table)
         for image in paginate(clients.ecr.get_paginator("describe_images"), repositoryName=repo["repositoryName"]):
             table.append(dict(image, **repo))
