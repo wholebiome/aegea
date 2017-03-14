@@ -12,6 +12,7 @@ from textwrap import fill
 import tweak
 from botocore.exceptions import NoRegionError
 from io import open
+from .util.compat import USING_PYTHON2
 
 try:
     import pkg_resources
@@ -32,7 +33,7 @@ if sys.version_info < (2, 7, 9): # See https://urllib3.readthedocs.io/en/latest/
 logger = logging.getLogger(__name__)
 
 config, parser = None, None
-_subparsers = {}
+_subparsers, _hidden_subparsers = {}, {}
 
 class AegeaConfig(tweak.Config):
     base_config_file = os.path.join(os.path.dirname(__file__), "base_config.yml")
@@ -108,9 +109,14 @@ def register_parser(function, parent=None, name=None, **add_parser_args):
         initialize()
     if parent is None:
         parent = parser
+    parser_name = name or function.__name__
     if parent.prog not in _subparsers:
         _subparsers[parent.prog] = parent.add_subparsers()
-    subparser = _subparsers[parent.prog].add_parser(name or function.__name__, **add_parser_args)
+    if "_" in parser_name and not USING_PYTHON2:
+        add_parser_args["aliases"] = [parser_name]
+    subparser = _subparsers[parent.prog].add_parser(parser_name.replace("_", "-"), **add_parser_args)
+    if "_" in parser_name and USING_PYTHON2:
+        _subparsers[parent.prog]._name_parser_map[parser_name] = subparser
     subparser.add_argument("--max-col-width", "-w", type=int, default=32,
                            help="When printing tables, truncate column contents to this width. Set to 0 for auto fit.")
     subparser.add_argument("--json", action="store_true",

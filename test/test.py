@@ -60,9 +60,11 @@ class TestAegea(unittest.TestCase):
                       dict(return_codes=[1, os.EX_SOFTWARE],
                            stderr="(UnauthorizedOperation|AccessDenied|DryRunOperation)")]
             args = []
-            if subcommand in ("ssh", "put_alarm", "batch"):
+            if subcommand in ("ssh", "put-alarm", "put_alarm", "batch"):
                 args += ["--help"]
-            elif subcommand == "build_docker_image":
+            elif "_" in subcommand:
+                continue
+            elif subcommand == "build-docker-image":
                 args += ["--dry-run", "docker-example"]
             elif subcommand == "console":
                 args += [instance_id]
@@ -73,7 +75,7 @@ class TestAegea(unittest.TestCase):
             elif subcommand == "grep":
                 args += ["--help"] if USING_PYTHON2 else ["error", "syslog", "--start-time=-2h", "--end-time=-5m"]
                 expect.append(dict(return_codes=[os.EX_DATAERR]))
-            elif subcommand in ("launch", "build_ami"):
+            elif subcommand in ("launch", "build-ami"):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]
             elif subcommand == "rm":
                 args += [resolve_ami()]
