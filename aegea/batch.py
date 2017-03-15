@@ -75,7 +75,7 @@ def compute_environments(args):
 parser = register_listing_parser(compute_environments, parent=batch_parser, help="List Batch compute environments")
 
 def create_compute_environment(args):
-    batch_iam_role = ARN(service="iam", region="", resource="role/service-role/AWSBatchServiceRole")
+    batch_iam_role = ensure_iam_role(args.service_role, trust=["batch"], policies=["service-role/AWSBatchServiceRole"])
     vpc = ensure_vpc()
     ssh_key_name = ensure_ssh_key(args.ssh_key_name, base_name=__name__)
     instance_profile = ensure_instance_profile(args.instance_role,
@@ -95,7 +95,7 @@ def create_compute_environment(args):
     compute_environment = clients.batch.create_compute_environment(computeEnvironmentName=args.name,
                                                                    type=args.type,
                                                                    computeResources=compute_resources,
-                                                                   serviceRole=str(batch_iam_role))
+                                                                   serviceRole=batch_iam_role.arn)
     wtr = make_waiter(clients.batch.describe_compute_environments, "computeEnvironments[].status", "VALID", "pathAny",
                       delay=2, max_attempts=300)
     wtr.wait(computeEnvironments=[args.name])
@@ -111,6 +111,7 @@ cce_parser.add_argument("--max-vcpus", type=int)
 cce_parser.add_argument("--instance-types", nargs="+")
 cce_parser.add_argument("--ssh-key-name")
 cce_parser.add_argument("--instance-role", default=__name__ + ".ecs_container_instance")
+cce_parser.add_argument("--service-role", default=__name__ + ".service")
 
 def delete_compute_environment(args):
     clients.batch.update_compute_environment(computeEnvironment=args.name, state="DISABLED")

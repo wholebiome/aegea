@@ -40,11 +40,11 @@ def configure(args):
         clients.cur.put_report_definition(ReportDefinition=dict(ReportName=__name__,
                                                                 TimeUnit="HOURLY",
                                                                 Format="textORcsv",
-                                                                Compression="ZIP",
+                                                                Compression="GZIP",
                                                                 S3Bucket=bucket.name,
-                                                                S3Prefix="",
+                                                                S3Prefix="aegea",
                                                                 S3Region=clients.cur.meta.region_name,
-                                                                AdditionalSchemaElements=[]))
+                                                                AdditionalSchemaElements=["RESOURCES"]))
     except clients.cur.exceptions.DuplicateReportNameException:
         pass
     print("Configured cost and usage reports. Enable cost allocation tags: http://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activate-built-in-tags.html.") # noqa
@@ -68,7 +68,7 @@ def ls(args):
     month = str(args.month or now.month).zfill(2)
     next_year = year + ((args.month or now.month) + 1) // 12
     next_month = str(((args.month or now.month) + 1) % 12).zfill(2)
-    manifest_name = "{report}/{yr}{mo}01-{next_yr}{next_mo}01/{report}-Manifest.json"
+    manifest_name = "aegea/{report}/{yr}{mo}01-{next_yr}{next_mo}01/{report}-Manifest.json"
     manifest_name = manifest_name.format(report=__name__, yr=year, mo=month, next_yr=next_year, next_mo=next_month)
     try:
         manifest = json.loads(bucket.Object(manifest_name).get().get("Body").read())
