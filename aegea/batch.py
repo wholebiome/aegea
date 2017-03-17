@@ -4,7 +4,7 @@ Manage AWS Batch jobs, queues, and compute environments.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, base64, collections, io, subprocess
+import os, sys, argparse, base64, collections, io, subprocess, json
 from datetime import datetime
 
 from botocore.exceptions import ClientError
@@ -149,6 +149,8 @@ def get_command_and_env(args):
                  "set +a",
                  "if [ -f /etc/profile ]; then source /etc/profile; fi",
                  "set -euo pipefail"]
+    if args.restart:
+        args.environment.append(dict(name="AEGEA_RESTART_POLICY", value=json.dumps(dict(tries=args.restart))))
     if args.storage:
         args.privileged = True
         args.volumes.append(["/dev", "/dev"])
@@ -278,6 +280,7 @@ group.add_argument("--job-role", metavar="IAM_ROLE", default=__name__ + ".worker
                    help="Name of IAM role to grant to the job")
 group.add_argument("--storage", nargs="+", metavar="MOUNTPOINT=SIZE_GB",
                    type=lambda x: x.rstrip("GBgb").split("=", 1), default=[])
+submit_parser.add_argument("--restart", help="Number of times to restart the job upon failure", type=int, default=0)
 submit_parser.add_argument("--dry-run", action="store_true", help="Gather arguments and stop short of submitting job")
 
 def terminate(args):
