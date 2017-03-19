@@ -13,7 +13,7 @@ test_deps:
 
 lint: test_deps
 	./setup.py flake8
-	flake8 --filename='*' $$(grep -r -l '/usr/bin/env python' aegea scripts)
+	flake8 --filename='*' $$(grep -r -l '/usr/bin/env python' aegea/missions aegea/rootfs.skel scripts)
 
 test: test_deps lint
 	mkdir -p "$${CIRCLE_TEST_REPORTS:-.}/pytest"

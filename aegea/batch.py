@@ -4,7 +4,7 @@ Manage AWS Batch jobs, queues, and compute environments.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os, sys, argparse, base64, collections, io, subprocess, json
+import os, sys, argparse, base64, collections, io, subprocess, json, time
 from datetime import datetime
 
 from botocore.exceptions import ClientError
@@ -150,7 +150,8 @@ def get_command_and_env(args):
                  "if [ -f /etc/profile ]; then source /etc/profile; fi",
                  "set -euo pipefail"]
     if args.restart:
-        args.environment.append(dict(name="AEGEA_RESTART_POLICY", value=json.dumps(dict(tries=args.restart))))
+        restart_policy = dict(tries=args.restart, prior_failures=[])
+        args.environment.append(dict(name="AEGEA_RESTART_POLICY", value=json.dumps(restart_policy)))
     if args.storage:
         args.privileged = True
         args.volumes.append(["/dev", "/dev"])
@@ -317,35 +318,35 @@ def format_job_status(status):
     return job_status_colors[status] + status + ENDC()
 
 class LogReader:
-    log_group_name, start_time = "/aws/batch/job", 0
+    log_group_name, start_time, end_time = "/aws/batch/job", 0, int(time.time() + 3600*720*12)
     seen_events, next_seen_events = collections.deque(), collections.deque()
     def __init__(self, job_name, job_id, head=None, tail=None):
         self.log_stream_name_prefix = "{}/{}".format(job_name, job_id)
         self.describe_log_streams = clients.logs.get_paginator("describe_log_streams")
-        self.filter_log_events = clients.logs.get_paginator("filter_log_events")
         self.head, self.tail = head, tail
 
     def __iter__(self):
         log_stream_args = dict(logGroupName=self.log_group_name, logStreamNamePrefix=self.log_stream_name_prefix)
         for log_stream in paginate(self.describe_log_streams, **log_stream_args):
-            filter_args = dict(logGroupName=self.log_group_name, logStreamNames=[log_stream["logStreamName"]],
-                               startTime=self.start_time)
-            for event in paginate(self.filter_log_events, **filter_args):
-                if "timestamp" in event and "message" in event:
-                    if event["timestamp"] != self.start_time:
-                        self.next_seen_events.clear()
-                        LogReader.start_time = event["timestamp"]
-                    self.next_seen_events.append(event)
-                    if self.seen_events and event == self.seen_events[0]:
-                        self.seen_events.popleft()
-                        continue
-                    yield event
-                    if self.head is not None:
-                        self.head -= 1
-                        if self.head <= 0:
-                            break
-                    if self.tail is not None:
-                        raise NotImplementedError()
+            get_args = dict(logGroupName=self.log_group_name, logStreamName=log_stream["logStreamName"],
+                            startTime=self.start_time, limit=min(self.head or 10000, self.tail or 10000))
+            get_args["startFromHead"] = True if self.tail is None else False
+            next_page_token = "nextForwardToken" if self.tail is None else "nextBackwardToken"
+            while True:
+                page = clients.logs.get_log_events(**get_args)
+                for event in page["events"]:
+                    if "timestamp" in event and "message" in event:
+                        if event["timestamp"] != self.start_time:
+                            self.next_seen_events.clear()
+                            LogReader.start_time = event["timestamp"]
+                        self.next_seen_events.append(event)
+                        if self.seen_events and event == self.seen_events[0]:
+                            self.seen_events.popleft()
+                            continue
+                        yield event
+                if self.head is not None or self.tail is not None or next_page_token not in page:
+                    break
+                get_args["nextToken"] = page[next_page_token]
         self.seen_events.clear()
         LogReader.next_seen_events, LogReader.seen_events = LogReader.seen_events, LogReader.next_seen_events
 
