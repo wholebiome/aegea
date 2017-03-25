@@ -18,6 +18,9 @@ Before you do this, you will also need to install some system library dependenci
 +--------------+---------+--------------------------------------------------------------------------------------------------+
 | OS           | Python  | Command                                                                                          |
 +==============+=========+==================================================================================================+
+| OS X         |         | ``sudo easy_install-2.7 pip; sudo pip install --ignore-installed six python-dateutil;``          |
+|              |         | ``sudo pip install aegea`` (if prompted to install XCode Command Line Tools, do it and try again)|
++--------------+---------+--------------------------------------------------------------------------------------------------+
 | Ubuntu       | Python 2| apt-get update;                                                                                  |
 |              |         | apt-get install build-essential python-pip python-dev python-cffi libffi-dev libssl-dev moreutils|
 +--------------+---------+--------------------------------------------------------------------------------------------------+
@@ -27,9 +30,6 @@ Before you do this, you will also need to install some system library dependenci
 | Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel moreutils                                     |
 +--------------+---------+--------------------------------------------------------------------------------------------------+
 | Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel moreutils                                   |
-+--------------+---------+--------------------------------------------------------------------------------------------------+
-| OS X         |         | ``sudo easy_install-2.7 pip; sudo pip install --ignore-installed six python-dateutil;``          |
-|              |         | ``sudo pip install aegea`` (if prompted to install XCode Command Line Tools, do it and try again)|
 +--------------+---------+--------------------------------------------------------------------------------------------------+
 
 Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access credentials that will be used by the
