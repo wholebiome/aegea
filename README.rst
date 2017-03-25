@@ -10,6 +10,7 @@ existing functionality of the `AWS CLI <https://aws.amazon.com/cli/>`_ and `boto
 Installation
 ~~~~~~~~~~~~
 ::
+
    pip install aegea
 
 Before you do this, you will also need to install some system library dependencies:
