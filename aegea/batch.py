@@ -36,9 +36,10 @@ while [[ ! -e $devnode ]]; do sleep 1; done
 mkfs.ext4 $devnode
 mount $devnode %s""" # noqa
 
-efs_vol_shellcode = """ mkdir -p {efs_mountpoint}
-NFS_ENDPOINT=$(getent hosts fs-79369430.efs.us-east-1.amazonaws.com | cut -f 1 -d " ")
+efs_vol_shellcode = """mkdir -p {efs_mountpoint}
+NFS_ENDPOINT=$(getent hosts {efs_id}.efs.us-east-1.amazonaws.com | cut -f 1 -d " ")
 mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $NFS_ENDPOINT:/ {efs_mountpoint}"""
+
 def batch(args):
     batch_parser.print_help()
 
@@ -171,7 +172,7 @@ def get_command_and_env(args):
             else:
                 raise AegeaException('Could not resolve "{}" to a valid EFS filesystem ID'.format(efs_id))
         args.privileged = True
-        commands = efs_vol_shellcode.format(efs_mountpoint=args.efs_storage).splitlines()
+        commands = efs_vol_shellcode.format(efs_mountpoint=args.efs_storage, efs_id=efs_id).splitlines()
         shellcode += commands
 
     if args.execute:
