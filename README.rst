@@ -10,6 +10,7 @@ existing functionality of the `AWS CLI <https://aws.amazon.com/cli/>`_ and `boto
 Installation
 ~~~~~~~~~~~~
 ::
+
    pip install aegea
 
 Before you do this, you will also need to install some system library dependencies:
@@ -17,6 +18,9 @@ Before you do this, you will also need to install some system library dependenci
 +--------------+---------+--------------------------------------------------------------------------------------------------+
 | OS           | Python  | Command                                                                                          |
 +==============+=========+==================================================================================================+
+| OS X         |         | ``sudo easy_install-2.7 pip; sudo pip install --ignore-installed six python-dateutil;``          |
+|              |         | ``sudo pip install aegea`` (if prompted to install XCode Command Line Tools, do it and try again)|
++--------------+---------+--------------------------------------------------------------------------------------------------+
 | Ubuntu       | Python 2| apt-get update;                                                                                  |
 |              |         | apt-get install build-essential python-pip python-dev python-cffi libffi-dev libssl-dev moreutils|
 +--------------+---------+--------------------------------------------------------------------------------------------------+
@@ -26,9 +30,6 @@ Before you do this, you will also need to install some system library dependenci
 | Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel moreutils                                     |
 +--------------+---------+--------------------------------------------------------------------------------------------------+
 | Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel moreutils                                   |
-+--------------+---------+--------------------------------------------------------------------------------------------------+
-| OS X         |         | `Install Homebrew <http://brew.sh/>`_. Run                                                       |
-|              |         | ``brew install openssl moreutils && brew link --force openssl``.                                 |
 +--------------+---------+--------------------------------------------------------------------------------------------------+
 
 Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access credentials that will be used by the
@@ -42,6 +43,8 @@ Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access c
 **No root access; user-local install**: Use ``make install_venv`` to install aegea in its own virtualenv. The last line of the 
 output shows how to activate the virtualenv. The version of virtualenv packaged in Ubuntu 12.04 is too old; use
 ``pip install --upgrade --user virtualenv`` to upgrade it.
+
+**OS X with Homebrew Python**: Run ``brew link --force openssl``.
 
 Configuration management
 ~~~~~~~~~~~~~~~~~~~~~~~~

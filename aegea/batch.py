@@ -36,9 +36,9 @@ while [[ ! -e $devnode ]]; do sleep 1; done
 mkfs.ext4 $devnode
 mount $devnode %s""" # noqa
 
-efs_vol_shellcode = """ mkdir -p {nfs_mountpoint}
+efs_vol_shellcode = """ mkdir -p {efs_mountpoint}
 NFS_ENDPOINT=$(getent hosts fs-79369430.efs.us-east-1.amazonaws.com | cut -f 1 -d " ")
-mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $NFS_ENDPOINT:/ {nfs_mountpoint}"""
+mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $NFS_ENDPOINT:/ {efs_mountpoint}"""
 def batch(args):
     batch_parser.print_help()
 
@@ -149,8 +149,7 @@ def get_command_and_env(args):
                  "if [ -f /etc/default/locale ]; then source /etc/default/locale; fi",
                  "set +a",
                  "if [ -f /etc/profile ]; then source /etc/profile; fi",
-                 "set -euo pipefail",
-                 "FIXME: ADD DSTAT HERE"]
+                 "set -euo pipefail"]
     if args.restart:
         restart_policy = dict(tries=args.restart, prior_failures=[])
         args.environment.append(dict(name="AEGEA_RESTART_POLICY", value=json.dumps(restart_policy)))
@@ -161,16 +160,16 @@ def get_command_and_env(args):
             shellcode += (ebs_vol_mgr_shellcode % (size_gb, mountpoint)).splitlines()
     elif args.efs_storage:
         if "=" in args.efs_storage:
-            efs_id, mountpoint = args.efs_storage.split("=")
-            if not efs_id.startswith("fs-"):
-                filesystems = clients.efs.describe_file_systems()["FileSystems"]
-#                for filesystem in clients.efs.describe_file_systems()["FileSystems"]:
-#        filesystem["tags"] = clients.efs.describe_tags(FileSystemId=filesystem["FileSystemId"])["Tags"]
-
-#                efs_id = 
+            mountpoint, efs_id = args.efs_storage.split("=")
         else:
-            efs_id = "wat"
-            mountpoint = args.efs_storage
+            mountpoint, efs_id = args.efs_storage, __name__
+        if not efs_id.startswith("fs-"):
+            for filesystem in clients.efs.describe_file_systems()["FileSystems"]:
+                if filesystem["Name"] == efs_id:
+                    efs_id = filesystem["FileSystemId"]
+                    break
+            else:
+                raise AegeaException('Could not resolve "{}" to a valid EFS filesystem ID'.format(efs_id))
         args.privileged = True
         commands = efs_vol_shellcode.format(efs_mountpoint=args.efs_storage).splitlines()
         shellcode += commands
@@ -370,6 +369,7 @@ class LogReader:
                         yield event
                 if self.head is not None or self.tail is not None or next_page_token not in page:
                     break
+                # FIXME: stopping condition / terminal state
                 get_args["nextToken"] = page[next_page_token]
         self.seen_events.clear()
         LogReader.next_seen_events, LogReader.seen_events = LogReader.seen_events, LogReader.next_seen_events
