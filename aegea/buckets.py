@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 
 from . import register_parser, logger
 from .ls import filter_collection, register_filtering_parser
-from .util.aws import ARN, resolve_instance_id, resources, clients, expect_error_codes
+from .util.aws import ARN, resolve_instance_id, resources, clients, expect_error_codes, get_cloudwatch_metric_stats
 from .util.printing import format_table, page_output, get_field, get_cell, tabulate, GREEN, BLUE, format_number
 
 def buckets(args):
@@ -29,24 +29,14 @@ def ls(args):
         bucket_region = bucket.LocationConstraint or "us-east-1"
         if bucket_region != cloudwatch.meta.client.meta.region_name:
             cloudwatch = boto3.Session(region_name=bucket_region).resource("cloudwatch")
-        num_obj_metric = cloudwatch.Metric("AWS/S3", "NumberOfObjects")
-        data = num_obj_metric.get_statistics(
-            StartTime=datetime.utcnow()-timedelta(days=2),
-            EndTime=datetime.utcnow(),
-            Period=3600,
-            Statistics=["Maximum"],
-            Dimensions=[dict(Name="BucketName", Value=bucket.name), dict(Name="StorageType", Value="AllStorageTypes")]
-        )
-        bucket.NumberOfObjects = int(data["Datapoints"][-1]["Maximum"]) if data["Datapoints"] else None
-        size_metric = cloudwatch.Metric("AWS/S3", "BucketSizeBytes")
-        data = size_metric.get_statistics(
-            StartTime=datetime.utcnow()-timedelta(days=2),
-            EndTime=datetime.utcnow(),
-            Period=3600,
-            Statistics=["Maximum"],
-            Dimensions=[dict(Name="BucketName", Value=bucket.name), dict(Name="StorageType", Value="StandardStorage")]
-        )
-        bucket.BucketSizeBytes = format_number(data["Datapoints"][-1]["Maximum"]) if data["Datapoints"] else None
+        data = get_cloudwatch_metric_stats("AWS/S3", "NumberOfObjects", start_time=datetime.utcnow()-timedelta(days=2),
+                                           end_time=datetime.utcnow(), period=3600, BucketName=bucket.name,
+                                           StorageType="AllStorageTypes", resource=cloudwatch)
+        bucket.NumberOfObjects = int(data["Datapoints"][-1]["Average"]) if data["Datapoints"] else None
+        data = get_cloudwatch_metric_stats("AWS/S3", "BucketSizeBytes", start_time=datetime.utcnow()-timedelta(days=2),
+                                           end_time=datetime.utcnow(), period=3600, BucketName=bucket.name,
+                                           StorageType="StandardStorage", resource=cloudwatch)
+        bucket.BucketSizeBytes = format_number(data["Datapoints"][-1]["Average"]) if data["Datapoints"] else None
         table.append(bucket)
     page_output(tabulate(table, args))
 

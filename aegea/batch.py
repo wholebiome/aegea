@@ -36,9 +36,9 @@ while [[ ! -e $devnode ]]; do sleep 1; done
 mkfs.ext4 $devnode
 mount $devnode %s""" # noqa
 
-efs_vol_shellcode = """ mkdir -p %s
-NFS_END_POINT=$(getent hosts fs-79369430.efs.us-east-1.amazonaws.com | cut -f 1 -d " ")
-mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $NFS_END_POINT:/ %s"""
+efs_vol_shellcode = """ mkdir -p {nfs_mountpoint}
+NFS_ENDPOINT=$(getent hosts fs-79369430.efs.us-east-1.amazonaws.com | cut -f 1 -d " ")
+mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $NFS_ENDPOINT:/ {nfs_mountpoint}"""
 def batch(args):
     batch_parser.print_help()
 
@@ -149,7 +149,8 @@ def get_command_and_env(args):
                  "if [ -f /etc/default/locale ]; then source /etc/default/locale; fi",
                  "set +a",
                  "if [ -f /etc/profile ]; then source /etc/profile; fi",
-                 "set -euo pipefail"]
+                 "set -euo pipefail",
+                 "FIXME: ADD DSTAT HERE"]
     if args.restart:
         restart_policy = dict(tries=args.restart, prior_failures=[])
         args.environment.append(dict(name="AEGEA_RESTART_POLICY", value=json.dumps(restart_policy)))
@@ -159,8 +160,19 @@ def get_command_and_env(args):
         for mountpoint, size_gb in args.storage:
             shellcode += (ebs_vol_mgr_shellcode % (size_gb, mountpoint)).splitlines()
     elif args.efs_storage:
+        if "=" in args.efs_storage:
+            efs_id, mountpoint = args.efs_storage.split("=")
+            if not efs_id.startswith("fs-"):
+                filesystems = clients.efs.describe_file_systems()["FileSystems"]
+#                for filesystem in clients.efs.describe_file_systems()["FileSystems"]:
+#        filesystem["tags"] = clients.efs.describe_tags(FileSystemId=filesystem["FileSystemId"])["Tags"]
+
+#                efs_id = 
+        else:
+            efs_id = "wat"
+            mountpoint = args.efs_storage
         args.privileged = True
-        commands = (efs_vol_shellcode % (args.efs_storage, args.efs_storage)).splitlines()
+        commands = efs_vol_shellcode.format(efs_mountpoint=args.efs_storage).splitlines()
         shellcode += commands
 
     if args.execute:
@@ -226,6 +238,8 @@ def ensure_queue(name):
         return create_queue(cq_args)
 
 def submit(args):
+    # FIXME
+    # ensure_lambda("aegea_batch_monitor")
     ensure_log_group("docker")
     ensure_log_group("syslog")
     command, environment = get_command_and_env(args)
@@ -289,6 +303,8 @@ group.add_argument("--storage", nargs="+", metavar="MOUNTPOINT=SIZE_GB",
                    type=lambda x: x.rstrip("GBgb").split("=", 1), default=[])
 group.add_argument("--efs-storage", action="store", dest="efs_storage", default=False,
                    help="mount nfs drive to the mount point specified. i.e. --efs-storage /mnt")
+submit_parser.add_argument("--timeout",
+                           help="Terminate (and possibly restart) the job after this time (use suffix s, m, h, d, w)")
 submit_parser.add_argument("--restart", help="Number of times to restart the job upon failure", type=int, default=0)
 submit_parser.add_argument("--dry-run", action="store_true", help="Gather arguments and stop short of submitting job")
 
@@ -399,8 +415,10 @@ def ssh(args):
     ecs_ci_ec2_id = ecs_ci_desc["ec2InstanceId"]
     for reservation in paginate(clients.ec2.get_paginator("describe_instances"), InstanceIds=[ecs_ci_ec2_id]):
         ecs_ci_address = reservation["Instances"][0]["PublicDnsName"]
+    logger.info("Job {} is on ECS container instance {} ({})".format(args.job_id, ecs_ci_ec2_id, ecs_ci_address))
     ssh_args = ["ssh", "-l", "ec2-user", ecs_ci_address,
                 "docker", "ps", "--filter", "name=" + args.job_id, "--format", "{{.ID}}"]
+    logger.info("Running: {}".format(" ".join(ssh_args)))
     container_id = subprocess.check_output(ssh_args).decode().strip()
     subprocess.call(["ssh", "-t", "-l", "ec2-user", ecs_ci_address,
                      "docker", "exec", "--interactive", "--tty", container_id] + args.ssh_args)

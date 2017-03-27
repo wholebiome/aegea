@@ -480,3 +480,15 @@ def ensure_log_group(name):
         except clients.logs.exceptions.ResourceAlreadyExistsException:
             pass
         return resolve_log_group(name)
+
+def get_cloudwatch_metric_stats(namespace, name, start_time=None, end_time=None, period=None, statistic="Average",
+                                resource=None, **kwargs):
+    start_time = datetime.utcnow() - period * 60 if start_time is None else start_time
+    end_time = datetime.utcnow() if end_time is None else end_time
+    cloudwatch = resources.cloudwatch if resource is None else resource
+    metric = cloudwatch.Metric(namespace, name)
+    get_stats_args = dict(StartTime=start_time, EndTime=end_time, Statistics=[statistic],
+                          Dimensions=[dict(Name=k, Value=v) for k, v in kwargs.items()])
+    if period is not None:
+        get_stats_args.update(Period=period)
+    return metric.get_statistics(**get_stats_args)
