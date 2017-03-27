@@ -37,7 +37,9 @@ mkfs.ext4 $devnode
 mount $devnode %s""" # noqa
 
 efs_vol_shellcode = """mkdir -p {efs_mountpoint}
-NFS_ENDPOINT=$(getent hosts {efs_id}.efs.us-east-1.amazonaws.com | cut -f 1 -d " ")
+MAC=$(curl http://169.254.169.254/latest/meta-data/mac)
+export SUBNET_ID=$(curl http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/subnet-id)
+NFS_ENDPOINT=$(echo "$AEGEA_EFS_DESC" | jq -r ".[] | select(.SubnetId == env.SUBNET_ID) | .IpAddress")
 mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $NFS_ENDPOINT:/ {efs_mountpoint}"""
 
 def batch(args):
@@ -160,6 +162,7 @@ def get_command_and_env(args):
         for mountpoint, size_gb in args.storage:
             shellcode += (ebs_vol_mgr_shellcode % (size_gb, mountpoint)).splitlines()
     elif args.efs_storage:
+        args.privileged = True
         if "=" in args.efs_storage:
             mountpoint, efs_id = args.efs_storage.split("=")
         else:
@@ -171,7 +174,8 @@ def get_command_and_env(args):
                     break
             else:
                 raise AegeaException('Could not resolve "{}" to a valid EFS filesystem ID'.format(efs_id))
-        args.privileged = True
+        mount_targets = clients.efs.describe_mount_targets(FileSystemId=efs_id)["MountTargets"]
+        args.environment.append(dict(name="AEGEA_EFS_DESC", value=json.dumps(mount_targets)))
         commands = efs_vol_shellcode.format(efs_mountpoint=args.efs_storage, efs_id=efs_id).splitlines()
         shellcode += commands
 
@@ -422,8 +426,8 @@ def ssh(args):
     logger.info("Running: {}".format(" ".join(ssh_args)))
     container_id = subprocess.check_output(ssh_args).decode().strip()
     subprocess.call(["ssh", "-t", "-l", "ec2-user", ecs_ci_address,
-                     "docker", "exec", "--interactive", "--tty", container_id] + args.ssh_args)
+                     "docker", "exec", "--interactive", "--tty", container_id] + (args.ssh_args or ["/bin/bash", "-l"]))
 
 ssh_parser = register_parser(ssh, parent=batch_parser, help="Log in to a running Batch job via SSH")
 ssh_parser.add_argument("job_id")
-ssh_parser.add_argument("ssh_args", nargs=argparse.REMAINDER, default=["/bin/bash", "-l"])
+ssh_parser.add_argument("ssh_args", nargs=argparse.REMAINDER)
