@@ -23,6 +23,7 @@ from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_r
 from .util.aws.spot import SpotFleetBuilder
 
 bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
+
 ebs_vol_mgr_shellcode = """iid=$(http http://169.254.169.254/latest/dynamic/instance-identity/document)
 aws configure set default.region $(echo "$iid" | jq -r .region)
 az=$(echo "$iid" | jq -r .availabilityZone)
@@ -346,38 +347,30 @@ def format_job_status(status):
     return job_status_colors[status] + status + ENDC()
 
 class LogReader:
-    log_group_name, start_time, end_time = "/aws/batch/job", 0, int(time.time() + 3600*720*12)
-    seen_events, next_seen_events = collections.deque(), collections.deque()
+    log_group_name, next_page_token = "/aws/batch/job", None
     def __init__(self, job_name, job_id, head=None, tail=None):
         self.log_stream_name_prefix = "{}/{}".format(job_name, job_id)
         self.describe_log_streams = clients.logs.get_paginator("describe_log_streams")
         self.head, self.tail = head, tail
+        self.next_page_key = "nextForwardToken" if self.tail is None else "nextBackwardToken"
 
     def __iter__(self):
         log_stream_args = dict(logGroupName=self.log_group_name, logStreamNamePrefix=self.log_stream_name_prefix)
         for log_stream in paginate(self.describe_log_streams, **log_stream_args):
             get_args = dict(logGroupName=self.log_group_name, logStreamName=log_stream["logStreamName"],
-                            startTime=self.start_time, limit=min(self.head or 10000, self.tail or 10000))
+                            limit=min(self.head or 10000, self.tail or 10000))
             get_args["startFromHead"] = True if self.tail is None else False
-            next_page_token = "nextForwardToken" if self.tail is None else "nextBackwardToken"
+            if self.next_page_token:
+                get_args["nextToken"] = self.next_page_token
             while True:
                 page = clients.logs.get_log_events(**get_args)
                 for event in page["events"]:
                     if "timestamp" in event and "message" in event:
-                        if event["timestamp"] != self.start_time:
-                            self.next_seen_events.clear()
-                            LogReader.start_time = event["timestamp"]
-                        self.next_seen_events.append(event)
-                        if self.seen_events and event == self.seen_events[0]:
-                            self.seen_events.popleft()
-                            continue
                         yield event
-                if self.head is not None or self.tail is not None or next_page_token not in page:
+                get_args["nextToken"] = page[self.next_page_key]
+                if self.head is not None or self.tail is not None or len(page["events"]) == 0:
                     break
-                # FIXME: stopping condition / terminal state
-                get_args["nextToken"] = page[next_page_token]
-        self.seen_events.clear()
-        LogReader.next_seen_events, LogReader.seen_events = LogReader.seen_events, LogReader.next_seen_events
+        LogReader.next_page_token = page[self.next_page_key]
 
 def get_logs(args):
     for event in LogReader(args.job_name, args.job_id, head=args.head, tail=args.tail):
