@@ -35,10 +35,13 @@ def users(args):
 
     def mark_cur_user(cell, row):
         return ">>>" if row.user_id == current_user.user_id else ""
+
+    def describe_mfa(cell, row):
+        return "Enabled" if list(row.mfa_devices.all()) else "Disabled"
     users = list(resources.iam.users.all())
     for user in users:
-        user.cur = ""
-    cell_transforms = {"cur": mark_cur_user, "policies": get_policies_for_principal}
+        user.cur, user.mfa = "", ""
+    cell_transforms = {"cur": mark_cur_user, "policies": get_policies_for_principal, "mfa": describe_mfa}
     page_output(tabulate(users, args, cell_transforms=cell_transforms))
 
 parser = register_listing_parser(users, parent=iam_parser, help="List IAM users")

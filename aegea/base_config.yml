@@ -178,6 +178,7 @@ iam_users:
     - password_last_used
     - groups
     - policies
+    - mfa
 
 iam_groups:
   resource: iam
