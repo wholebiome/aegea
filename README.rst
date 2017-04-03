@@ -46,22 +46,6 @@ output shows how to activate the virtualenv. The version of virtualenv packaged 
 
 **OS X with Homebrew Python**: Run ``brew link --force openssl``.
 
-Configuration management
-~~~~~~~~~~~~~~~~~~~~~~~~
-Aegea supports ingesting configuration from a configurable array of sources. Each source is a JSON or YAML file.
-Configuration sources that follow the first source update the configuration using recursive dictionary merging. Sources are
-enumerated in the following order (i.e., in order of increasing priority):
-
-- Site-wide configuration source, ``/etc/aegea/config.yml``
-- User configuration source, ``~/.config/aegea/config.yml``
-- Any sources listed in the colon-delimited variable ``AEGEA_CONFIG_FILE``
-- Command line options
-
-**Array merge operators**: When loading a chain of configuration sources, Aegea uses recursive dictionary merging to
-combine the sources. Additionally, when the original config value is a list, Aegea supports array manipulation
-operators, which let you extend and modify arrays defined in underlying configurations. See
-https://github.com/kislyuk/tweak#array-merge-operators for a list of these operators.
-
 Aegea Batch
 ~~~~~~~~~~~
 The `AWS Batch <https://aws.amazon.com/batch>`_ API currently requires you to use the us-east-1 region. You can use
@@ -87,6 +71,29 @@ https://console.aws.amazon.com/batch/home?region=us-east-1#/compute-environments
 
 AWS Batch launches and manages `ECS <https://aws.amazon.com/ecs/>`_ host instances to execute your jobs. You can see the
 host instances by running ``aegea ls``.
+
+Configuration management
+~~~~~~~~~~~~~~~~~~~~~~~~
+Aegea supports ingesting configuration from a configurable array of sources. Each source is a JSON or YAML file.
+Configuration sources that follow the first source update the configuration using recursive dictionary merging. Sources are
+enumerated in the following order (i.e., in order of increasing priority):
+
+- Site-wide configuration source, ``/etc/aegea/config.yml``
+- User configuration source, ``~/.config/aegea/config.yml``
+- Any sources listed in the colon-delimited variable ``AEGEA_CONFIG_FILE``
+- Command line options
+
+**Array merge operators**: When loading a chain of configuration sources, Aegea uses recursive dictionary merging to
+combine the sources. Additionally, when the original config value is a list, Aegea supports array manipulation
+operators, which let you extend and modify arrays defined in underlying configurations. See
+https://github.com/kislyuk/tweak#array-merge-operators for a list of these operators.
+
+Building AMIs and Docker images
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Aegea includes a lightweight configuration management system for building machine images based on
+`cloud-init <http://cloudinit.readthedocs.io/>`_ (both Docker images and AMIs are supported).
+
+TODO: ``build_image build_ami build_docker_image rootfs.skel``
 
 .. image:: https://circleci.com/gh/kislyuk/aegea.svg?style=svg&circle-token=70d22b84025fad5d484ac5f3df1fc0a183c0f516
    :target: https://circleci.com/gh/kislyuk/aegea
