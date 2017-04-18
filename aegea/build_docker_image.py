@@ -67,8 +67,8 @@ def ensure_ecr_repo(name, read_access=None):
                               action=["ecr:GetDownloadUrlForLayer",
                                       "ecr:BatchGetImage",
                                       "ecr:BatchCheckLayerAvailability"])
-    clients.ecr.set_repository_policy(repositoryName=name, policyText=str(policy))
-
+    if read_access:
+        clients.ecr.set_repository_policy(repositoryName=name, policyText=str(policy))
 
 def build_docker_image(args):
     for key, value in config.build_image.items():
