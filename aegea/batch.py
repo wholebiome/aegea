@@ -19,7 +19,7 @@ from .util.exceptions import AegeaException
 from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_role, ensure_instance_profile,
                        make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket, ensure_log_group,
-                       IAMPolicyBuilder)
+                       IAMPolicyBuilder, resolve_ami)
 from .util.aws.spot import SpotFleetBuilder
 
 bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
@@ -96,11 +96,16 @@ def create_compute_environment(args):
                              bidPercentage=100,
                              spotIamFleetRole=SpotFleetBuilder.get_iam_fleet_role().name,
                              ec2KeyPair=ssh_key_name)
+    if args.ecs_container_instance_ami:
+        compute_resources["imageId"] = args.ecs_container_instance_ami
+    elif args.ecs_container_instance_tags:
+        # TODO: build ECS CI AMI on demand
+        compute_resources["imageId"] = resolve_ami(**args.ecs_container_instance_tags)
     logger.info("Creating compute environment %s in %s", args.name, vpc)
     compute_environment = clients.batch.create_compute_environment(computeEnvironmentName=args.name,
                                                                    type=args.type,
                                                                    computeResources=compute_resources,
-                                                                   serviceRole=batch_iam_role.arn)
+                                                                   serviceRole=batch_iam_role.name)
     wtr = make_waiter(clients.batch.describe_compute_environments, "computeEnvironments[].status", "VALID", "pathAny",
                       delay=2, max_attempts=300)
     wtr.wait(computeEnvironments=[args.name])
@@ -117,6 +122,8 @@ cce_parser.add_argument("--instance-types", nargs="+")
 cce_parser.add_argument("--ssh-key-name")
 cce_parser.add_argument("--instance-role", default=__name__ + ".ecs_container_instance")
 cce_parser.add_argument("--service-role", default=__name__ + ".service")
+cce_parser.add_argument("--ecs-container-instance-ami")
+cce_parser.add_argument("--ecs-container-instance-ami-tags")
 
 def delete_compute_environment(args):
     clients.batch.update_compute_environment(computeEnvironment=args.name, state="DISABLED")

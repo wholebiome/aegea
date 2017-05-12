@@ -6,13 +6,14 @@ Requires=docker.service
 [Service]
 TimeoutStartSec=0
 Restart=always
-ExecStartPre=/usr/bin/env mkdir -p /var/log/ecs /etc/ecs /var/lib/ecs/data
-ExecStartPre=/usr/bin/env sysctl -w net.ipv4.conf.all.route_localnet=1
-ExecStartPre=/usr/bin/env iptables -t nat -A PREROUTING -p tcp -d 169.254.170.2 --dport 80 -j DNAT --to-destination 127.0.0.1:51679
-ExecStartPre=/usr/bin/env iptables -t nat -A OUTPUT -d 169.254.170.2 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 51679
-ExecStartPre=/usr/bin/env docker rm ecs-agent
-ExecStart=/usr/bin/env docker run --name ecs-agent \
-    --detach=true \
+ExecStartPre=/bin/mkdir -p /var/log/ecs /etc/ecs /var/lib/ecs/data
+ExecStartPre=/sbin/sysctl -w net.ipv4.conf.all.route_localnet=1
+ExecStartPre=/sbin/iptables -t nat -A PREROUTING -p tcp -d 169.254.170.2 --dport 80 -j DNAT --to-destination 127.0.0.1:51679
+ExecStartPre=/sbin/iptables -t nat -A OUTPUT -d 169.254.170.2 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 51679
+ExecStartPre=-/usr/bin/docker kill ecs-agent
+ExecStartPre=-/usr/bin/docker rm ecs-agent
+ExecStartPre=-/usr/bin/docker pull amazon/amazon-ecs-agent
+ExecStart=/usr/bin/docker run --name ecs-agent \
     --restart=on-failure:10 \
     --volume=/var/run/docker.sock:/var/run/docker.sock \
     --volume=/var/log/ecs:/log \
@@ -24,6 +25,7 @@ ExecStart=/usr/bin/env docker run --name ecs-agent \
     --env=ECS_ENABLE_TASK_IAM_ROLE=true \
     --env=ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true \
     amazon/amazon-ecs-agent:latest
+ExecStop=/usr/bin/docker stop ecs-agent
 
 [Install]
 WantedBy=multi-user.target
