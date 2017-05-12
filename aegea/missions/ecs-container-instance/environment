@@ -1,0 +1,3 @@
+export ECS_CONTAINER_INSTANCE_CE=aegea_batch
+export ECS_CONTAINER_INSTANCE_ECS_CLUSTER_ARN=$(aws batch describe-compute-environments | jq --raw-output ".computeEnvironments[] | select(.computeEnvironmentName==env.ECS_CONTAINER_INSTANCE_CE) | .ecsClusterArn")
+export ECS_CONTAINER_INSTANCE_ECS_CLUSTER=$(basename "$ECS_CONTAINER_INSTANCE_ECS_CLUSTER_ARN")
