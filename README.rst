@@ -15,22 +15,22 @@ Installation
 
 Before you do this, you will also need to install some system library dependencies:
 
-+--------------+---------+--------------------------------------------------------------------------------------------------+
-| OS           | Python  | Command                                                                                          |
-+==============+=========+==================================================================================================+
-| OS X         |         | ``sudo easy_install-2.7 pip; sudo pip install --ignore-installed six python-dateutil;``          |
-|              |         | ``sudo pip install aegea`` (if prompted to install XCode Command Line Tools, do it and try again)|
-+--------------+---------+--------------------------------------------------------------------------------------------------+
-| Ubuntu       | Python 2| apt-get update;                                                                                  |
-|              |         | apt-get install build-essential python-pip python-dev python-cffi libffi-dev libssl-dev moreutils|
-+--------------+---------+--------------------------------------------------------------------------------------------------+
-| Ubuntu       | Python 3| apt-get update;                                                                                  |
-|              |         | apt-get install build-essential python3-{pip,dev,cffi} libffi-dev libssl-dev moreutils           |
-+--------------+---------+--------------------------------------------------------------------------------------------------+
-| Red Hat      | Python 2| yum install python-devel python-cffi openssl-devel moreutils                                     |
-+--------------+---------+--------------------------------------------------------------------------------------------------+
-| Red Hat      | Python 3| yum install python3-devel python3-cffi openssl-devel moreutils                                   |
-+--------------+---------+--------------------------------------------------------------------------------------------------+
++--------------+---------+-------------------------------------------------------------------------------------------------------+
+| OS           | Python  | Command                                                                                               |
++==============+=========+=======================================================================================================+
+| OS X         |         | ``sudo easy_install-2.7 pip; sudo pip install --ignore-installed six python-dateutil;``               |
+|              |         | ``sudo pip install aegea`` (if prompted to install XCode Command Line Tools, do it and try again)     |
++--------------+---------+-------------------------------------------------------------------------------------------------------+
+| Ubuntu       | Python 2| sudo apt-get update;                                                                                  |
+|              |         | sudo apt-get install build-essential python-pip python-dev python-cffi libffi-dev libssl-dev moreutils|
++--------------+---------+-------------------------------------------------------------------------------------------------------+
+| Ubuntu       | Python 3| sudo apt-get update;                                                                                  |
+|              |         | sudo apt-get install build-essential python3-{pip,dev,cffi} libffi-dev libssl-dev moreutils           |
++--------------+---------+-------------------------------------------------------------------------------------------------------+
+| Red Hat      | Python 2| sudo yum install python-devel python-cffi openssl-devel moreutils                                     |
++--------------+---------+-------------------------------------------------------------------------------------------------------+
+| Red Hat      | Python 3| sudo yum install python3-devel python3-cffi openssl-devel moreutils                                   |
++--------------+---------+-------------------------------------------------------------------------------------------------------+
 
 Run ``aws configure`` to configure `IAM <https://aws.amazon.com/iam/>`_ access credentials that will be used by the
 ``aws`` and ``aegea`` commands. You can create a new IAM key at https://console.aws.amazon.com/iam/home#/users.
