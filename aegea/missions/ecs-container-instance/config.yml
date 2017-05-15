@@ -6,9 +6,10 @@ build_ami:
     $remove: docker.io
   commands:
     $extend:
-      - "systemctl enable ecs.service"
       - "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -"
       - "apt-key adv --keyserver keyserver.ubuntu.com --recv 58118E89F3A912897C070ADBF76221572C52609D"
       - "echo deb https://apt.dockerproject.org/repo ubuntu-xenial main > /etc/apt/sources.list.d/docker.list"
       - "apt-get update"
       - "apt-get install --yes docker-engine"
+      - "systemctl enable ecs.service"
+      - "rm -f /var/lib/ecs/data/ecs_agent_data.json"
