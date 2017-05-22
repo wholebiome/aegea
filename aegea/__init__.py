@@ -118,6 +118,7 @@ def register_parser(function, parent=None, name=None, **add_parser_args):
                            help="Output tabular data as a JSON-formatted list of objects")
     subparser.add_argument("--log-level", type=logger.setLevel,
                            help=str([logging.getLevelName(i) for i in range(0, 60, 10)]),
+                           choices={logging.getLevelName(i) for i in range(0, 60, 10)},
                            default=config.get("log_level"))
     subparser.set_defaults(entry_point=function)
     if parent and sys.version_info < (2, 7, 9): # See https://bugs.python.org/issue9351
