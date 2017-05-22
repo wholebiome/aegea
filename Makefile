@@ -1,12 +1,16 @@
 SHELL=/bin/bash -eo pipefail
 
-wheel: lint constants clean
+wheel: lint constants version clean
 	./setup.py bdist_wheel
 
 constants: aegea/constants.json
+version: aegea/version.py
 
 aegea/constants.json:
 	python -c "import aegea; aegea.initialize(); from aegea.util.constants import write; write()"
+
+aegea/version.py: setup.py
+	echo "__version__ = '$$(python setup.py --version)'" > aegea/version.py
 
 test_deps:
 	pip install coverage flake8 pytest pytest-cov
@@ -25,9 +29,9 @@ init_docs:
 docs:
 	$(MAKE) -C docs html
 
-install: clean
+install: clean version
 	pip install wheel
-	python ./setup.py bdist_wheel
+	./setup.py bdist_wheel
 	pip install --upgrade dist/*.whl
 
 install_venv: clean

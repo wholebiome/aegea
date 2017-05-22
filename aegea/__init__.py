@@ -13,12 +13,7 @@ import tweak
 from botocore.exceptions import NoRegionError
 from io import open
 from .util.compat import USING_PYTHON2
-
-try:
-    import pkg_resources
-    __version__ = pkg_resources.get_distribution(__name__).version
-except Exception:
-    __version__ = "0.0.0"
+from .version import __version__
 
 if sys.version_info < (2, 7, 9): # See https://urllib3.readthedocs.io/en/latest/advanced-usage.html#sni-warning
     try:
