@@ -217,7 +217,11 @@ def format_cell(cell):
 
 def get_cell(resource, field, transform=None):
     cell = get_field(resource, field)
-    cell = transform(cell, resource) if transform else cell
+    if transform:
+        try:
+            cell = transform(cell, resource)
+        except TypeError:
+            cell = transform(cell)
     return ", ".join(i.name for i in cell.all()) if hasattr(cell, "all") else cell
 
 def format_tags(cell, row):

@@ -333,7 +333,7 @@ def ls(args, page_size=100):
             job_ids.extend(j["jobId"] for j in clients.batch.list_jobs(jobQueue=q, jobStatus=s)["jobSummaryList"])
     for i in range(0, len(job_ids), page_size):
         table.extend(clients.batch.describe_jobs(jobs=job_ids[i:i+page_size])["jobs"])
-    page_output(tabulate(table, args, cell_transforms={"createdAt": lambda cell, row: Timestamp(cell)}))
+    page_output(tabulate(table, args, cell_transforms={"createdAt": Timestamp}))
 
 parser = register_listing_parser(ls, parent=batch_parser, help="List Batch jobs")
 parser.add_argument("--queues", nargs="+")
