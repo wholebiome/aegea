@@ -23,6 +23,11 @@ def rm(args):
                     clients.elb.delete_load_balancer(LoadBalancerName=name)
                 else:
                     clients.elb.describe_load_balancer_attributes(LoadBalancerName=name)
+            elif getattr(args, "lambda"):
+                if args.force:
+                    getattr(clients, "lambda").delete_function(FunctionName=name)
+                else:
+                    getattr(clients, "lambda").get_function(FunctionName=name)
             elif name.startswith("sg-"):
                 resources.ec2.SecurityGroup(name).delete(DryRun=not args.force)
             elif name.startswith("vol-"):
@@ -86,3 +91,5 @@ parser.add_argument("--key-pair", action="store_true", help="""
 Assume input names are EC2 SSH key pair names (required when deleting key pairs, since they have no ID or ARN)""")
 parser.add_argument("--elb", action="store_true", help="""
 Assume input names are Elastic Load Balancer names (required when deleting ELBs, since they have no ID or ARN)""")
+parser.add_argument("--lambda", action="store_true", help="""
+Assume input names are Lambda function names (required when deleting Lambdas, since they have no ID or ARN)""")
