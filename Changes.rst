@@ -1,3 +1,8 @@
+Changes for v1.9.14 (2017-05-29)
+================================
+
+-  Temporarily disable batch custom AMI
+
 Changes for v1.9.13 (2017-05-29)
 ================================
 
