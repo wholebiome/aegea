@@ -335,20 +335,19 @@ def ls(args, page_size=100):
         table.extend(clients.batch.describe_jobs(jobs=job_ids[i:i+page_size])["jobs"])
     page_output(tabulate(table, args, cell_transforms={"createdAt": Timestamp}))
 
+job_status_colors = dict(SUBMITTED=YELLOW(), PENDING=YELLOW(), RUNNABLE=BOLD()+YELLOW(),
+                         STARTING=GREEN(), RUNNING=GREEN(),
+                         SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
+job_states = job_status_colors.keys()
 parser = register_listing_parser(ls, parent=batch_parser, help="List Batch jobs")
 parser.add_argument("--queues", nargs="+")
-parser.add_argument("--status", nargs="+",
-                    default="SUBMITTED PENDING RUNNABLE STARTING RUNNING SUCCEEDED FAILED".split())
+parser.add_argument("--status", nargs="+", default=job_states, choices=job_states)
 
 def describe(args):
     return clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
 
 parser = register_parser(describe, parent=batch_parser, help="Describe a Batch job")
 parser.add_argument("job_id")
-
-job_status_colors = dict(SUBMITTED=YELLOW(), PENDING=YELLOW(), RUNNABLE=BOLD()+YELLOW(),
-                         STARTING=GREEN(), RUNNING=GREEN(),
-                         SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
 
 def format_job_status(status):
     return job_status_colors[status] + status + ENDC()
