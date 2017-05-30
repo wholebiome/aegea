@@ -1,3 +1,16 @@
+Changes for v1.9.13 (2017-05-29)
+================================
+
+-  Minor refactor in batch
+
+-  Ensure default selection of batch instances has instance storage
+
+-  Begin aegea lambda ls, aegea rm --lambda
+
+-  Tab complete log levels
+
+-  Avoid using pkgutil for introspection
+
 Changes for v1.9.12 (2017-05-14)
 ================================
 
