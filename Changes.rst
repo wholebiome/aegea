@@ -1,3 +1,8 @@
+Changes for v1.9.15 (2017-06-01)
+================================
+
+-  Fix logic error in parameter naming
+
 Changes for v1.9.14 (2017-05-29)
 ================================
 
