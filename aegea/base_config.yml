@@ -510,7 +510,7 @@ batch_create_compute_environment:
   min_vcpus: 0
   desired_vcpus: 2
   max_vcpus: 64
-#  ecs_container_instance_tags:
+#  ecs_container_instance_ami_tags:
 #    AegeaMission: "ecs-container-instance"
 
 batch_compute_environments:
