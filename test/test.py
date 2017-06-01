@@ -34,6 +34,7 @@ class TestAegea(unittest.TestCase):
         return_code = process.poll()
         out = out.decode(sys.stdin.encoding)
         err = err.decode(sys.stdin.encoding)
+
         def match(return_code, out, err, expected):
             exit_ok = return_code in expected["return_codes"]
             stdout_ok = re.search(expected.get("stdout") or "", out)
@@ -79,7 +80,8 @@ class TestAegea(unittest.TestCase):
                 args += ["--no-verify-ssh-key-pem-file", "--dry-run", "test"]
             elif subcommand == "rm":
                 args += [resolve_ami()]
-            elif subcommand in ("secrets", "rds", "elb", "flow-logs", "deploy", "zones", "ebs", "buckets", "efs", "ecr"):
+            elif subcommand in ("secrets", "rds", "elb", "flow-logs", "deploy", "zones", "ebs", "buckets", "efs",
+                                "ecr", "lambda"):
                 args += ["ls"]
             elif subcommand == "pricing":
                 args += ["AmazonEC2", "--json"]
