@@ -1,3 +1,9 @@
+Changes for v1.9.17 (2017-06-15)
+================================
+
+Merge pull request #22 from wholebiome/build-timeout Extend timeout for
+AMI builds Added timeout to loop, default much longer Fix tests
+
 Changes for v1.9.16 (2017-06-01)
 ================================
 
