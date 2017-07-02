@@ -3,7 +3,7 @@
 Aegea deploy git auth helper. To be used with the ``GIT_SSH_COMMAND`` environment variable.
 See https://git-scm.com/docs/git for more.
 """
-import os, sys, shlex, argparse, subprocess, logging
+import os, sys, shlex, argparse, subprocess
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("user_at_host")
@@ -14,12 +14,7 @@ if args.user_at_host == "git@github.com" and args.command.startswith("git-upload
     owner, repo = shlex.split(args.command)[-1].split("/")
     if repo.endswith(".git"):
         repo = repo[:-len(".git")]
-    # This command might fail if the submodule is a fork.
     cmd = "ssh-agent bash -c 'aegea-get-secret deploy.{}.{} | ssh-add /dev/stdin; ssh {} {}'"
-    try:
-        subprocess.check_call(cmd.format(owner, repo, args.user_at_host, args.command), shell=True)
-        sys.exit()
-    except subprocess.CalledProcessError as e:
-        logging.error("Unable to connect with secret ... trying without.")
-
-os.execvp("ssh", ["ssh", args.user_at_host, args.command])
+    subprocess.check_call(cmd.format(owner, repo, args.user_at_host, args.command), shell=True)
+else:
+    os.execvp("ssh", ["ssh", args.user_at_host, args.command])

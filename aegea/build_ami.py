@@ -26,7 +26,7 @@ def build_ami(args):
         hostname = "{}-{}-{}".format(__name__, args.name, int(time.time())).replace(".", "-").replace("_", "-")
         launch_args = launch_parser.parse_args(args=[hostname], namespace=args)
         launch_args.wait_for_ssh = True
-        launch_args.iam_role = None
+        launch_args.iam_role = args.iam_role
         launch_args.cloud_config_data.update(rootfs_skel_dirs=args.rootfs_skel_dirs)
         instance = resources.ec2.Instance(launch(launch_args)["instance_id"])
     ci_timeout = args.cloud_init_timeout
@@ -90,3 +90,4 @@ parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE", help=
 parser.add_argument("--cloud-config-data", type=json.loads)
 parser.add_argument("--cloud-init-timeout", type=int, default=-1,
                     help="Approximate time in seconds to wait for cloud-init to finish before aborting.")
+parser.add_argument("--iam-role", default=__name__)
