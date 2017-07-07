@@ -10,7 +10,7 @@ aegea/constants.json:
 	python -c "import aegea; aegea.initialize(); from aegea.util.constants import write; write()"
 
 aegea/version.py: setup.py
-	echo "__version__ = '$$(python setup.py --version)'" > aegea/version.py
+	echo "__version__ = '$$(python setup.py --version)'" > $@
 
 test_deps:
 	pip install coverage flake8 pytest pytest-cov
