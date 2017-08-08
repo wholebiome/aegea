@@ -11,6 +11,7 @@ Environment=MAKETARGET={makeTarget}
 Environment=MAKERELOADTARGET={makeReloadTarget}
 ExecStart=/usr/bin/aegea-deploy-pilot
 ExecReload=/bin/kill -USR1 $MAINPID
+ExecStop=/bin/kill -USR2 $MAINPID
 StandardOutput=syslog
 Restart=on-failure
 RestartSec=5
