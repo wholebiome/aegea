@@ -71,6 +71,7 @@ build_image:
     - wget
     - git
     - aria2
+    - sift
 
 build_docker_image:
   base_image: ubuntu:16.04
