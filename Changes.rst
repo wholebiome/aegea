@@ -1,3 +1,8 @@
+Changes for v1.9.18 (2017-08-16)
+================================
+
+-  aegea batch watch: Do not crash if log stream does not exist yet
+
 Changes for v1.9.17 (2017-06-15)
 ================================
 
