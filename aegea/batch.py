@@ -361,6 +361,7 @@ class LogReader:
         self.next_page_key = "nextForwardToken" if self.tail is None else "nextBackwardToken"
 
     def __iter__(self):
+        page = None
         log_stream_args = dict(logGroupName=self.log_group_name, logStreamNamePrefix=self.log_stream_name_prefix)
         for log_stream in paginate(self.describe_log_streams, **log_stream_args):
             get_args = dict(logGroupName=self.log_group_name, logStreamName=log_stream["logStreamName"],
@@ -376,7 +377,8 @@ class LogReader:
                 get_args["nextToken"] = page[self.next_page_key]
                 if self.head is not None or self.tail is not None or len(page["events"]) == 0:
                     break
-        LogReader.next_page_token = page[self.next_page_key]
+        if page:
+            LogReader.next_page_token = page[self.next_page_key]
 
 def get_logs(args):
     for event in LogReader(args.job_name, args.job_id, head=args.head, tail=args.tail):
