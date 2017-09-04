@@ -98,7 +98,8 @@ def create_compute_environment(args):
                              ec2KeyPair=ssh_key_name)
     if args.ecs_container_instance_ami:
         compute_resources["imageId"] = args.ecs_container_instance_ami
-    elif args.ecs_container_instance_ami_tags:
+
+    elif args.ecs_container_instance_tags:
         # TODO: build ECS CI AMI on demand
         compute_resources["imageId"] = resolve_ami(**args.ecs_container_instance_tags)
     logger.info("Creating compute environment %s in %s", args.name, vpc)

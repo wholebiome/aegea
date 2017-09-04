@@ -42,16 +42,6 @@ Changes for v1.9.12 (2017-05-14)
 
 -  Batch bug fixes and begin support for custom Batch ECI AMIs
 
-
-
-
-
-
-
-
-
-
-
 Changes for v1.8.4 (2017-02-02)
 ===============================
 
