@@ -98,6 +98,7 @@ def create_compute_environment(args):
                              ec2KeyPair=ssh_key_name)
     if args.ecs_container_instance_ami:
         compute_resources["imageId"] = args.ecs_container_instance_ami
+
     elif args.ecs_container_instance_tags:
         # TODO: build ECS CI AMI on demand
         compute_resources["imageId"] = resolve_ami(**args.ecs_container_instance_tags)
@@ -333,22 +334,21 @@ def ls(args, page_size=100):
             job_ids.extend(j["jobId"] for j in clients.batch.list_jobs(jobQueue=q, jobStatus=s)["jobSummaryList"])
     for i in range(0, len(job_ids), page_size):
         table.extend(clients.batch.describe_jobs(jobs=job_ids[i:i+page_size])["jobs"])
-    page_output(tabulate(table, args, cell_transforms={"createdAt": lambda cell, row: Timestamp(cell)}))
+    page_output(tabulate(table, args, cell_transforms={"createdAt": Timestamp}))
 
+job_status_colors = dict(SUBMITTED=YELLOW(), PENDING=YELLOW(), RUNNABLE=BOLD()+YELLOW(),
+                         STARTING=GREEN(), RUNNING=GREEN(),
+                         SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
+job_states = job_status_colors.keys()
 parser = register_listing_parser(ls, parent=batch_parser, help="List Batch jobs")
 parser.add_argument("--queues", nargs="+")
-parser.add_argument("--status", nargs="+",
-                    default="SUBMITTED PENDING RUNNABLE STARTING RUNNING SUCCEEDED FAILED".split())
+parser.add_argument("--status", nargs="+", default=job_states, choices=job_states)
 
 def describe(args):
     return clients.batch.describe_jobs(jobs=[args.job_id])["jobs"][0]
 
 parser = register_parser(describe, parent=batch_parser, help="Describe a Batch job")
 parser.add_argument("job_id")
-
-job_status_colors = dict(SUBMITTED=YELLOW(), PENDING=YELLOW(), RUNNABLE=BOLD()+YELLOW(),
-                         STARTING=GREEN(), RUNNING=GREEN(),
-                         SUCCEEDED=BOLD()+GREEN(), FAILED=BOLD()+RED())
 
 def format_job_status(status):
     return job_status_colors[status] + status + ENDC()
@@ -362,6 +362,7 @@ class LogReader:
         self.next_page_key = "nextForwardToken" if self.tail is None else "nextBackwardToken"
 
     def __iter__(self):
+        page = None
         log_stream_args = dict(logGroupName=self.log_group_name, logStreamNamePrefix=self.log_stream_name_prefix)
         for log_stream in paginate(self.describe_log_streams, **log_stream_args):
             get_args = dict(logGroupName=self.log_group_name, logStreamName=log_stream["logStreamName"],
@@ -377,7 +378,8 @@ class LogReader:
                 get_args["nextToken"] = page[self.next_page_key]
                 if self.head is not None or self.tail is not None or len(page["events"]) == 0:
                     break
-        LogReader.next_page_token = page[self.next_page_key]
+        if page:
+            LogReader.next_page_token = page[self.next_page_key]
 
 def get_logs(args):
     for event in LogReader(args.job_name, args.job_id, head=args.head, tail=args.tail):

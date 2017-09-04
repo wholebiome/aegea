@@ -8,6 +8,7 @@
 # build_docker_image and build_ami.
 build_image:
   commands:
+    - "update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
     - "pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.4.3 awscli==1.11.44 dynamoq==0.0.5 tractorbeam==0.1.3"
   packages:
     - language-pack-en
@@ -70,6 +71,7 @@ build_image:
     - wget
     - git
     - aria2
+    - sift
 
 build_docker_image:
   base_image: ubuntu:16.04
@@ -505,11 +507,11 @@ batch_queues:
 batch_create_compute_environment:
   type: MANAGED
   compute_type: SPOT
-  instance_types: [m4, c4, r4]
+  instance_types: [m3, c3, r3]
   min_vcpus: 0
   desired_vcpus: 2
   max_vcpus: 64
-  ecs_container_instance_tags:
+  ecs_container_instance_ami_tags:
     AegeaMission: "ecs-container-instance"
 
 batch_compute_environments:
@@ -541,6 +543,18 @@ batch_ls:
     - container.vcpus
     - container.memory
     - dependsOn
+
+lambda_ls:
+  columns:
+    - FunctionName
+    - Runtime
+    - Role
+    - Handler
+    - CodeSize
+    - Description
+    - Timeout
+    - MemorySize
+    - LastModified
 
 launch:
   commands: []

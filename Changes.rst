@@ -1,17 +1,46 @@
+Changes for v1.9.18 (2017-08-16)
+================================
+
+-  aegea batch watch: Do not crash if log stream does not exist yet
+
+Changes for v1.9.17 (2017-06-15)
+================================
+
+Merge pull request #22 from wholebiome/build-timeout Extend timeout for
+AMI builds Added timeout to loop, default much longer Fix tests
+
+Changes for v1.9.16 (2017-06-01)
+================================
+
+-  Add file missed in 0c99863
+
+Changes for v1.9.15 (2017-06-01)
+================================
+
+-  Fix logic error in parameter naming
+
+Changes for v1.9.14 (2017-05-29)
+================================
+
+-  Temporarily disable batch custom AMI
+
+Changes for v1.9.13 (2017-05-29)
+================================
+
+-  Minor refactor in batch
+
+-  Ensure default selection of batch instances has instance storage
+
+-  Begin aegea lambda ls, aegea rm --lambda
+
+-  Tab complete log levels
+
+-  Avoid using pkgutil for introspection
+
 Changes for v1.9.12 (2017-05-14)
 ================================
 
 -  Batch bug fixes and begin support for custom Batch ECI AMIs
-
-
-
-
-
-
-
-
-
-
 
 Changes for v1.8.4 (2017-02-02)
 ===============================

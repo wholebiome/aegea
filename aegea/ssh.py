@@ -14,8 +14,8 @@ MITM vulnerability.
 
 import os, sys, argparse, subprocess
 
-from . import register_parser
-from .util.aws import resolve_instance_id, resources, clients
+from . import register_parser, logger
+from .util.aws import resolve_instance_id, resources
 from .util.crypto import add_ssh_host_key_to_known_hosts
 from .util.printing import BOLD
 from .util.exceptions import AegeaException
@@ -60,9 +60,13 @@ def ssh(args):
         # FIXME: this results in duplicates.
         # Use paramiko to detect if the key is already listed and not insert it then (or only insert if different)
         add_ssh_host_key_to_known_hosts(instance.public_dns_name + " " + ssh_host_key + "\n")
-
-    ssh_args = ["ssh", prefix + at + instance.public_dns_name] + args.ssh_args
-    os.execvp("ssh", ssh_args)
+    ssh_args = ["ssh", prefix + at + instance.public_dns_name]
+    if not (prefix or at):
+        try:
+            ssh_args += ["-l", resources.iam.CurrentUser().user.name]
+        except:
+            logger.info("Unable to determine IAM username, using local username")
+    os.execvp("ssh", ssh_args + args.ssh_args)
 
 parser = register_parser(ssh, help="Connect to an EC2 instance", description=__doc__,
                          formatter_class=argparse.RawTextHelpFormatter)

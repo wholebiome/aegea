@@ -31,11 +31,11 @@ def build_ami(args):
         instance = resources.ec2.Instance(launch(launch_args)["instance_id"])
     ci_timeout = args.cloud_init_timeout
     if ci_timeout <= 0:
-        ci_timeout = 99999
+        ci_timeout = 3660*24
     ssh_client = AegeaSSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.connect(instance.public_dns_name, username="ubuntu", key_filename=get_ssh_key_path(ssh_key_name))
-    sys.stderr.write("Waiting %d seconds for cloud-init..." % ci_timeout)
+    sys.stderr.write("Waiting {} seconds for cloud-init ...".format(ci_timeout))
     sys.stderr.flush()
     devnull = open(os.devnull, "w")
     for i in range(ci_timeout):
@@ -91,3 +91,4 @@ parser.add_argument("--cloud-config-data", type=json.loads)
 parser.add_argument("--cloud-init-timeout", type=int, default=-1,
                     help="Approximate time in seconds to wait for cloud-init to finish before aborting.")
 parser.add_argument("--iam-role", default=__name__)
+
