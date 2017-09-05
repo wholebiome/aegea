@@ -15,7 +15,7 @@ MITM vulnerability.
 import os, sys, argparse, subprocess
 
 from . import register_parser, logger
-from .util.aws import resolve_instance_id, resources
+from .util.aws import resolve_instance_id, resources, clients
 from .util.crypto import add_ssh_host_key_to_known_hosts
 from .util.printing import BOLD
 from .util.exceptions import AegeaException
