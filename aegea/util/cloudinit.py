@@ -76,16 +76,28 @@ def encode_cloud_config_payload(cloud_config_data, gzip=True):
     slug = "#cloud-config\n" + json.dumps(cloud_config_data, default=dict)
     return gzip_compress_bytes(slug.encode()) if gzip else slug
 
-def upload_bootstrap_asset(cloud_config_data, rootfs_skel_dirs):
+def upload_bootstrap_asset(cloud_config_data, rootfs_skel_dirs, use_cipher=False):
     key_name = "".join(random.choice(string.ascii_letters) for x in range(32))
     enc_key = "".join(random.choice(string.ascii_letters) for x in range(32))
+
     logger.info("Uploading bootstrap asset %s to S3", key_name)
     bucket = ensure_s3_bucket()
-    cipher = subprocess.Popen(["openssl", "aes-256-cbc", "-e", "-k", enc_key],
-                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    encrypted_tarfile = cipher.communicate(get_bootstrap_files(rootfs_skel_dirs, dest="tarfile"))[0]
-    bucket.upload_fileobj(io.BytesIO(encrypted_tarfile), key_name)
     url = clients.s3.generate_presigned_url(ClientMethod='get_object', Params=dict(Bucket=bucket.name, Key=key_name))
-    cmd = "curl -s '{url}' | openssl aes-256-cbc -d -k {key} | tar -xz --no-same-owner -C /"
-    cloud_config_data["runcmd"].insert(0, cmd.format(url=url, key=enc_key))
+    cmd = "curl -s '{url}'".format(url=url)
+    tarfile = get_bootstrap_files(rootfs_skel_dirs, dest="tarfile")
+
+    if use_cipher:
+        cipher = subprocess.Popen(["openssl", "aes-256-cbc", "-e", "-k", enc_key],
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        encrypted_tarfile = cipher.communicate(tarfile)[0]
+        bucket.upload_fileobj(io.BytesIO(encrypted_tarfile), key_name)
+        cmd = cmd + " | openssl aes-256-cbc -d -k {key}".format(key=enc_key)
+    else:
+        bucket.upload_fileobj(io.BytesIO(tarfile), key_name)
+
+    cmd = cmd + " | tar -xz --no-same-owner -C /"
+    cmd = cmd + " && aws s3 rm s3://{bucket}/{key}".format(bucket=bucket.name, key=key_name)
+
+    cloud_config_data["runcmd"].insert(0, cmd)
+
     del cloud_config_data["write_files"]
