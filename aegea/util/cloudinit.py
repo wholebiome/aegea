@@ -20,16 +20,12 @@ def add_file_to_cloudinit_manifest(src_path, path, manifest):
 
 def get_bootstrap_files(rootfs_skel_dirs, dest="cloudinit"):
     manifest = OrderedDict()
-    aegea_conf = os.getenv("AEGEA_CONFIG_FILE")
     targz = io.BytesIO()
     tar = tarfile.open(mode="w:gz", fileobj=targz) if dest == "tarfile" else None
 
     for rootfs_skel_dir in rootfs_skel_dirs:
         if rootfs_skel_dir == "auto":
             fn = os.path.join(os.path.dirname(__file__), "..", "rootfs.skel")
-        elif aegea_conf:
-            # FIXME: not compatible with colon-separated AEGEA_CONFIG_FILE
-            fn = os.path.join(os.path.dirname(aegea_conf), rootfs_skel_dir)
         elif os.path.exists(rootfs_skel_dir):
             fn = os.path.abspath(os.path.normpath(rootfs_skel_dir))
         else:
