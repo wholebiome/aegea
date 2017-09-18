@@ -24,12 +24,15 @@ def get_bootstrap_files(rootfs_skel_dirs, dest="cloudinit"):
     targz = io.BytesIO()
     tar = tarfile.open(mode="w:gz", fileobj=targz) if dest == "tarfile" else None
 
+    if aegea_conf:
+        # This is a workaround for colon-separated AEGEA_CONFIG_FILE
+        # Until this code uses Tweak's Config() to manage the manifest,
+        # this is useful to maintain the interface compatibility
+        rootfs_skel_dirs = aegea_conf.split(":")
+
     for rootfs_skel_dir in rootfs_skel_dirs:
         if rootfs_skel_dir == "auto":
             fn = os.path.join(os.path.dirname(__file__), "..", "rootfs.skel")
-        elif aegea_conf:
-            # FIXME: not compatible with colon-separated AEGEA_CONFIG_FILE
-            fn = os.path.join(os.path.dirname(aegea_conf), rootfs_skel_dir)
         elif os.path.exists(rootfs_skel_dir):
             fn = os.path.abspath(os.path.normpath(rootfs_skel_dir))
         else:
@@ -101,3 +104,4 @@ def upload_bootstrap_asset(cloud_config_data, rootfs_skel_dirs, use_cipher=False
     cloud_config_data["runcmd"].insert(0, cmd)
 
     del cloud_config_data["write_files"]
+
