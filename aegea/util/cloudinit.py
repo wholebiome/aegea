@@ -25,11 +25,11 @@ def get_bootstrap_files(rootfs_skel_dirs, dest="cloudinit"):
 
     for rootfs_skel_dir in rootfs_skel_dirs:
         if rootfs_skel_dir == "auto":
-            fn = os.path.join(os.path.dirname(__file__), "..", "rootfs.skel")
+            fn = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "rootfs.skel"))
         elif os.path.exists(rootfs_skel_dir):
             fn = os.path.abspath(os.path.normpath(rootfs_skel_dir))
         else:
-            raise Exception("rootfs_skel directory {} not found".format(fn))
+            raise Exception("rootfs_skel directory {} not found".format(rootfs_skel_dir))
         logger.debug("Trying rootfs.skel: %s" % fn)
         if not os.path.exists(fn):
             raise Exception("rootfs_skel directory {} not found".format(fn))
