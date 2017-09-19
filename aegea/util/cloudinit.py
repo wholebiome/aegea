@@ -20,16 +20,8 @@ def add_file_to_cloudinit_manifest(src_path, path, manifest):
 
 def get_bootstrap_files(rootfs_skel_dirs, dest="cloudinit"):
     manifest = OrderedDict()
-    aegea_conf = os.getenv("AEGEA_CONFIG_FILE")
     targz = io.BytesIO()
     tar = tarfile.open(mode="w:gz", fileobj=targz) if dest == "tarfile" else None
-
-    if aegea_conf:
-        # This is a workaround for colon-separated AEGEA_CONFIG_FILE
-        # Until this code uses Tweak's Config() to manage the manifest,
-        # this is useful to maintain the interface compatibility
-        rootfs_skel_dirs = [ os.path.join(os.path.dirname(f), "rootfs.skel") \
-                            for f in aegea_conf.split(":") ]
 
     for rootfs_skel_dir in rootfs_skel_dirs:
         if rootfs_skel_dir == "auto":
