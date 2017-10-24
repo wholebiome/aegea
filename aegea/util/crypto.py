@@ -16,7 +16,11 @@ def get_public_key_from_pair(key):
     return key.get_name() + " " + key.get_base64()
 
 def key_fingerprint(key):
-    return key.get_name() + " " + ":".join("{:02x}".format(ord(i)) for i in key.get_fingerprint())
+    fingerprint = key.get_fingerprint()
+    if isinstance(fingerprint[0], int):
+        return key.get_name() + " " + ":".join("{:02x}".format(i) for i in fingerprint)
+    else:
+        return key.get_name() + " " + ":".join("{:02x}".format(ord(i)) for i in fingerprint)
 
 def get_ssh_key_path(name):
     return os.path.expanduser("~/.ssh/{}.pem".format(name))
