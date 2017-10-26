@@ -85,11 +85,15 @@ def configure(args):
     status_bucket_name = "deploy-status-" + ARN(topic.arn).account_id
     try:
         resources.s3.meta.client.head_bucket(Bucket=status_bucket_name)
-    except ClientError:  #if the bucket does not already exist
-        status_bucket = resources.s3.create_bucket(Bucket=status_bucket_name,
-                                                   CreateBucketConfiguration=
-                                                   {'LocationConstraint':clients.s3.meta.region_name})
-        logger.info("Created %s", status_bucket)
+    except ClientError as e:  #if the bucket does not already exist
+        error_code = int(e.response['Error']['Code'])
+        if error_code == 404: # the bucket does not exist.
+            status_bucket = resources.s3.create_bucket(Bucket=status_bucket_name,
+                                                    CreateBucketConfiguration=
+                                                    {'LocationConstraint':clients.s3.meta.region_name})
+            logger.info("Created %s", status_bucket)
+        else:
+            raise
     grant(args)
     return dict(topic_arn=topic.arn)
 
