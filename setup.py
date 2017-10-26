@@ -27,7 +27,7 @@ setuptools.setup(
     long_description=open("README.rst").read(),
     install_requires=[
         "boto3 == 1.4.7",
-        "botocore == 1.5.4",
+        "botocore == 1.7.28",
         "argcomplete >= 1.8.2, < 2",
         "paramiko >= 2.1.1, < 3",
         "requests >= 2.12.4, < 3",
