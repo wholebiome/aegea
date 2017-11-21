@@ -99,6 +99,10 @@ build_ami:
     - colordiff
     - cgmanager-utils
     - nmap
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
   commands:
     - "sed -i -e '/cloudconfig/ d' /etc/fstab"
     - "sed -i -e '/^PermitRootLogin/ s/.*/PermitRootLogin no/' /etc/ssh/sshd_config"
@@ -108,7 +112,13 @@ build_ami:
     - "keymaker install"
     - "activate-global-python-argcomplete"
     - "dpkg-reconfigure debconf -f noninteractive -p critical"
-    - "apt-get install --yes virtualenv docker.io || true"
+    - "apt-get install --yes virtualenv || true"
+    - "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -"
+    - "apt-key fingerprint 0EBFCD88"
+    - "add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable\""
+    - "apt-get update"
+    - "apt-cache policy docker-ce"
+    - "apt-get install -y docker-ce"
     - "apt-get remove --yes popularity-contest postfix apport"
     - "if dpkg-query --show snapd; then apt-get remove --yes snapd; fi"
     - "apt-get autoremove --yes"
