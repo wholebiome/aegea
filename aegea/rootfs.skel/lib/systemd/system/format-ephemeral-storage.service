@@ -1,9 +1,0 @@
-[Unit]
-Description=Format and mount AWS EC2 ephemeral filesystems
-
-[Service]
-ExecStart=/usr/bin/aegea-format-ephemeral-storage --yes
-StandardOutput=syslog
-
-[Install]
-WantedBy=sysinit.target

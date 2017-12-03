@@ -119,6 +119,7 @@ build_ami:
     - "apt-get update"
     - "apt-cache policy docker-ce"
     - "apt-get install -y docker-ce"
+    - "rm /lib/systemd/system/docker.service"
     - "apt-get remove --yes popularity-contest postfix apport"
     - "if dpkg-query --show snapd; then apt-get remove --yes snapd; fi"
     - "apt-get autoremove --yes"
