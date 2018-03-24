@@ -34,7 +34,7 @@ setuptools.setup(
         "tweak >= 0.4.0, < 1",
         "keymaker >= 0.3.3, < 1",
         "pyyaml >= 3.11, < 4",
-        "python-dateutil >= 2.5.3, < 3",
+        "python-dateutil >= 2.1, <2.7.0",
         "babel >= 2.3.4, < 3",
         "ipwhois >= 0.13.0, < 1",
         "uritemplate >= 3.0.0, < 4",
