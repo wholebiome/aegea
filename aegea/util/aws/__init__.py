@@ -107,6 +107,7 @@ def ensure_subnet(vpc):
     return subnet
 
 def ensure_ingress_rule(security_group, **kwargs):
+    """Add an ingress rule to a security group if the rule is not present."""
     cidr_ip = kwargs.pop("CidrIp")
     for rule in security_group.ip_permissions:
         ip_range_matches = any(cidr_ip == ip_range["CidrIp"] for ip_range in rule["IpRanges"])
@@ -117,6 +118,7 @@ def ensure_ingress_rule(security_group, **kwargs):
         security_group.authorize_ingress(CidrIp=cidr_ip, **kwargs)
 
 def resolve_security_group(name, vpc=None):
+    """Find a security group by name, optionally limiting the search to a VPC."""
     if vpc is None:
         vpc = ensure_vpc()
     sgs = vpc.security_groups.filter(GroupNames=[name]) if vpc.is_default else vpc.security_groups.all()
@@ -126,6 +128,10 @@ def resolve_security_group(name, vpc=None):
     raise KeyError(name)
 
 def ensure_security_group(name, vpc, tcp_ingress=frozenset()):
+    """Resolve or create a security group and add only the requested TCP ingress rules.
+
+    By default, no ingress rules are added.
+    """
     try:
         security_group = resolve_security_group(name, vpc)
     except (ClientError, KeyError):
