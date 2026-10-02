@@ -80,6 +80,7 @@ def compute_environments(args):
 
 parser = register_listing_parser(compute_environments, parent=batch_parser, help="List Batch compute environments")
 def create_compute_environment(args):
+    """Create a Batch compute environment with default or explicitly selected security groups."""
     batch_iam_role = ensure_iam_role(args.service_role, trust=["batch"], policies=["service-role/AWSBatchServiceRole"])
     vpc = ensure_vpc()
     ssh_key_name = ensure_ssh_key(args.ssh_key_name, base_name=__name__)
@@ -87,11 +88,13 @@ def create_compute_environment(args):
                                                policies={"service-role/AmazonAPIGatewayPushToCloudWatchLogs",
                                                          "service-role/AmazonEC2ContainerServiceforEC2Role",
                                                          IAMPolicyBuilder(action="sts:AssumeRole", resource="*")})
+    security_groups = ([resolve_security_group(name, vpc) for name in args.security_groups]
+                       if args.security_groups else [ensure_security_group("aegea.launch", vpc)])
     compute_resources = dict(type=args.compute_type,
                              minvCpus=args.min_vcpus, desiredvCpus=args.desired_vcpus, maxvCpus=args.max_vcpus,
                              instanceTypes=args.instance_types,
                              subnets=[subnet.id for subnet in vpc.subnets.all()],
-                             securityGroupIds=[ensure_security_group("aegea.launch", vpc).id],
+                             securityGroupIds=[security_group.id for security_group in security_groups],
                              instanceRole=instance_profile.name,
                              bidPercentage=100,
                              spotIamFleetRole=SpotFleetBuilder.get_iam_fleet_role().name,
@@ -121,6 +124,8 @@ cce_parser.add_argument("--desired-vcpus", type=int)
 cce_parser.add_argument("--max-vcpus", type=int)
 cce_parser.add_argument("--instance-types", nargs="+")
 cce_parser.add_argument("--ssh-key-name")
+cce_parser.add_argument("--security-groups", nargs="+", metavar="SECURITY_GROUP",
+                        help="Use existing security groups with any required, explicitly approved ingress rules")
 cce_parser.add_argument("--instance-role", default=__name__ + ".ecs_container_instance")
 cce_parser.add_argument("--service-role", default=__name__ + ".service")
 cce_parser.add_argument("--ecs-container-instance-ami")

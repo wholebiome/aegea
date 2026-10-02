@@ -44,6 +44,7 @@ def get_startup_commands(args, username):
     ] + args.commands
 
 def launch(args):
+    """Launch an EC2 instance using selected security groups for SSH access."""
     if args.spot_price or args.duration_hours or args.cores or args.min_mem_per_core_gb:
         args.spot = True
     if args.use_dns:
@@ -73,6 +74,9 @@ def launch(args):
         subnet = ensure_subnet(vpc)
     if not subnet.map_public_ip_on_launch:
         raise AegeaException("Subnets without public IP mapping are not supported")
+
+    if args.wait_for_ssh and not args.security_groups:
+        raise AegeaException("--wait-for-ssh requires --security-groups with approved SSH ingress")
 
     if args.security_groups:
         security_groups = [resolve_security_group(sg, vpc) for sg in args.security_groups]
@@ -213,7 +217,7 @@ parser.add_argument("--availability-zone", "--az")
 parser.add_argument("--security-groups", nargs="+", metavar="SECURITY_GROUP")
 parser.add_argument("--tags", nargs="+", default=[], metavar="NAME=VALUE")
 parser.add_argument("--wait-for-ssh", action="store_true",
-                    help="Wait for launched instance to begin accepting SSH connections. Security groups and NACLs must permit SSH from launching host.")  # noqa
+                    help="Wait for SSH; pass --security-groups with approved ingress from the launching host")
 parser.add_argument("--essential-services", nargs="+")
 parser.add_argument("--iam-role", default=__name__)
 parser.add_argument("--iam-policies", nargs="+", metavar="IAM_POLICY_NAME",
