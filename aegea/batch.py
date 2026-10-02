@@ -19,7 +19,7 @@ from .util.exceptions import AegeaException
 from .util.printing import page_output, tabulate, YELLOW, RED, GREEN, BOLD, ENDC
 from .util.aws import (ARN, resources, clients, expect_error_codes, ensure_iam_role, ensure_instance_profile,
                        make_waiter, ensure_vpc, ensure_security_group, ensure_s3_bucket, ensure_log_group,
-                       IAMPolicyBuilder, resolve_ami)
+                       IAMPolicyBuilder, resolve_ami, resolve_security_group)
 from .util.aws.spot import SpotFleetBuilder
 
 bash_cmd_preamble = ["/bin/bash", "-c", 'for i in "$@"; do eval "$i"; done', __name__]
